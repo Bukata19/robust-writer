@@ -5,17 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 import {
   ArrowLeft,
   Save,
   Download,
-  FileText,
   Bot,
   Sparkles,
   ShieldCheck,
   MessageCircle,
   X,
-  ChevronDown,
   Bold,
   Italic,
   Underline,
@@ -25,6 +24,10 @@ import {
   AlignCenter,
   Heading1,
   Heading2,
+  Send,
+  Loader2,
+  Check,
+  XCircle,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -36,7 +39,12 @@ interface DocumentData {
   content: Json | null;
   doc_type: DocType;
   plagiarism_score: number | null;
+  plagiarism_data: Json | null;
 }
+
+type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const templates: Record<DocType, string> = {
   essay: `<h1>Essay Title</h1>
@@ -50,7 +58,6 @@ const templates: Record<DocType, string> = {
 <p><em>Present your third main argument with supporting evidence...</em></p>
 <h2>Conclusion</h2>
 <p><em>Summarize your arguments and restate your thesis...</em></p>`,
-
   research_paper: `<h1>Research Paper Title</h1>
 <h2>Abstract</h2>
 <p><em>Provide a brief summary of the research (150-300 words)...</em></p>
@@ -68,7 +75,6 @@ const templates: Record<DocType, string> = {
 <p><em>Summarize key findings and suggest future research directions...</em></p>
 <h2>References</h2>
 <p><em>List all cited sources in proper format...</em></p>`,
-
   report: `<h1>Report Title</h1>
 <h2>Executive Summary</h2>
 <p><em>Provide a concise overview of the report...</em></p>
@@ -80,7 +86,6 @@ const templates: Record<DocType, string> = {
 <p><em>Provide actionable recommendations based on findings...</em></p>
 <h2>Conclusion</h2>
 <p><em>Summarize the report and next steps...</em></p>`,
-
   general: `<h1>Document Title</h1>
 <p><em>Start writing here...</em></p>`,
 };
@@ -93,10 +98,23 @@ const EditorPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Sidebars
   const [chatOpen, setChatOpen] = useState(false);
   const [humanizerOpen, setHumanizerOpen] = useState(false);
-  const [humanizerIntensity, setHumanizerIntensity] = useState<'subtle' | 'moderate' | 'full'>('moderate');
   const [showPlagiarism, setShowPlagiarism] = useState(false);
+
+  // Humanizer
+  const [humanizerIntensity, setHumanizerIntensity] = useState<'subtle' | 'moderate' | 'full'>('moderate');
+  const [humanizing, setHumanizing] = useState(false);
+  const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string } | null>(null);
+
+  // Chat
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,7 +125,7 @@ const EditorPage: React.FC = () => {
   const fetchDocument = async () => {
     const { data, error } = await supabase
       .from('documents')
-      .select('id, title, content, doc_type, plagiarism_score')
+      .select('id, title, content, doc_type, plagiarism_score, plagiarism_data')
       .eq('id', id!)
       .single();
 
@@ -121,7 +139,6 @@ const EditorPage: React.FC = () => {
     setTitle(data.title);
     setLoading(false);
 
-    // Load content into editor after render
     setTimeout(() => {
       if (editorRef.current) {
         if (data.content && typeof data.content === 'string') {
@@ -136,18 +153,13 @@ const EditorPage: React.FC = () => {
   const saveDocument = useCallback(async () => {
     if (!id || !editorRef.current) return;
     setSaving(true);
-
     const content = editorRef.current.innerHTML;
     const { error } = await supabase
       .from('documents')
       .update({ title, content: content as unknown as Json })
       .eq('id', id);
-
-    if (error) {
-      toast.error('Failed to save');
-    } else {
-      toast.success('Document saved!');
-    }
+    if (error) toast.error('Failed to save');
+    else toast.success('Document saved!');
     setSaving(false);
   }, [id, title]);
 
@@ -158,15 +170,189 @@ const EditorPage: React.FC = () => {
         e.preventDefault();
         saveDocument();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault();
+        handleHumanize();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [saveDocument]);
+  }, [saveDocument, humanizerIntensity]);
 
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
   };
+
+  // ===== HUMANIZER =====
+  const getSelectedText = (): string => {
+    const selection = window.getSelection();
+    return selection ? selection.toString().trim() : '';
+  };
+
+  const handleHumanize = async () => {
+    const selectedText = getSelectedText();
+    if (!selectedText) {
+      toast.error('Select text in the editor first');
+      return;
+    }
+    if (selectedText.length > 10000) {
+      toast.error('Selected text exceeds 10,000 character limit');
+      return;
+    }
+
+    setHumanizing(true);
+    setHumanizerResult(null);
+    setHumanizerOpen(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('humanizer', {
+        body: { text: selectedText, intensity: humanizerIntensity },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setHumanizerResult({ original: selectedText, humanized: data.humanizedText });
+    } catch (err: any) {
+      toast.error(err.message || 'Humanizer failed');
+    } finally {
+      setHumanizing(false);
+    }
+  };
+
+  const acceptHumanized = () => {
+    if (!humanizerResult || !editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    // Simple replace of the original text
+    const escaped = humanizerResult.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'g');
+    editorRef.current.innerHTML = html.replace(regex, humanizerResult.humanized);
+    setHumanizerResult(null);
+    toast.success('Humanized text applied!');
+  };
+
+  const rejectHumanized = () => {
+    setHumanizerResult(null);
+  };
+
+  // ===== CHAT =====
+  const sendChatMessage = async () => {
+    const msg = chatInput.trim();
+    if (!msg || chatLoading) return;
+
+    const userMsg: ChatMessage = { role: 'user', content: msg };
+    const newMessages = [...chatMessages, userMsg];
+    setChatMessages(newMessages);
+    setChatInput('');
+    setChatLoading(true);
+
+    let assistantSoFar = '';
+
+    try {
+      const documentContent = editorRef.current?.innerText || '';
+
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: newMessages,
+          documentContent,
+          plagiarismData: doc?.plagiarism_data,
+        }),
+      });
+
+      if (resp.status === 429) {
+        toast.error('Rate limit exceeded. Please wait and try again.');
+        setChatLoading(false);
+        return;
+      }
+      if (resp.status === 402) {
+        toast.error('AI credits exhausted. Please add funds.');
+        setChatLoading(false);
+        return;
+      }
+      if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let streamDone = false;
+
+      const upsertAssistant = (chunk: string) => {
+        assistantSoFar += chunk;
+        setChatMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant') {
+            return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+          }
+          return [...prev, { role: 'assistant', content: assistantSoFar }];
+        });
+      };
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) upsertAssistant(content);
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Flush remaining
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw) continue;
+          if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+          if (raw.startsWith(':') || raw.trim() === '') continue;
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) upsertAssistant(content);
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Chat failed');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   if (loading) {
     return (
@@ -191,7 +377,6 @@ const EditorPage: React.FC = () => {
               className="bg-transparent border-none text-foreground font-display font-semibold text-sm h-8 w-48 md:w-72 focus-visible:ring-0 px-0"
             />
           </div>
-
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" onClick={saveDocument} disabled={saving}>
               <Save className="w-4 h-4 mr-1" />
@@ -242,30 +427,14 @@ const EditorPage: React.FC = () => {
 
             <div className="flex-1" />
 
-            {/* AI Tools */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setHumanizerOpen(!humanizerOpen)}
-              className={humanizerOpen ? 'text-teal' : ''}
-            >
-              <Sparkles className="w-4 h-4 mr-1" /> Humanizer
+            <Button variant="ghost" size="sm" onClick={() => { setHumanizerOpen(!humanizerOpen); }} className={humanizerOpen ? 'text-teal' : ''}>
+              <Sparkles className="w-4 h-4 mr-1" /> <span className="hidden md:inline">Humanizer</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPlagiarism(!showPlagiarism)}
-              className={showPlagiarism ? 'text-destructive' : ''}
-            >
-              <ShieldCheck className="w-4 h-4 mr-1" /> Plagiarism
+            <Button variant="ghost" size="sm" onClick={() => setShowPlagiarism(!showPlagiarism)} className={showPlagiarism ? 'text-destructive' : ''}>
+              <ShieldCheck className="w-4 h-4 mr-1" /> <span className="hidden md:inline">Plagiarism</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setChatOpen(!chatOpen)}
-              className={chatOpen ? 'text-teal' : ''}
-            >
-              <MessageCircle className="w-4 h-4 mr-1" /> Chat
+            <Button variant="ghost" size="sm" onClick={() => setChatOpen(!chatOpen)} className={chatOpen ? 'text-teal' : ''}>
+              <MessageCircle className="w-4 h-4 mr-1" /> <span className="hidden md:inline">Chat</span>
             </Button>
           </div>
 
@@ -320,19 +489,52 @@ const EditorPage: React.FC = () => {
                 </div>
               </div>
 
-              <Button className="w-full" size="sm">
-                <Sparkles className="w-4 h-4 mr-1" /> Humanize Selected Text
+              <Button className="w-full" size="sm" onClick={handleHumanize} disabled={humanizing}>
+                {humanizing ? (
+                  <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-1" /> Humanize Selected Text</>
+                )}
               </Button>
 
-              <p className="text-xs text-muted-foreground">
-                Select text in the editor, then click humanize. Changes appear as teal highlights that you can accept or reject.
-              </p>
+              {/* Humanizer Result */}
+              {humanizerResult && (
+                <div className="space-y-3 border-t border-border pt-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Original</label>
+                    <div className="text-xs text-foreground/70 bg-muted rounded-md p-2 max-h-24 overflow-auto">
+                      {humanizerResult.original}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-teal mb-1 block">Humanized</label>
+                    <div className="text-xs text-foreground bg-teal/10 border border-teal/30 rounded-md p-2 max-h-32 overflow-auto">
+                      {humanizerResult.humanized}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={acceptHumanized}>
+                      <Check className="w-3 h-3 mr-1" /> Accept
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={rejectHumanized}>
+                      <XCircle className="w-3 h-3 mr-1" /> Reject
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-              <div className="border-t border-border pt-3">
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-foreground">Tip:</strong> Use Ctrl+H to quickly trigger humanization on selected text.
-                </p>
-              </div>
+              {!humanizerResult && (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Select text in the editor, then click humanize. Review the result and accept or reject.
+                  </p>
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      <strong className="text-foreground">Tip:</strong> Use Ctrl+H to quickly trigger humanization.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -349,24 +551,63 @@ const EditorPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex-1 p-4 overflow-auto scrollbar-dark">
-              <div className="text-center text-muted-foreground text-sm py-8">
-                <Bot className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p>Ask me about your document. I have full context of your content and plagiarism data.</p>
-              </div>
+            <div ref={chatScrollRef} className="flex-1 p-4 overflow-auto scrollbar-dark space-y-4">
+              {chatMessages.length === 0 && (
+                <div className="text-center text-muted-foreground text-sm py-8">
+                  <Bot className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p>Ask me about your document. I have full context of your content.</p>
+                </div>
+              )}
+
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-br-sm'
+                        : 'bg-secondary text-secondary-foreground rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.role === 'assistant' ? (
+                      <div className="prose prose-sm prose-invert max-w-none [&_p]:mb-1 [&_p]:last:mb-0 [&_ul]:mb-1 [&_ol]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {chatLoading && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary rounded-xl px-3 py-2 rounded-bl-sm">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-3 border-t border-border">
-              <div className="flex gap-2">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendChatMessage();
+                }}
+                className="flex gap-2"
+              >
                 <input
                   type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Ask about your document..."
                   className="flex-1 bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  disabled={chatLoading}
                 />
-                <Button size="sm">
-                  Send
+                <Button size="sm" type="submit" disabled={chatLoading || !chatInput.trim()}>
+                  <Send className="w-4 h-4" />
                 </Button>
-              </div>
+              </form>
             </div>
           </div>
         )}
