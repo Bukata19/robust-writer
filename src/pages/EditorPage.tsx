@@ -31,6 +31,9 @@ import {
   Eye,
   EyeOff,
   XCircle,
+  FileText,
+  FileDown,
+  ChevronDown,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
