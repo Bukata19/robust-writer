@@ -27,6 +27,9 @@ import {
   Send,
   Loader2,
   Check,
+  AlertTriangle,
+  Eye,
+  EyeOff,
   XCircle,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
