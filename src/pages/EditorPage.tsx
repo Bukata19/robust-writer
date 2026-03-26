@@ -253,6 +253,68 @@ const EditorPage: React.FC = () => {
     setHumanizerResult(null);
   };
 
+  // ===== PLAGIARISM =====
+  const runPlagiarismCheck = async () => {
+    if (!editorRef.current || plagiarismRunning) return;
+    const text = editorRef.current.innerText.trim();
+    if (text.length < 50) {
+      toast.error('Write at least 50 characters before running plagiarism check');
+      return;
+    }
+
+    setPlagiarismRunning(true);
+    setPlagiarismReport(null);
+    setShowPlagiarism(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('plagiarism', {
+        body: { text, documentId: id },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setPlagiarismReport(data);
+      setPlagiarismHighlightsVisible(true);
+
+      // Save score to DB
+      if (id) {
+        await supabase
+          .from('documents')
+          .update({
+            plagiarism_score: data.overall_score,
+            plagiarism_data: data as unknown as Json,
+          })
+          .eq('id', id);
+        setDoc((prev) => prev ? { ...prev, plagiarism_score: data.overall_score, plagiarism_data: data as unknown as Json } : prev);
+      }
+
+      toast.success(`Plagiarism check complete: ${data.overall_score}% risk`);
+    } catch (err: any) {
+      toast.error(err.message || 'Plagiarism check failed');
+    } finally {
+      setPlagiarismRunning(false);
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score <= 15) return 'text-teal';
+    if (score <= 40) return 'text-yellow-400';
+    return 'text-destructive';
+  };
+
+  const getScoreBg = (score: number) => {
+    if (score <= 15) return 'bg-teal/20';
+    if (score <= 40) return 'bg-yellow-500/20';
+    return 'bg-destructive/20';
+  };
+
+  const getSeverityColor = (severity: string) => {
+    if (severity === 'high') return 'border-destructive/60 bg-destructive/10';
+    if (severity === 'medium') return 'border-yellow-500/60 bg-yellow-500/10';
+    return 'border-muted-foreground/30 bg-muted/50';
+  };
+
   // ===== CHAT =====
   const sendChatMessage = async () => {
     const msg = chatInput.trim();
