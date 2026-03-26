@@ -31,6 +31,9 @@ import {
   Eye,
   EyeOff,
   XCircle,
+  FileText,
+  FileDown,
+  ChevronDown,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -101,6 +104,8 @@ const EditorPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   // Sidebars
   const [chatOpen, setChatOpen] = useState(false);
@@ -201,7 +206,147 @@ const EditorPage: React.FC = () => {
     editorRef.current?.focus();
   };
 
-  // ===== HUMANIZER =====
+  // ===== EXPORT =====
+  const exportToPdf = async () => {
+    if (!editorRef.current) return;
+    setExporting(true);
+    setExportMenuOpen(false);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = editorRef.current.cloneNode(true) as HTMLElement;
+      // Apply white background for PDF
+      element.style.background = '#ffffff';
+      element.style.padding = '40px';
+      element.style.color = '#1a1a1a';
+
+      const opt = {
+        margin: 0.5,
+        filename: `${title || 'document'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const },
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      toast.success('PDF exported successfully!');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.error('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportToDocx = async () => {
+    if (!editorRef.current) return;
+    setExporting(true);
+    setExportMenuOpen(false);
+    try {
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType: DocAlign } = await import('docx');
+      const { saveAs } = await import('file-saver');
+
+      const children: any[] = [];
+      const nodes = editorRef.current.childNodes;
+
+      type RunInfo = { text: string; bold?: boolean; italics?: boolean; underline?: boolean };
+
+      const extractRuns = (node: Node, parentBold = false, parentItalic = false, parentUnderline = false): RunInfo[] => {
+        const runs: RunInfo[] = [];
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent || '';
+          if (text) runs.push({ text, bold: parentBold, italics: parentItalic, underline: parentUnderline });
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          const tag = el.tagName.toLowerCase();
+          if (tag === 'br') {
+            runs.push({ text: '\n' });
+          } else {
+            const isBold = parentBold || tag === 'b' || tag === 'strong';
+            const isItalic = parentItalic || tag === 'i' || tag === 'em';
+            const isUnderline = parentUnderline || tag === 'u';
+            el.childNodes.forEach((child) => {
+              runs.push(...extractRuns(child, isBold, isItalic, isUnderline));
+            });
+          }
+        }
+        return runs;
+      };
+
+      const toTextRuns = (el: Element): any[] => {
+        const infos = extractRuns(el);
+        return infos.map(r =>
+          r.text === '\n'
+            ? new TextRun({ text: '', break: 1 })
+            : new TextRun({ text: r.text, bold: r.bold, italics: r.italics, underline: r.underline ? {} : undefined })
+        );
+      };
+
+      const processElement = (el: Element) => {
+        const tag = el.tagName.toLowerCase();
+        const text = el.textContent?.trim() || '';
+
+        if (tag === 'h1') {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text, bold: true, size: 32, font: 'Arial' })] }));
+        } else if (tag === 'h2') {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text, bold: true, size: 28, font: 'Arial' })] }));
+        } else if (tag === 'h3') {
+          children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun({ text, bold: true, size: 24, font: 'Arial' })] }));
+        } else if (tag === 'ul' || tag === 'ol') {
+          el.querySelectorAll(':scope > li').forEach((li) => {
+            const liRuns = toTextRuns(li);
+            children.push(new Paragraph({
+              children: liRuns.length > 0 ? liRuns : [new TextRun(li.textContent || '')],
+              bullet: tag === 'ul' ? { level: 0 } : undefined,
+              numbering: tag === 'ol' ? { reference: 'default-numbering', level: 0 } : undefined,
+            }));
+          });
+        } else if (tag === 'p' || tag === 'div') {
+          const runs = toTextRuns(el);
+          if (runs.length > 0) {
+            children.push(new Paragraph({ children: runs, spacing: { after: 200 } }));
+          } else if (text) {
+            children.push(new Paragraph({ children: [new TextRun(text)], spacing: { after: 200 } }));
+          }
+        } else if (text) {
+          children.push(new Paragraph({ children: [new TextRun(text)], spacing: { after: 200 } }));
+        }
+      };
+
+      nodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          processElement(node as Element);
+        } else if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+          children.push(new Paragraph({ children: [new TextRun(node.textContent.trim())] }));
+        }
+      });
+
+      if (children.length === 0) {
+        children.push(new Paragraph({ children: [new TextRun('')] }));
+      }
+
+      const docFile = new Document({
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+            },
+          },
+          children,
+        }],
+      });
+
+      const buffer = await Packer.toBlob(docFile);
+      saveAs(buffer, `${title || 'document'}.docx`);
+      toast.success('DOCX exported successfully!');
+    } catch (err) {
+      console.error('DOCX export error:', err);
+      toast.error('Failed to export DOCX');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const getSelectedText = (): string => {
     const selection = window.getSelection();
     return selection ? selection.toString().trim() : '';
@@ -461,9 +606,31 @@ const EditorPage: React.FC = () => {
               <Save className="w-4 h-4 mr-1" />
               <span className="hidden md:inline">{saving ? 'Saving...' : 'Save'}</span>
             </Button>
-            <Button variant="ghost" size="sm">
-              <Download className="w-4 h-4" />
-            </Button>
+            <div className="relative">
+              <Button variant="ghost" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting}>
+                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              </Button>
+              {exportMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setExportMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-lg shadow-lg z-40 overflow-hidden">
+                    <button
+                      onClick={exportToPdf}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <FileDown className="w-4 h-4 text-destructive" /> Export as PDF
+                    </button>
+                    <button
+                      onClick={exportToDocx}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <FileText className="w-4 h-4 text-primary" /> Export as DOCX
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
