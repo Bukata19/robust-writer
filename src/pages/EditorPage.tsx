@@ -112,6 +112,20 @@ const EditorPage: React.FC = () => {
   const [humanizing, setHumanizing] = useState(false);
   const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string } | null>(null);
 
+  // Plagiarism
+  const [plagiarismRunning, setPlagiarismRunning] = useState(false);
+  const [plagiarismReport, setPlagiarismReport] = useState<{
+    overall_score: number;
+    summary: string;
+    flagged_passages: Array<{
+      excerpt: string;
+      concern_type: string;
+      reason: string;
+      severity: string;
+    }>;
+  } | null>(null);
+  const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
+
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
