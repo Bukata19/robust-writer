@@ -685,21 +685,21 @@ useEffect(() => {
 
   {/* Humanizer Sidebar - Always visible when open */}
   {humanizerOpen && (
-    <div className="w-72 border-l border-border bg-card p-4 overflow-auto flex flex-col">
+    <div className="w-72 border-l border-border bg-card p-4 overflow-auto">
       {/* ... humanizer content ... */}
     </div>
   )}
 
   {/* Plagiarism Sidebar - Always visible when open */}
   {showPlagiarism && (
-    <div className="w-80 border-l border-border bg-card flex flex-col overflow-auto">
+<div className="w-72 border-l border-border bg-card p-4 overflow-auto">
       {/* ... plagiarism content ... */}
     </div>
   )}
 
   {/* Chat Sidebar - Always visible when open */}
   {chatOpen && (
-    <div className="w-80 border-l border-border bg-card flex flex-col overflow-hidden max-h-[calc(100vh-48px)]">
+    <div className="w-72 border-l border-border bg-card p-4 overflow-auto">
       {/* ... chat content ... */}
     </div>
   )}
