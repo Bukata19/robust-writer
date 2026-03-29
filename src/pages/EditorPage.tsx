@@ -166,7 +166,7 @@ const EditorPage: React.FC = () => {
     setTimeout(() => {
       if (editorRef.current) {
         if (data.content && typeof data.content === 'string') {
-          editorRef.current.innerHTML = data.content;
+  editorRef.current.innerHTML = DOMPurify.sanitize(data.content);
         } else if (!data.content) {
           editorRef.current.innerHTML = templates[data.doc_type];
         }
