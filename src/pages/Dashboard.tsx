@@ -34,7 +34,7 @@ const docTypeConfig: Record<DocType, { label: string; icon: React.ReactNode; col
 };
 
 const getPlagiarismBadge = (score: number | null) => {
-  if (score === null) return null;
+  if (score === null || score === 0) return null;
   if (score <= 15) return { label: `${score}% Clean`, className: 'bg-teal/20 text-teal' };
   if (score <= 40) return { label: `${score}% Warning`, className: 'bg-yellow-500/20 text-yellow-400' };
   return { label: `${score}% High Risk`, className: 'bg-destructive/20 text-destructive' };
@@ -45,6 +45,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<DocType | 'all'>('all');
 
   useEffect(() => {
     fetchDocuments();
@@ -90,8 +92,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesSearch = doc.title.toLowerCase().includes(search.toLowerCase());
+    const matchesType = filterType === 'all' || doc.doc_type === filterType;
+    return matchesSearch && matchesType;
+  });
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -133,20 +138,46 @@ const Dashboard: React.FC = () => {
         {/* Documents */}
         <h2 className="text-lg font-display font-semibold text-foreground mb-4">Your Documents</h2>
 
+        {/* Search and filter */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <input
+            type="text"
+            placeholder="Search documents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 min-w-[160px] bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <div className="flex gap-1">
+            {(['all', 'essay', 'research_paper', 'report', 'general'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors capitalize ${
+                  filterType === type
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {type === 'all' ? 'All' : type === 'research_paper' ? 'Research' : type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-32 rounded-xl bg-card border border-border animate-pulse" />
             ))}
           </div>
-        ) : documents.length === 0 ? (
+        ) : filteredDocuments.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>No documents yet. Create one above!</p>
+            <p>{search || filterType !== 'all' ? 'No documents match your search.' : 'No documents yet. Create one above!'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents.map((doc) => {
+            {filteredDocuments.map((doc) => {
               const config = docTypeConfig[doc.doc_type];
               const badge = getPlagiarismBadge(doc.plagiarism_score);
               return (
@@ -195,3 +226,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+  
