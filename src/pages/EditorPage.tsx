@@ -891,7 +891,7 @@ useEffect(() => {
 
         {/* Chat Sidebar */}
         {chatOpen && (
-          <div className="w-80 border-l border-border bg-card flex flex-col animate-slide-in-right">
+          <div className="w-80 border-l border-border bg-card flex flex-col animate-slide-in-right overflow-hidden max-h-[calc(100vh-48px)]">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-display font-semibold text-foreground text-sm flex items-center gap-2">
                 <Bot className="w-4 h-4 text-teal" /> AI Assistant
