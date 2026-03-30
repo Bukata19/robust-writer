@@ -960,7 +960,7 @@ const EditorPage: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop: Left formatting toolbar */}
         {!isMobile && (
-          <div className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
+          <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
             {formatButtons}
           </div>
         )}
