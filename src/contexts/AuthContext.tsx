@@ -2,8 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-const REMEMBER_KEY = 'rb_remember';
-const SESSION_KEY = 'rb_session_active';
+const REMEMBER_KEY = 'rb_remember_me';
 
 interface AuthContextType {
   session: Session | null;
@@ -22,28 +21,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      // If a session exists in localStorage but no sessionStorage flag,
-      // this is a new tab/browser open. Auto sign-out if user didn't pick "remember me".
-      if (session && !sessionStorage.getItem(SESSION_KEY)) {
-        if (localStorage.getItem(REMEMBER_KEY) !== 'true') {
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-      }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
     return () => subscription.unsubscribe();
+  }, []);
+
+  // If rememberMe is false, sign out when the browser tab closes
+  useEffect(() => {
+    const handleUnload = () => {
+      if (localStorage.getItem(REMEMBER_KEY) === 'false') {
+        supabase.auth.signOut();
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
   const signUp = async (email: string, password: string) => {
@@ -54,18 +55,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string, rememberMe: boolean = true) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
-      if (rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, 'true');
-      } else {
-        localStorage.removeItem(REMEMBER_KEY);
-      }
+      localStorage.setItem(REMEMBER_KEY, rememberMe ? 'true' : 'false');
     }
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
-    sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(REMEMBER_KEY);
     await supabase.auth.signOut();
   };
@@ -82,4 +77,4 @@ export const useAuth = () => {
   if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
-                                                                       
+  
