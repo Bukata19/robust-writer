@@ -11,6 +11,8 @@ import {
   SheetContent,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import introJs from 'intro.js';
+import 'intro.js/introjs.css';
 import {
   ArrowLeft,
   Save,
@@ -610,6 +612,57 @@ const EditorPage: React.FC = () => {
     }
   }, [chatMessages]);
 
+  // Intro.js onboarding tour — only on first visit
+  useEffect(() => {
+    if (loading) return;
+    const TOUR_KEY = 'rb_editor_tour_done';
+    if (localStorage.getItem(TOUR_KEY)) return;
+
+    const timer = setTimeout(() => {
+      const intro = introJs();
+      intro.setOptions({
+        steps: [
+          {
+            element: '[data-intro-id="editor-canvas"]',
+            intro: 'This is your writing canvas. Type your content here — it uses a clean A4-style layout.',
+            position: 'right',
+          },
+          {
+            element: '[data-intro-id="format-toolbar"]',
+            intro: 'Use these formatting tools to bold, italicize, add headings, lists, and align your text.',
+            position: isMobile ? 'top' : 'right',
+          },
+          {
+            element: '[data-intro-id="ai-tools"]',
+            intro: 'Access your AI tools here: Chat with an AI assistant, humanize text, or run a plagiarism check.',
+            position: isMobile ? 'top' : 'left',
+          },
+          {
+            element: '[data-intro-id="export-btn"]',
+            intro: 'Export your finished document as a PDF or DOCX file.',
+            position: 'bottom',
+          },
+          {
+            element: '[data-intro-id="save-btn"]',
+            intro: 'Save your work anytime. Documents also auto-save every 30 seconds. Shortcut: Ctrl+S.',
+            position: 'bottom',
+          },
+        ],
+        showProgress: true,
+        showBullets: false,
+        exitOnOverlayClick: true,
+        doneLabel: 'Got it!',
+        nextLabel: 'Next →',
+        prevLabel: '← Back',
+      });
+      intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.start();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [loading, isMobile]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -874,7 +927,7 @@ const EditorPage: React.FC = () => {
 
         {/* Export dropdown */}
         <div className="relative">
-          <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting}>
+          <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn">
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1">Export</span>
             <ChevronDown className="w-3 h-3 ml-1" />
@@ -897,7 +950,7 @@ const EditorPage: React.FC = () => {
           )}
         </div>
 
-        <Button onClick={saveDocument} disabled={saving} size="sm">
+        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
@@ -907,7 +960,7 @@ const EditorPage: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop: Left formatting toolbar */}
         {!isMobile && (
-          <div className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
+          <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
             {formatButtons}
           </div>
         )}
@@ -920,6 +973,7 @@ const EditorPage: React.FC = () => {
             suppressContentEditableWarning
             onInput={updateWordCount}
             className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-sm max-w-none focus:outline-none"
+            data-intro-id="editor-canvas"
             style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8, fontSize: '14px' }}
           />
         </div>
@@ -927,7 +981,7 @@ const EditorPage: React.FC = () => {
         {/* Desktop: Right AI tab bar + inline sidebar */}
         {!isMobile && (
           <>
-            <div className="w-10 border-l border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
+            <div data-intro-id="ai-tools" className="w-10 border-l border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
               {aiToolButtons}
             </div>
 
@@ -943,9 +997,13 @@ const EditorPage: React.FC = () => {
       {/* Mobile: Bottom toolbar with formatting + AI tools */}
       {isMobile && (
         <div className="border-t border-border bg-card flex items-center px-1 py-1 gap-0.5 shrink-0 overflow-x-auto">
-          {formatButtons}
+          <div data-intro-id="format-toolbar">
+            {formatButtons}
+          </div>
           <div className="w-px h-6 bg-border mx-1 shrink-0" />
-          {aiToolButtons}
+          <div data-intro-id="ai-tools">
+            {aiToolButtons}
+          </div>
         </div>
       )}
 
