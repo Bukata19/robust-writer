@@ -612,6 +612,57 @@ const EditorPage: React.FC = () => {
     }
   }, [chatMessages]);
 
+  // Intro.js onboarding tour — only on first visit
+  useEffect(() => {
+    if (loading) return;
+    const TOUR_KEY = 'rb_editor_tour_done';
+    if (localStorage.getItem(TOUR_KEY)) return;
+
+    const timer = setTimeout(() => {
+      const intro = introJs();
+      intro.setOptions({
+        steps: [
+          {
+            element: '[data-intro-id="editor-canvas"]',
+            intro: 'This is your writing canvas. Type your content here — it uses a clean A4-style layout.',
+            position: 'right',
+          },
+          {
+            element: '[data-intro-id="format-toolbar"]',
+            intro: 'Use these formatting tools to bold, italicize, add headings, lists, and align your text.',
+            position: isMobile ? 'top' : 'right',
+          },
+          {
+            element: '[data-intro-id="ai-tools"]',
+            intro: 'Access your AI tools here: Chat with an AI assistant, humanize text, or run a plagiarism check.',
+            position: isMobile ? 'top' : 'left',
+          },
+          {
+            element: '[data-intro-id="export-btn"]',
+            intro: 'Export your finished document as a PDF or DOCX file.',
+            position: 'bottom',
+          },
+          {
+            element: '[data-intro-id="save-btn"]',
+            intro: 'Save your work anytime. Documents also auto-save every 30 seconds. Shortcut: Ctrl+S.',
+            position: 'bottom',
+          },
+        ],
+        showProgress: true,
+        showBullets: false,
+        exitOnOverlayClick: true,
+        doneLabel: 'Got it!',
+        nextLabel: 'Next →',
+        prevLabel: '← Back',
+      });
+      intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.start();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [loading, isMobile]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
