@@ -7,6 +7,11 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
   ArrowLeft,
   Save,
   Download,
@@ -100,6 +105,7 @@ const EditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [doc, setDoc] = useState<DocumentData | null>(null);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
@@ -614,10 +620,246 @@ const EditorPage: React.FC = () => {
 
   const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : null;
 
+  const closeSidebar = () => {
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowPlagiarism(false);
+  };
+
+  // ===== Sidebar content (shared between mobile Sheet & desktop inline) =====
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      {/* Chat Sidebar */}
+      {chatOpen && (
+        <>
+          <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">AI Chat</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+            {chatMessages.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center mt-8">Ask me anything about your document…</p>
+            )}
+            {chatMessages.map((m, i) => (
+              <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                  {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
+              </div>
+            )}
+          </div>
+          <div className="p-3 border-t border-border flex gap-2 shrink-0">
+            <Input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
+              placeholder="Type a message…"
+              className="flex-1 text-sm"
+            />
+            <Button size="icon" onClick={sendChatMessage} disabled={chatLoading}>
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Humanizer Sidebar */}
+      {humanizerOpen && (
+        <>
+          <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">Humanizer</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="p-3 space-y-4 overflow-y-auto flex-1">
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Intensity</p>
+              <div className="flex gap-1">
+                {(['subtle', 'moderate', 'full'] as const).map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => setHumanizerIntensity(level)}
+                    className={`flex-1 py-1.5 text-xs rounded-md capitalize transition-colors ${
+                      humanizerIntensity === level
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleHumanize} disabled={humanizing} className="w-full" size="sm">
+              {humanizing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
+              {humanizing ? 'Humanizing…' : 'Humanize Selection'}
+            </Button>
+            <p className="text-xs text-muted-foreground">Select text in the editor, then click above. Shortcut: Ctrl+H</p>
+
+            {humanizerResult && (
+              <div className="space-y-3 border-t border-border pt-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Original</p>
+                  <p className="text-xs bg-muted p-2 rounded line-through text-muted-foreground">{humanizerResult.original}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-primary mb-1">Humanized</p>
+                  <p className="text-xs bg-primary/10 p-2 rounded text-foreground">{humanizerResult.humanized}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={acceptHumanized} className="flex-1">
+                    <Check className="w-3 h-3 mr-1" /> Accept
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={rejectHumanized} className="flex-1">
+                    <XCircle className="w-3 h-3 mr-1" /> Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Plagiarism Sidebar */}
+      {showPlagiarism && (
+        <>
+          <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">Plagiarism Check</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {plagiarismReport && (
+                <Button variant="ghost" size="icon" onClick={() => setPlagiarismHighlightsVisible(!plagiarismHighlightsVisible)} title="Toggle highlights">
+                  {plagiarismHighlightsVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setShowPlagiarism(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="p-3 space-y-4 overflow-y-auto flex-1">
+            <Button onClick={runPlagiarismCheck} disabled={plagiarismRunning} className="w-full" size="sm">
+              {plagiarismRunning ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ShieldCheck className="w-4 h-4 mr-1" />}
+              {plagiarismRunning ? 'Analyzing…' : 'Run Plagiarism Check'}
+            </Button>
+
+            {plagiarismReport && (
+              <div className="space-y-4">
+                <div className={`rounded-lg p-4 text-center ${getScoreBg(plagiarismReport.overall_score)}`}>
+                  <p className={`text-3xl font-bold ${getScoreColor(plagiarismReport.overall_score)}`}>{plagiarismReport.overall_score}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">Risk Score</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{plagiarismReport.summary}</p>
+                {plagiarismReport.flagged_passages.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-foreground">Flagged Passages ({plagiarismReport.flagged_passages.length})</p>
+                    {plagiarismReport.flagged_passages.map((fp, i) => (
+                      <div key={i} className={`border rounded-lg p-2 space-y-1 ${getSeverityColor(fp.severity)}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-medium uppercase text-muted-foreground">{fp.concern_type.replace('_', ' ')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            fp.severity === 'high' ? 'bg-destructive/20 text-destructive' :
+                            fp.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
+                            'bg-muted text-muted-foreground'
+                          }`}>{fp.severity}</span>
+                        </div>
+                        <p className="text-xs text-foreground italic">"{fp.excerpt}"</p>
+                        <p className="text-[11px] text-muted-foreground">{fp.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // ===== AI tool buttons =====
+  const aiToolButtons = (
+    <>
+      <Button
+        variant={chatOpen ? 'default' : 'ghost'}
+        size="icon"
+        onClick={() => { setChatOpen(!chatOpen); setHumanizerOpen(false); setShowPlagiarism(false); }}
+        title="AI Chat"
+      >
+        <MessageCircle className="w-4 h-4" />
+      </Button>
+      <Button
+        variant={humanizerOpen ? 'default' : 'ghost'}
+        size="icon"
+        onClick={() => { setHumanizerOpen(!humanizerOpen); setChatOpen(false); setShowPlagiarism(false); }}
+        title="Humanizer"
+      >
+        <Sparkles className="w-4 h-4" />
+      </Button>
+      <Button
+        variant={showPlagiarism ? 'default' : 'ghost'}
+        size="icon"
+        onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); }}
+        title="Plagiarism Check"
+      >
+        <ShieldCheck className="w-4 h-4" />
+      </Button>
+    </>
+  );
+
+  // ===== Formatting toolbar buttons =====
+  const formatButtons = (
+    <>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('bold')} title="Bold">
+        <Bold className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('italic')} title="Italic">
+        <Italic className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('underline')} title="Underline">
+        <Underline className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H1')} title="Heading 1">
+        <Heading1 className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H2')} title="Heading 2">
+        <Heading2 className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('insertUnorderedList')} title="Bullet List">
+        <List className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('insertOrderedList')} title="Numbered List">
+        <ListOrdered className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('justifyLeft')} title="Align Left">
+        <AlignLeft className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => execCommand('justifyCenter')} title="Align Center">
+        <AlignCenter className="w-4 h-4" />
+      </Button>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top Bar */}
-      <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
+      <header className="h-14 border-b border-border bg-card flex items-center px-3 gap-2 shrink-0">
         <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -625,16 +867,16 @@ const EditorPage: React.FC = () => {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="flex-1 bg-transparent text-foreground font-medium text-lg focus:outline-none truncate"
+          className="flex-1 min-w-0 bg-transparent text-foreground font-medium text-lg focus:outline-none truncate"
         />
 
-        <span className="text-xs text-muted-foreground hidden sm:inline">{wordCount} words</span>
+        <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap">{wordCount} words</span>
 
         {/* Export dropdown */}
         <div className="relative">
           <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting}>
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Download className="w-4 h-4 mr-1" />}
-            Export
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline ml-1">Export</span>
             <ChevronDown className="w-3 h-3 ml-1" />
           </Button>
           {exportMenuOpen && (
@@ -656,257 +898,65 @@ const EditorPage: React.FC = () => {
         </div>
 
         <Button onClick={saveDocument} disabled={saving} size="sm">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-          Save
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span className="hidden sm:inline ml-1">Save</span>
         </Button>
       </header>
 
+      {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Toolbar */}
-        <div className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => execCommand('bold')} title="Bold">
-            <Bold className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('italic')} title="Italic">
-            <Italic className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('underline')} title="Underline">
-            <Underline className="w-4 h-4" />
-          </Button>
-          <div className="w-6 border-t border-border my-1" />
-          <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H1')} title="Heading 1">
-            <Heading1 className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H2')} title="Heading 2">
-            <Heading2 className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('insertUnorderedList')} title="Bullet List">
-            <List className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('insertOrderedList')} title="Numbered List">
-            <ListOrdered className="w-4 h-4" />
-          </Button>
-          <div className="w-6 border-t border-border my-1" />
-          <Button variant="ghost" size="icon" onClick={() => execCommand('justifyLeft')} title="Align Left">
-            <AlignLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => execCommand('justifyCenter')} title="Align Center">
-            <AlignCenter className="w-4 h-4" />
-          </Button>
-        </div>
+        {/* Desktop: Left formatting toolbar */}
+        {!isMobile && (
+          <div className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
+            {formatButtons}
+          </div>
+        )}
 
-        {/* Editor Canvas */}
-        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-8 px-4">
+        {/* Editor Canvas — always takes remaining space */}
+        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-4 sm:py-8 px-2 sm:px-4">
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             onInput={updateWordCount}
-            className="bg-card w-full max-w-[816px] min-h-[1056px] p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-sm max-w-none focus:outline-none"
+            className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-sm max-w-none focus:outline-none"
             style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8, fontSize: '14px' }}
           />
         </div>
 
-        {/* Right AI Panel Tabs */}
-        <div className="w-10 border-l border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
-          <Button
-            variant={chatOpen ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => { setChatOpen(!chatOpen); setHumanizerOpen(false); setShowPlagiarism(false); }}
-            title="AI Chat"
-          >
-            <MessageCircle className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={humanizerOpen ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => { setHumanizerOpen(!humanizerOpen); setChatOpen(false); setShowPlagiarism(false); }}
-            title="Humanizer"
-          >
-            <Sparkles className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={showPlagiarism ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); }}
-            title="Plagiarism Check"
-          >
-            <ShieldCheck className="w-4 h-4" />
-          </Button>
-        </div>
+        {/* Desktop: Right AI tab bar + inline sidebar */}
+        {!isMobile && (
+          <>
+            <div className="w-10 border-l border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
+              {aiToolButtons}
+            </div>
 
-        {/* Sidebar Content */}
-        {activeSidebar && (
-          <div className="w-80 border-l border-border bg-card flex flex-col shrink-0 overflow-hidden">
-            {/* Chat Sidebar */}
-            {chatOpen && (
-              <>
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">AI Chat</span>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
-                  {chatMessages.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center mt-8">Ask me anything about your document…</p>
-                  )}
-                  {chatMessages.map((m, i) => (
-                    <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
-                      <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                        {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
-                      </div>
-                    </div>
-                  ))}
-                  {chatLoading && (
-                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 border-t border-border flex gap-2">
-                  <Input
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
-                    placeholder="Type a message…"
-                    className="flex-1 text-sm"
-                  />
-                  <Button size="icon" onClick={sendChatMessage} disabled={chatLoading}>
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </>
+            {activeSidebar && (
+              <div className="w-80 border-l border-border bg-card flex flex-col shrink-0 overflow-hidden">
+                {sidebarContent}
+              </div>
             )}
-
-            {/* Humanizer Sidebar */}
-            {humanizerOpen && (
-              <>
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">Humanizer</span>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="p-3 space-y-4 overflow-y-auto flex-1">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Intensity</p>
-                    <div className="flex gap-1">
-                      {(['subtle', 'moderate', 'full'] as const).map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => setHumanizerIntensity(level)}
-                          className={`flex-1 py-1.5 text-xs rounded-md capitalize transition-colors ${
-                            humanizerIntensity === level
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <Button onClick={handleHumanize} disabled={humanizing} className="w-full" size="sm">
-                    {humanizing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                    {humanizing ? 'Humanizing…' : 'Humanize Selection'}
-                  </Button>
-                  <p className="text-xs text-muted-foreground">Select text in the editor, then click above. Shortcut: Ctrl+H</p>
-
-                  {humanizerResult && (
-                    <div className="space-y-3 border-t border-border pt-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Original</p>
-                        <p className="text-xs bg-muted p-2 rounded line-through text-muted-foreground">{humanizerResult.original}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-primary mb-1">Humanized</p>
-                        <p className="text-xs bg-primary/10 p-2 rounded text-foreground">{humanizerResult.humanized}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={acceptHumanized} className="flex-1">
-                          <Check className="w-3 h-3 mr-1" /> Accept
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={rejectHumanized} className="flex-1">
-                          <XCircle className="w-3 h-3 mr-1" /> Reject
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Plagiarism Sidebar */}
-            {showPlagiarism && (
-              <>
-                <div className="p-3 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">Plagiarism Check</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {plagiarismReport && (
-                      <Button variant="ghost" size="icon" onClick={() => setPlagiarismHighlightsVisible(!plagiarismHighlightsVisible)} title="Toggle highlights">
-                        {plagiarismHighlightsVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => setShowPlagiarism(false)}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="p-3 space-y-4 overflow-y-auto flex-1">
-                  <Button onClick={runPlagiarismCheck} disabled={plagiarismRunning} className="w-full" size="sm">
-                    {plagiarismRunning ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ShieldCheck className="w-4 h-4 mr-1" />}
-                    {plagiarismRunning ? 'Analyzing…' : 'Run Plagiarism Check'}
-                  </Button>
-
-                  {plagiarismReport && (
-                    <div className="space-y-4">
-                      {/* Score */}
-                      <div className={`rounded-lg p-4 text-center ${getScoreBg(plagiarismReport.overall_score)}`}>
-                        <p className={`text-3xl font-bold ${getScoreColor(plagiarismReport.overall_score)}`}>{plagiarismReport.overall_score}%</p>
-                        <p className="text-xs text-muted-foreground mt-1">Risk Score</p>
-                      </div>
-
-                      {/* Summary */}
-                      <p className="text-xs text-muted-foreground">{plagiarismReport.summary}</p>
-
-                      {/* Flagged Passages */}
-                      {plagiarismReport.flagged_passages.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-foreground">Flagged Passages ({plagiarismReport.flagged_passages.length})</p>
-                          {plagiarismReport.flagged_passages.map((fp, i) => (
-                            <div key={i} className={`border rounded-lg p-2 space-y-1 ${getSeverityColor(fp.severity)}`}>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-medium uppercase text-muted-foreground">{fp.concern_type.replace('_', ' ')}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                                  fp.severity === 'high' ? 'bg-destructive/20 text-destructive' :
-                                  fp.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
-                                  'bg-muted text-muted-foreground'
-                                }`}>{fp.severity}</span>
-                              </div>
-                              <p className="text-xs text-foreground italic">"{fp.excerpt}"</p>
-                              <p className="text-[11px] text-muted-foreground">{fp.reason}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          </>
         )}
       </div>
+
+      {/* Mobile: Bottom toolbar with formatting + AI tools */}
+      {isMobile && (
+        <div className="border-t border-border bg-card flex items-center px-1 py-1 gap-0.5 shrink-0 overflow-x-auto">
+          {formatButtons}
+          <div className="w-px h-6 bg-border mx-1 shrink-0" />
+          {aiToolButtons}
+        </div>
+      )}
+
+      {/* Mobile: Sheet overlay for AI sidebar */}
+      {isMobile && (
+        <Sheet open={!!activeSidebar} onOpenChange={(open) => { if (!open) closeSidebar(); }}>
+          <SheetContent side="bottom" className="h-[75vh] p-0 flex flex-col">
+            {sidebarContent}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 };
