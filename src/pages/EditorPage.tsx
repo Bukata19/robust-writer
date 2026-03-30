@@ -11,6 +11,8 @@ import {
   SheetContent,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import introJs from 'intro.js';
+import 'intro.js/introjs.css';
 import {
   ArrowLeft,
   Save,
