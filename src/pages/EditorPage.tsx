@@ -950,7 +950,7 @@ const EditorPage: React.FC = () => {
           )}
         </div>
 
-        <Button onClick={saveDocument} disabled={saving} size="sm">
+        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
