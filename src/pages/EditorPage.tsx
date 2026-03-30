@@ -7,6 +7,11 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import {
+  Sheet,
+  SheetContent,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
   ArrowLeft,
   Save,
   Download,
