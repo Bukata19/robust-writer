@@ -182,8 +182,8 @@
 }
 
 /* Editor placeholder descriptions */
-em[data-placeholder="true"] {
-  color: hsl(var(--muted-foreground) / 0.5);
+[data-placeholder="true"] {
+  color: hsl(var(--muted-foreground) / 0.5) !important;
   font-style: italic;
   pointer-events: none;
   user-select: none;
