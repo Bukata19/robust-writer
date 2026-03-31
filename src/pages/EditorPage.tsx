@@ -147,11 +147,27 @@ const EditorPage: React.FC = () => {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const [hasPlaceholders, setHasPlaceholders] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     fetchDocument();
   }, [id]);
+
+  // Remove placeholder <em> tags on first user interaction
+  const clearPlaceholders = useCallback(() => {
+    if (!hasPlaceholders || !editorRef.current) return;
+    const placeholders = editorRef.current.querySelectorAll('em[data-placeholder="true"]');
+    placeholders.forEach((em) => {
+      const parent = em.parentElement;
+      em.remove();
+      // If the parent paragraph is now empty, add a <br> so the cursor can land there
+      if (parent && !parent.textContent?.trim() && parent.tagName === 'P') {
+        parent.innerHTML = '<br>';
+      }
+    });
+    setHasPlaceholders(false);
+  }, [hasPlaceholders]);
 
   const fetchDocument = async () => {
     const { data, error } = await supabase
