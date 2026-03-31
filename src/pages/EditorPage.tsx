@@ -197,7 +197,7 @@ const EditorPage: React.FC = () => {
         if (data.content && typeof data.content === 'string') {
           editorRef.current.innerHTML = data.content;
           // Check if loaded content still has placeholders
-          setHasPlaceholders(editorRef.current.querySelectorAll('em[data-placeholder="true"]').length > 0);
+          setHasPlaceholders(editorRef.current.querySelectorAll('[data-placeholder="true"]').length > 0);
         } else if (!data.content) {
           editorRef.current.innerHTML = templates[data.doc_type];
           setHasPlaceholders(true);
