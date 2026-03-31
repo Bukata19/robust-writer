@@ -115,6 +115,7 @@ const EditorPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // Sidebars
   const [chatOpen, setChatOpen] = useState(false);
@@ -197,7 +198,7 @@ const EditorPage: React.FC = () => {
         if (data.content && typeof data.content === 'string') {
           editorRef.current.innerHTML = data.content;
           // Check if loaded content still has placeholders
-          setHasPlaceholders(editorRef.current.querySelectorAll('em[data-placeholder="true"]').length > 0);
+          setHasPlaceholders(editorRef.current.querySelectorAll('[data-placeholder="true"]').length > 0);
         } else if (!data.content) {
           editorRef.current.innerHTML = templates[data.doc_type];
           setHasPlaceholders(true);
@@ -247,6 +248,18 @@ const EditorPage: React.FC = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, [saveDocument, id]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportMenuOpen]);
 
   // Update word count on every keystroke
   const updateWordCount = () => {
@@ -951,7 +964,7 @@ const EditorPage: React.FC = () => {
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap">{wordCount} words</span>
 
         {/* Export dropdown */}
-        <div className="relative">
+        <div className="relative" ref={exportMenuRef}>
           <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn">
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1">Export</span>
@@ -991,14 +1004,14 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas — always takes remaining space */}
-        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-4 sm:py-8 px-2 sm:px-4">
+        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-6 sm:py-10 px-3 sm:px-6">
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             onInput={updateWordCount}
             onKeyDown={clearPlaceholders}
-            className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-sm max-w-none focus:outline-none"
+            className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-1 focus:ring-primary/30"
             data-intro-id="editor-canvas"
             style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8, fontSize: '14px' }}
           />
@@ -1022,12 +1035,12 @@ const EditorPage: React.FC = () => {
 
       {/* Mobile: Bottom toolbar with formatting + AI tools */}
       {isMobile && (
-        <div className="border-t border-border bg-card flex items-center px-1 py-1 gap-0.5 shrink-0 overflow-x-auto">
-          <div data-intro-id="format-toolbar">
+        <div className="border-t border-border bg-card flex items-center px-1 py-1.5 gap-0.5 shrink-0 overflow-x-auto scrollbar-dark">
+          <div data-intro-id="format-toolbar" className="flex items-center gap-0.5 shrink-0">
             {formatButtons}
           </div>
           <div className="w-px h-6 bg-border mx-1 shrink-0" />
-          <div data-intro-id="ai-tools">
+          <div data-intro-id="ai-tools" className="flex items-center gap-0.5 shrink-0">
             {aiToolButtons}
           </div>
         </div>
