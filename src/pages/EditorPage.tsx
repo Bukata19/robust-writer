@@ -991,6 +991,7 @@ const EditorPage: React.FC = () => {
             contentEditable
             suppressContentEditableWarning
             onInput={updateWordCount}
+            onKeyDown={clearPlaceholders}
             className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-sm max-w-none focus:outline-none"
             data-intro-id="editor-canvas"
             style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8, fontSize: '14px' }}
