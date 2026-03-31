@@ -157,13 +157,19 @@ const EditorPage: React.FC = () => {
   // Remove placeholder <em> tags on first user interaction
   const clearPlaceholders = useCallback(() => {
     if (!hasPlaceholders || !editorRef.current) return;
-    const placeholders = editorRef.current.querySelectorAll('em[data-placeholder="true"]');
-    placeholders.forEach((em) => {
-      const parent = em.parentElement;
-      em.remove();
-      // If the parent paragraph is now empty, add a <br> so the cursor can land there
-      if (parent && !parent.textContent?.trim() && parent.tagName === 'P') {
-        parent.innerHTML = '<br>';
+    const allPlaceholders = editorRef.current.querySelectorAll('[data-placeholder="true"]');
+    allPlaceholders.forEach((el) => {
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'em') {
+        const parent = el.parentElement;
+        el.remove();
+        if (parent && !parent.textContent?.trim() && parent.tagName === 'P') {
+          parent.innerHTML = '<br>';
+        }
+      } else {
+        // Headings: clear text content but keep the element so structure remains
+        el.innerHTML = '<br>';
+        el.removeAttribute('data-placeholder');
       }
     });
     setHasPlaceholders(false);
