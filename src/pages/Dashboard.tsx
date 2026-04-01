@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import SettingsDrawer from '@/components/SettingsDrawer';
 import {
   Plus,
-  LogOut,
   FileText,
   BookOpen,
   File,
@@ -14,6 +15,8 @@ import {
   Trash2,
   Clock,
   ShieldCheck,
+  Settings,
+  Bot,
 } from 'lucide-react';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
@@ -27,27 +30,28 @@ interface Document {
 }
 
 const docTypeConfig: Record<DocType, { label: string; icon: React.ReactNode; color: string }> = {
-  essay: { label: 'Essay', icon: <FileText className="w-4 h-4" />, color: 'text-teal' },
+  essay: { label: 'Essay', icon: <FileText className="w-4 h-4" />, color: 'text-primary' },
   research_paper: { label: 'Research Paper', icon: <BookOpen className="w-4 h-4" />, color: 'text-primary' },
-  report: { label: 'Report', icon: <File className="w-4 h-4" />, color: 'text-slate' },
+  report: { label: 'Report', icon: <File className="w-4 h-4" />, color: 'text-muted-foreground' },
   general: { label: 'General', icon: <File className="w-4 h-4" />, color: 'text-muted-foreground' },
 };
 
 const getPlagiarismBadge = (score: number | null) => {
-  // Don't show badge for null or 0 (unchecked documents)
   if (score === null || score === 0) return null;
-  if (score <= 15) return { label: `${score}% Clean`, className: 'bg-teal/20 text-teal' };
+  if (score <= 15) return { label: `${score}% Clean`, className: 'bg-primary/20 text-primary' };
   if (score <= 40) return { label: `${score}% Warning`, className: 'bg-yellow-500/20 text-yellow-400' };
   return { label: `${score}% High Risk`, className: 'bg-destructive/20 text-destructive' };
 };
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<DocType | 'all'>('all');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -99,24 +103,36 @@ const Dashboard: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
+  const isCompact = settings.cardDensity === 'compact';
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-enter">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-md">
               <Terminal className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-foreground">RobAssister</span>
+            <span className="font-display font-bold text-foreground text-lg tracking-tight">RobAssister</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="w-4 h-4 mr-1" /> Sign Out
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} title="Settings">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Hero Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-display font-bold gradient-hero mb-2">
+            Welcome back
+          </h1>
+          <p className="text-muted-foreground text-sm">Create, edit, and polish your documents with AI</p>
+        </div>
+
         {/* New Document */}
         <div className="mb-8">
           <h2 className="text-lg font-display font-semibold text-foreground mb-4">New Document</h2>
@@ -127,7 +143,7 @@ const Dashboard: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => createDocument(type)}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-all group"
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-all group card-hover-glow btn-glow"
                 >
                   <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                     <Plus className="w-5 h-5 text-primary" />
@@ -149,17 +165,17 @@ const Dashboard: React.FC = () => {
             placeholder="Search documents..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-[160px] bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 min-w-[160px] bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
           />
           <div className="flex gap-1 flex-wrap">
             {(['all', 'essay', 'research_paper', 'report', 'general'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                   filterType === type
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
                 }`}
               >
                 {type === 'all' ? 'All' : type === 'research_paper' ? 'Research' : type.charAt(0).toUpperCase() + type.slice(1)}
@@ -171,13 +187,20 @@ const Dashboard: React.FC = () => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 rounded-xl bg-card border border-border animate-pulse" />
+              <div key={i} className={`${isCompact ? 'h-24' : 'h-32'} rounded-xl skeleton-shimmer`} />
             ))}
           </div>
         ) : filteredDocuments.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
-            <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>{search || filterType !== 'all' ? 'No documents match your search.' : 'No documents yet. Create one above!'}</p>
+            <div className="bounce-gentle inline-block mb-4">
+              <Bot className="w-16 h-16 mx-auto text-primary/40" />
+            </div>
+            <p className="text-lg font-medium text-foreground mb-1">
+              {search || filterType !== 'all' ? 'No matches found' : 'No documents yet'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {search || filterType !== 'all' ? 'Try adjusting your search or filters.' : 'Create your first document above to get started!'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -188,7 +211,7 @@ const Dashboard: React.FC = () => {
                 <div
                   key={doc.id}
                   onClick={() => navigate(`/editor/${doc.id}`)}
-                  className="bg-card border border-border rounded-xl p-4 hover:border-primary/40 transition-all cursor-pointer group animate-fade-in"
+                  className={`bg-card border border-border rounded-xl ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -225,9 +248,10 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </main>
+
+      <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
 
 export default Dashboard;
-  
