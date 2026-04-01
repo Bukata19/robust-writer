@@ -13,7 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
@@ -56,26 +55,34 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are an academic integrity analyzer. Analyze the provided text for potential plagiarism and originality concerns.
+    const systemPrompt = `You are an expert academic integrity and originality analyzer. Analyze the provided text for potential plagiarism and originality concerns with nuance and precision.
 
-You MUST respond using the "plagiarism_report" tool. Analyze the text thoroughly and provide:
+You MUST respond using the "plagiarism_report" tool. Analyze the text thoroughly across MULTIPLE dimensions:
 
-1. An overall risk score from 0-100 (0 = fully original, 100 = likely plagiarized)
-2. A list of flagged passages with specific concerns
+**Analysis Dimensions:**
+1. **Writing Style Consistency** — Does the tone, vocabulary level, and voice remain consistent throughout? Sudden shifts in sophistication or style may indicate copied sections.
+2. **Sentence Structure Variety** — Original writing tends to have natural variation in sentence length and structure. Repetitive or overly uniform patterns suggest formulaic or generated content.
+3. **Vocabulary Naturalness** — Look for unnaturally sophisticated vocabulary that doesn't match the overall writing level, or overly generic "filler" phrasing typical of AI-generated text.
+4. **Transition Patterns** — Original writers use diverse transitions. Overuse of "Furthermore," "Moreover," "In conclusion" etc. without variety suggests templated writing.
+5. **Specificity & Personal Voice** — Original writing contains specific examples, personal perspective, and unique observations. Generic, surface-level treatment of topics is a red flag.
+6. **Claim Substantiation** — Factual claims without citations or attribution in academic writing suggest unattributed borrowing.
 
-Scoring guidelines:
-- 0-15: Clean — text appears original and well-written
-- 16-40: Low risk — minor concerns, possibly common phrasing
-- 41-70: Moderate risk — several passages seem derivative or overly formulaic
-- 71-100: High risk — text shows strong indicators of being copied or AI-generated without personalization
+**Scoring Guidelines (be precise, not inflated):**
+- 0-15: Clean — text shows strong originality markers: consistent voice, varied structure, natural vocabulary, specific examples
+- 16-40: Low risk — mostly original with minor concerns (a few common phrases or slightly formulaic sections)
+- 41-70: Moderate risk — multiple passages seem derivative, noticeable style inconsistencies, or heavily formulaic structure
+- 71-100: High risk — strong indicators of copying, AI generation without personalization, or significant unattributed content
 
-For each flagged passage, identify:
-- The exact text excerpt (10-50 words)
-- The type of concern: "common_phrasing", "formulaic_structure", "ai_generated", "uncited_claim", "style_inconsistency"
-- A brief reason explaining the concern
-- A severity: "low", "medium", or "high"
+**Important:** Be fair and calibrated. Academic writing naturally contains some common phrases and discipline-specific terminology. Focus on PATTERNS of unoriginality, not isolated common expressions. Give credit where the writing demonstrates genuine thought and voice.
 
-Be thorough but fair. Academic writing naturally contains some common phrases. Focus on passages that genuinely seem unoriginal.`;
+For each flagged passage:
+- Identify the exact excerpt (10-50 words)
+- Classify the concern type
+- Explain the specific concern clearly
+- Rate severity accurately
+- Provide ONE actionable suggestion to improve that specific passage
+
+Also identify 1-2 things the writing does well in terms of originality (even in high-risk texts, find something positive).`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -108,6 +115,11 @@ Be thorough but fair. Academic writing naturally contains some common phrases. F
                       type: "string",
                       description: "Brief overall assessment of the text's originality (1-3 sentences)",
                     },
+                    originality_strengths: {
+                      type: "array",
+                      description: "1-2 things the writing does well in terms of originality",
+                      items: { type: "string" },
+                    },
                     flagged_passages: {
                       type: "array",
                       items: {
@@ -135,13 +147,17 @@ Be thorough but fair. Academic writing naturally contains some common phrases. F
                             type: "string",
                             enum: ["low", "medium", "high"],
                           },
+                          suggestion: {
+                            type: "string",
+                            description: "One actionable tip to fix or improve this specific passage",
+                          },
                         },
-                        required: ["excerpt", "concern_type", "reason", "severity"],
+                        required: ["excerpt", "concern_type", "reason", "severity", "suggestion"],
                         additionalProperties: false,
                       },
                     },
                   },
-                  required: ["overall_score", "summary", "flagged_passages"],
+                  required: ["overall_score", "summary", "originality_strengths", "flagged_passages"],
                   additionalProperties: false,
                 },
               },
