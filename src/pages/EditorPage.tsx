@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import PlagiarismPanel from '@/components/PlagiarismPanel';
 import {
   Sheet,
   SheetContent,
@@ -34,9 +37,6 @@ import {
   Send,
   Loader2,
   Check,
-  AlertTriangle,
-  Eye,
-  EyeOff,
   XCircle,
   FileText,
   FileDown,
@@ -103,10 +103,22 @@ const templates: Record<DocType, string> = {
 <p><em data-placeholder="true">Start writing here...</em></p>`,
 };
 
+const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode }> = ({ onClick, title, icon }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button variant="ghost" size="icon" onClick={onClick} className="scale-click hover:bg-primary/10 hover:text-primary transition-all">
+        {icon}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent side="right" className="text-xs">{title}</TooltipContent>
+  </Tooltip>
+);
+
 const EditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useSettings();
   const isMobile = useIsMobile();
   const [doc, setDoc] = useState<DocumentData | null>(null);
   const [title, setTitle] = useState('');
@@ -123,7 +135,7 @@ const EditorPage: React.FC = () => {
   const [showPlagiarism, setShowPlagiarism] = useState(false);
 
   // Humanizer
-  const [humanizerIntensity, setHumanizerIntensity] = useState<'subtle' | 'moderate' | 'full'>('moderate');
+  const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
   const [humanizing, setHumanizing] = useState(false);
   const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string } | null>(null);
 
@@ -137,7 +149,9 @@ const EditorPage: React.FC = () => {
       concern_type: string;
       reason: string;
       severity: string;
+      suggestion?: string;
     }>;
+    originality_strengths?: string[];
   } | null>(null);
   const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
 
@@ -150,12 +164,18 @@ const EditorPage: React.FC = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [hasPlaceholders, setHasPlaceholders] = useState(false);
 
+  // Apply chat default state from settings
+  useEffect(() => {
+    if (settings.chatDefaultState === 'open') {
+      setChatOpen(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     fetchDocument();
   }, [id]);
 
-  // Remove placeholder <em> tags on first user interaction
   const clearPlaceholders = useCallback(() => {
     if (!hasPlaceholders || !editorRef.current) return;
     const allPlaceholders = editorRef.current.querySelectorAll('[data-placeholder="true"]');
@@ -168,7 +188,6 @@ const EditorPage: React.FC = () => {
           parent.innerHTML = '<br>';
         }
       } else {
-        // Headings: clear text content but keep the element so structure remains
         el.innerHTML = '<br>';
         el.removeAttribute('data-placeholder');
       }
@@ -197,13 +216,11 @@ const EditorPage: React.FC = () => {
       if (editorRef.current) {
         if (data.content && typeof data.content === 'string') {
           editorRef.current.innerHTML = data.content;
-          // Check if loaded content still has placeholders
           setHasPlaceholders(editorRef.current.querySelectorAll('[data-placeholder="true"]').length > 0);
         } else if (!data.content) {
           editorRef.current.innerHTML = templates[data.doc_type];
           setHasPlaceholders(true);
         }
-        // Initialise word count after content loads
         const text = editorRef.current.innerText.trim();
         setWordCount(text ? text.split(/\s+/).filter(Boolean).length : 0);
       }
@@ -239,15 +256,16 @@ const EditorPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [saveDocument, humanizerIntensity]);
 
-  // Autosave every 30 seconds
+  // Autosave
   useEffect(() => {
+    if (!settings.autosaveEnabled) return;
     const interval = setInterval(() => {
       if (editorRef.current && id) {
         saveDocument();
       }
-    }, 30000);
+    }, settings.autosaveInterval * 1000);
     return () => clearInterval(interval);
-  }, [saveDocument, id]);
+  }, [saveDocument, id, settings.autosaveEnabled, settings.autosaveInterval]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -261,7 +279,6 @@ const EditorPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [exportMenuOpen]);
 
-  // Update word count on every keystroke
   const updateWordCount = () => {
     if (editorRef.current) {
       const text = editorRef.current.innerText.trim();
@@ -282,7 +299,6 @@ const EditorPage: React.FC = () => {
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       const element = editorRef.current.cloneNode(true) as HTMLElement;
-      // Apply white background for PDF
       element.style.background = '#ffffff';
       element.style.padding = '40px';
       element.style.color = '#1a1a1a';
@@ -310,7 +326,7 @@ const EditorPage: React.FC = () => {
     setExporting(true);
     setExportMenuOpen(false);
     try {
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType: DocAlign } = await import('docx');
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
       const { saveAs } = await import('file-saver');
 
       const children: any[] = [];
@@ -454,7 +470,6 @@ const EditorPage: React.FC = () => {
   const acceptHumanized = () => {
     if (!humanizerResult || !editorRef.current) return;
     const html = editorRef.current.innerHTML;
-    // Simple replace of the original text
     const escaped = humanizerResult.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(escaped, 'g');
     editorRef.current.innerHTML = html.replace(regex, humanizerResult.humanized);
@@ -490,7 +505,6 @@ const EditorPage: React.FC = () => {
       setPlagiarismReport(data);
       setPlagiarismHighlightsVisible(true);
 
-      // Save score to DB
       if (id) {
         await supabase
           .from('documents')
@@ -508,24 +522,6 @@ const EditorPage: React.FC = () => {
     } finally {
       setPlagiarismRunning(false);
     }
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score <= 15) return 'text-teal';
-    if (score <= 40) return 'text-yellow-400';
-    return 'text-destructive';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score <= 15) return 'bg-teal/20';
-    if (score <= 40) return 'bg-yellow-500/20';
-    return 'bg-destructive/20';
-  };
-
-  const getSeverityColor = (severity: string) => {
-    if (severity === 'high') return 'border-destructive/60 bg-destructive/10';
-    if (severity === 'medium') return 'border-yellow-500/60 bg-yellow-500/10';
-    return 'border-muted-foreground/30 bg-muted/50';
   };
 
   // ===== CHAT =====
@@ -620,7 +616,6 @@ const EditorPage: React.FC = () => {
         }
       }
 
-      // Flush remaining
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split('\n')) {
           if (!raw) continue;
@@ -650,7 +645,7 @@ const EditorPage: React.FC = () => {
     }
   }, [chatMessages]);
 
-  // Intro.js onboarding tour — only on first visit
+  // Intro.js onboarding tour
   useEffect(() => {
     if (loading) return;
     const TOUR_KEY = 'rb_editor_tour_done';
@@ -682,7 +677,7 @@ const EditorPage: React.FC = () => {
           },
           {
             element: '[data-intro-id="save-btn"]',
-            intro: 'Save your work anytime. Documents also auto-save every 30 seconds. Shortcut: Ctrl+S.',
+            intro: 'Save your work anytime. Documents also auto-save. Shortcut: Ctrl+S.',
             position: 'bottom',
           },
         ],
@@ -717,9 +712,12 @@ const EditorPage: React.FC = () => {
     setShowPlagiarism(false);
   };
 
-  // ===== Sidebar content (shared between mobile Sheet & desktop inline) =====
+  const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
+  const canvasMaxW = settings.canvasWidth === 'full' ? 'max-w-none' : 'max-w-[816px]';
+
+  // ===== Sidebar content =====
   const sidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full glass-panel">
       {/* Chat Sidebar */}
       {chatOpen && (
         <>
@@ -732,13 +730,13 @@ const EditorPage: React.FC = () => {
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-dark">
             {chatMessages.length === 0 && (
               <p className="text-xs text-muted-foreground text-center mt-8">Ask me anything about your document…</p>
             )}
             {chatMessages.map((m, i) => (
-              <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
-                <div className={`inline-block max-w-[90%] rounded-lg px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+              <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'} animate-fade-in`}>
+                <div className={`inline-block max-w-[90%] rounded-xl px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
                   {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
                 </div>
               </div>
@@ -755,9 +753,9 @@ const EditorPage: React.FC = () => {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
               placeholder="Type a message…"
-              className="flex-1 text-sm"
+              className="flex-1 text-sm focus-glow"
             />
-            <Button size="icon" onClick={sendChatMessage} disabled={chatLoading}>
+            <Button size="icon" onClick={sendChatMessage} disabled={chatLoading} className="btn-glow">
               <Send className="w-4 h-4" />
             </Button>
           </div>
@@ -776,7 +774,7 @@ const EditorPage: React.FC = () => {
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <div className="p-3 space-y-4 overflow-y-auto flex-1">
+          <div className="p-3 space-y-4 overflow-y-auto flex-1 scrollbar-dark">
             <div>
               <p className="text-xs text-muted-foreground mb-2">Intensity</p>
               <div className="flex gap-1">
@@ -784,9 +782,9 @@ const EditorPage: React.FC = () => {
                   <button
                     key={level}
                     onClick={() => setHumanizerIntensity(level)}
-                    className={`flex-1 py-1.5 text-xs rounded-md capitalize transition-colors ${
+                    className={`flex-1 py-1.5 text-xs rounded-lg capitalize transition-all ${
                       humanizerIntensity === level
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-primary text-primary-foreground shadow-md'
                         : 'bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -795,24 +793,24 @@ const EditorPage: React.FC = () => {
                 ))}
               </div>
             </div>
-            <Button onClick={handleHumanize} disabled={humanizing} className="w-full" size="sm">
+            <Button onClick={handleHumanize} disabled={humanizing} className="w-full btn-glow" size="sm">
               {humanizing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
               {humanizing ? 'Humanizing…' : 'Humanize Selection'}
             </Button>
             <p className="text-xs text-muted-foreground">Select text in the editor, then click above. Shortcut: Ctrl+H</p>
 
             {humanizerResult && (
-              <div className="space-y-3 border-t border-border pt-3">
+              <div className="space-y-3 border-t border-border pt-3 animate-fade-in">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Original</p>
-                  <p className="text-xs bg-muted p-2 rounded line-through text-muted-foreground">{humanizerResult.original}</p>
+                  <p className="text-xs bg-muted p-2 rounded-lg line-through text-muted-foreground">{humanizerResult.original}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-primary mb-1">Humanized</p>
-                  <p className="text-xs bg-primary/10 p-2 rounded text-foreground">{humanizerResult.humanized}</p>
+                  <p className="text-xs bg-primary/10 p-2 rounded-lg text-foreground border border-primary/20">{humanizerResult.humanized}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={acceptHumanized} className="flex-1">
+                  <Button size="sm" onClick={acceptHumanized} className="flex-1 btn-glow">
                     <Check className="w-3 h-3 mr-1" /> Accept
                   </Button>
                   <Button size="sm" variant="outline" onClick={rejectHumanized} className="flex-1">
@@ -827,59 +825,14 @@ const EditorPage: React.FC = () => {
 
       {/* Plagiarism Sidebar */}
       {showPlagiarism && (
-        <>
-          <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Plagiarism Check</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {plagiarismReport && (
-                <Button variant="ghost" size="icon" onClick={() => setPlagiarismHighlightsVisible(!plagiarismHighlightsVisible)} title="Toggle highlights">
-                  {plagiarismHighlightsVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => setShowPlagiarism(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="p-3 space-y-4 overflow-y-auto flex-1">
-            <Button onClick={runPlagiarismCheck} disabled={plagiarismRunning} className="w-full" size="sm">
-              {plagiarismRunning ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <ShieldCheck className="w-4 h-4 mr-1" />}
-              {plagiarismRunning ? 'Analyzing…' : 'Run Plagiarism Check'}
-            </Button>
-
-            {plagiarismReport && (
-              <div className="space-y-4">
-                <div className={`rounded-lg p-4 text-center ${getScoreBg(plagiarismReport.overall_score)}`}>
-                  <p className={`text-3xl font-bold ${getScoreColor(plagiarismReport.overall_score)}`}>{plagiarismReport.overall_score}%</p>
-                  <p className="text-xs text-muted-foreground mt-1">Risk Score</p>
-                </div>
-                <p className="text-xs text-muted-foreground">{plagiarismReport.summary}</p>
-                {plagiarismReport.flagged_passages.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground">Flagged Passages ({plagiarismReport.flagged_passages.length})</p>
-                    {plagiarismReport.flagged_passages.map((fp, i) => (
-                      <div key={i} className={`border rounded-lg p-2 space-y-1 ${getSeverityColor(fp.severity)}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-medium uppercase text-muted-foreground">{fp.concern_type.replace('_', ' ')}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                            fp.severity === 'high' ? 'bg-destructive/20 text-destructive' :
-                            fp.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
-                            'bg-muted text-muted-foreground'
-                          }`}>{fp.severity}</span>
-                        </div>
-                        <p className="text-xs text-foreground italic">"{fp.excerpt}"</p>
-                        <p className="text-[11px] text-muted-foreground">{fp.reason}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </>
+        <PlagiarismPanel
+          report={plagiarismReport}
+          running={plagiarismRunning}
+          highlightsVisible={plagiarismHighlightsVisible}
+          onRun={runPlagiarismCheck}
+          onToggleHighlights={() => setPlagiarismHighlightsVisible(!plagiarismHighlightsVisible)}
+          onClose={() => setShowPlagiarism(false)}
+        />
       )}
     </div>
   );
@@ -887,100 +840,97 @@ const EditorPage: React.FC = () => {
   // ===== AI tool buttons =====
   const aiToolButtons = (
     <>
-      <Button
-        variant={chatOpen ? 'default' : 'ghost'}
-        size="icon"
-        onClick={() => { setChatOpen(!chatOpen); setHumanizerOpen(false); setShowPlagiarism(false); }}
-        title="AI Chat"
-      >
-        <MessageCircle className="w-4 h-4" />
-      </Button>
-      <Button
-        variant={humanizerOpen ? 'default' : 'ghost'}
-        size="icon"
-        onClick={() => { setHumanizerOpen(!humanizerOpen); setChatOpen(false); setShowPlagiarism(false); }}
-        title="Humanizer"
-      >
-        <Sparkles className="w-4 h-4" />
-      </Button>
-      <Button
-        variant={showPlagiarism ? 'default' : 'ghost'}
-        size="icon"
-        onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); }}
-        title="Plagiarism Check"
-      >
-        <ShieldCheck className="w-4 h-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={chatOpen ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => { setChatOpen(!chatOpen); setHumanizerOpen(false); setShowPlagiarism(false); }}
+            className="scale-click"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">AI Chat</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={humanizerOpen ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => { setHumanizerOpen(!humanizerOpen); setChatOpen(false); setShowPlagiarism(false); }}
+            className="scale-click"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Humanizer</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={showPlagiarism ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); }}
+            className="scale-click"
+          >
+            <ShieldCheck className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Plagiarism Check</TooltipContent>
+      </Tooltip>
     </>
   );
 
   // ===== Formatting toolbar buttons =====
   const formatButtons = (
     <>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('bold')} title="Bold">
-        <Bold className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('italic')} title="Italic">
-        <Italic className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('underline')} title="Underline">
-        <Underline className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H1')} title="Heading 1">
-        <Heading1 className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('formatBlock', 'H2')} title="Heading 2">
-        <Heading2 className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('insertUnorderedList')} title="Bullet List">
-        <List className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('insertOrderedList')} title="Numbered List">
-        <ListOrdered className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('justifyLeft')} title="Align Left">
-        <AlignLeft className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => execCommand('justifyCenter')} title="Align Center">
-        <AlignCenter className="w-4 h-4" />
-      </Button>
+      <ToolbarButton onClick={() => execCommand('bold')} title="Bold" icon={<Bold className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('italic')} title="Italic" icon={<Italic className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('underline')} title="Underline" icon={<Underline className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('formatBlock', 'H1')} title="Heading 1" icon={<Heading1 className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('formatBlock', 'H2')} title="Heading 2" icon={<Heading2 className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('insertUnorderedList')} title="Bullet List" icon={<List className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('insertOrderedList')} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('justifyLeft')} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => execCommand('justifyCenter')} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} />
     </>
   );
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-screen bg-background flex flex-col overflow-hidden page-enter">
       {/* Top Bar */}
-      <header className="h-14 border-b border-border bg-card flex items-center px-3 gap-2 shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="scale-click">
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-foreground font-medium text-lg focus:outline-none truncate"
+          className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate"
         />
 
-        <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap">{wordCount} words</span>
+        <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
         {/* Export dropdown */}
         <div className="relative" ref={exportMenuRef}>
-          <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn">
+          <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn" className="btn-glow">
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1">Export</span>
             <ChevronDown className="w-3 h-3 ml-1" />
           </Button>
           {exportMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px]">
+            <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 min-w-[160px] animate-scale-in overflow-hidden">
               <button
                 onClick={exportToPdf}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors rounded-t-lg"
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
               >
                 <FileText className="w-4 h-4" /> Export as PDF
               </button>
               <button
                 onClick={exportToDocx}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors rounded-b-lg"
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
               >
                 <FileDown className="w-4 h-4" /> Export as DOCX
               </button>
@@ -988,7 +938,7 @@ const EditorPage: React.FC = () => {
           )}
         </div>
 
-        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn">
+        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
@@ -998,34 +948,34 @@ const EditorPage: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop: Left formatting toolbar */}
         {!isMobile && (
-          <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto">
+          <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto scrollbar-dark">
             {formatButtons}
           </div>
         )}
 
-        {/* Editor Canvas — always takes remaining space */}
-        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-6 sm:py-10 px-3 sm:px-6">
+        {/* Editor Canvas */}
+        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-6 sm:py-10 px-3 sm:px-6 scrollbar-dark">
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             onInput={updateWordCount}
             onKeyDown={clearPlaceholders}
-            className="bg-card w-full max-w-[816px] min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-sm border border-border text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className={`bg-card w-full ${canvasMaxW} min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-lg border border-border text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow`}
             data-intro-id="editor-canvas"
-            style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8, fontSize: '14px' }}
+            style={{ fontFamily: 'Georgia, serif', lineHeight, fontSize: 'var(--editor-font-size)' }}
           />
         </div>
 
         {/* Desktop: Right AI tab bar + inline sidebar */}
         {!isMobile && (
           <>
-            <div data-intro-id="ai-tools" className="w-10 border-l border-border bg-card flex flex-col items-center py-3 gap-2 shrink-0">
+            <div data-intro-id="ai-tools" className="w-10 border-l border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-2 shrink-0">
               {aiToolButtons}
             </div>
 
             {activeSidebar && (
-              <div className="w-80 border-l border-border bg-card flex flex-col shrink-0 overflow-hidden">
+              <div className="w-80 border-l border-border bg-card flex flex-col shrink-0 overflow-hidden animate-slide-in-right">
                 {sidebarContent}
               </div>
             )}
@@ -1033,9 +983,9 @@ const EditorPage: React.FC = () => {
         )}
       </div>
 
-      {/* Mobile: Bottom toolbar with formatting + AI tools */}
+      {/* Mobile: Bottom toolbar */}
       {isMobile && (
-        <div className="border-t border-border bg-card flex items-center px-1 py-1.5 gap-0.5 shrink-0 overflow-x-auto scrollbar-dark">
+        <div className="border-t border-border bg-card/80 backdrop-blur-sm flex items-center px-1 py-1.5 gap-0.5 shrink-0 overflow-x-auto scrollbar-dark">
           <div data-intro-id="format-toolbar" className="flex items-center gap-0.5 shrink-0">
             {formatButtons}
           </div>
