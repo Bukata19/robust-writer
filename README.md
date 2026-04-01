@@ -26,7 +26,7 @@ RobAssister is a full-stack AI writing assistant built for students who need to 
 - Inline placeholder guidance for each document section
 
 ### 🧠 AI Writing Assistant
-- Real-time AI chat panel powered by Claude (via Supabase Edge Functions)
+- Real-time AI chat panel powered by Gemini 3.1 Pro (via Supabase Edge Functions)
 - Context-aware suggestions based on your current document content
 - Ask questions, brainstorm ideas, request rewrites, or get outline help
 - Full conversation history maintained per session
