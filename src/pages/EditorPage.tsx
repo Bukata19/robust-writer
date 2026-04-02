@@ -982,6 +982,8 @@ const EditorPage: React.FC = () => {
       <ToolbarButton onClick={openOutline} title="AI Outline" icon={<ListTree className="w-4 h-4" />} />
     </>
   );
+
+  return (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
       <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : ''}`}>
