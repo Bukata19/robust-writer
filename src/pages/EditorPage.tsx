@@ -855,6 +855,21 @@ const EditorPage: React.FC = () => {
           onClose={() => setShowPlagiarism(false)}
         />
       )}
+
+      {/* Version History Sidebar */}
+      {showHistory && id && (
+        <VersionHistoryPanel
+          documentId={id}
+          onRestore={(content, restoredTitle) => {
+            if (editorRef.current) {
+              editorRef.current.innerHTML = content;
+              setTitle(restoredTitle);
+              updateWordCount();
+            }
+          }}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 
