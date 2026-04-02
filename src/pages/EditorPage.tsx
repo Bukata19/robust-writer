@@ -44,6 +44,9 @@ import {
   FileDown,
   ChevronDown,
   History,
+  Maximize,
+  Minimize,
+  ListTree,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
