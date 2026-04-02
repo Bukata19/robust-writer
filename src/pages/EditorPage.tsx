@@ -231,17 +231,27 @@ const EditorPage: React.FC = () => {
   };
 
   const saveDocument = useCallback(async () => {
-    if (!id || !editorRef.current) return;
+    if (!id || !editorRef.current || !user) return;
     setSaving(true);
     const content = editorRef.current.innerHTML;
     const { error } = await supabase
       .from('documents')
       .update({ title, content: content as unknown as Json })
       .eq('id', id);
-    if (error) toast.error('Failed to save');
-    else toast.success('Document saved!');
+    if (error) {
+      toast.error('Failed to save');
+    } else {
+      // Snapshot version
+      await supabase.from('document_versions').insert({
+        document_id: id,
+        user_id: user.id,
+        title,
+        content: content as unknown as Json,
+      });
+      toast.success('Document saved!');
+    }
     setSaving(false);
-  }, [id, title]);
+  }, [id, title, user]);
 
   // Keyboard shortcuts
   useEffect(() => {
