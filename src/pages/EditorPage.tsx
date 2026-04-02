@@ -272,10 +272,13 @@ const EditorPage: React.FC = () => {
         e.preventDefault();
         handleHumanize();
       }
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [saveDocument, humanizerIntensity]);
+  }, [saveDocument, humanizerIntensity, focusMode]);
 
   // Autosave
   useEffect(() => {
