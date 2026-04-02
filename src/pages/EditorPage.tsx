@@ -9,10 +9,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
+import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import {
-  Sheet,
-  SheetContent,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerContent,
+} from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import introJs from 'intro.js';
 import 'intro.js/introjs.css';
@@ -41,6 +42,7 @@ import {
   FileText,
   FileDown,
   ChevronDown,
+  History,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -133,6 +135,7 @@ const EditorPage: React.FC = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [humanizerOpen, setHumanizerOpen] = useState(false);
   const [showPlagiarism, setShowPlagiarism] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Humanizer
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
@@ -228,17 +231,27 @@ const EditorPage: React.FC = () => {
   };
 
   const saveDocument = useCallback(async () => {
-    if (!id || !editorRef.current) return;
+    if (!id || !editorRef.current || !user) return;
     setSaving(true);
     const content = editorRef.current.innerHTML;
     const { error } = await supabase
       .from('documents')
       .update({ title, content: content as unknown as Json })
       .eq('id', id);
-    if (error) toast.error('Failed to save');
-    else toast.success('Document saved!');
+    if (error) {
+      toast.error('Failed to save');
+    } else {
+      // Snapshot version
+      await supabase.from('document_versions').insert({
+        document_id: id,
+        user_id: user.id,
+        title,
+        content: content as unknown as Json,
+      });
+      toast.success('Document saved!');
+    }
     setSaving(false);
-  }, [id, title]);
+  }, [id, title, user]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -704,9 +717,17 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : null;
 
   const closeSidebar = () => {
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowPlagiarism(false);
+    setShowHistory(false);
+  };
+
+  const openHistory = () => {
+    setShowHistory(true);
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
@@ -834,6 +855,21 @@ const EditorPage: React.FC = () => {
           onClose={() => setShowPlagiarism(false)}
         />
       )}
+
+      {/* Version History Sidebar */}
+      {showHistory && id && (
+        <VersionHistoryPanel
+          documentId={id}
+          onRestore={(content, restoredTitle) => {
+            if (editorRef.current) {
+              editorRef.current.innerHTML = content;
+              setTitle(restoredTitle);
+              updateWordCount();
+            }
+          }}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 
@@ -938,6 +974,15 @@ const EditorPage: React.FC = () => {
           )}
         </div>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={openHistory} className="scale-click">
+              <History className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Version History</TooltipContent>
+        </Tooltip>
+
         <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
@@ -998,11 +1043,11 @@ const EditorPage: React.FC = () => {
 
       {/* Mobile: Sheet overlay for AI sidebar */}
       {isMobile && (
-        <Sheet open={!!activeSidebar} onOpenChange={(open) => { if (!open) closeSidebar(); }}>
-          <SheetContent side="bottom" className="h-[75vh] p-0 flex flex-col">
+        <Drawer open={!!activeSidebar} onOpenChange={(open) => { if (!open) closeSidebar(); }}>
+          <DrawerContent className="h-[75vh] max-h-[75vh] p-0 flex flex-col">
             {sidebarContent}
-          </SheetContent>
-        </Sheet>
+          </DrawerContent>
+        </Drawer>
       )}
     </div>
   );

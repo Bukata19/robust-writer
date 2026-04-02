@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      document_versions: {
+        Row: {
+          content: Json | null
+          created_at: string
+          document_id: string
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          document_id: string
+          id?: string
+          title?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           content: Json | null
