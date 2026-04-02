@@ -140,6 +140,10 @@ const EditorPage: React.FC = () => {
   const [humanizerOpen, setHumanizerOpen] = useState(false);
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
+
+  // Focus mode
+  const [focusMode, setFocusMode] = useState(false);
 
   // Humanizer
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
