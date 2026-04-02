@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
+import OutlinePanel from '@/components/OutlinePanel';
 import {
   Drawer,
   DrawerContent,
@@ -43,6 +44,9 @@ import {
   FileDown,
   ChevronDown,
   History,
+  Maximize,
+  Minimize,
+  ListTree,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -136,6 +140,10 @@ const EditorPage: React.FC = () => {
   const [humanizerOpen, setHumanizerOpen] = useState(false);
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
+
+  // Focus mode
+  const [focusMode, setFocusMode] = useState(false);
 
   // Humanizer
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
@@ -264,10 +272,13 @@ const EditorPage: React.FC = () => {
         e.preventDefault();
         handleHumanize();
       }
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [saveDocument, humanizerIntensity]);
+  }, [saveDocument, humanizerIntensity, focusMode]);
 
   // Autosave
   useEffect(() => {
@@ -717,13 +728,14 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowHistory(false);
+    setShowOutline(false);
   };
 
   const openHistory = () => {
@@ -731,6 +743,15 @@ const EditorPage: React.FC = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
+    setShowOutline(false);
+  };
+
+  const openOutline = () => {
+    setShowOutline(true);
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowPlagiarism(false);
+    setShowHistory(false);
   };
 
   const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
@@ -870,6 +891,20 @@ const EditorPage: React.FC = () => {
           onClose={() => setShowHistory(false)}
         />
       )}
+
+      {/* Outline Sidebar */}
+      {showOutline && doc && (
+        <OutlinePanel
+          docType={doc.doc_type}
+          onInsert={(html) => {
+            if (editorRef.current) {
+              editorRef.current.innerHTML = html;
+              updateWordCount();
+            }
+          }}
+          onClose={() => setShowOutline(false)}
+        />
+      )}
     </div>
   );
 
@@ -907,13 +942,26 @@ const EditorPage: React.FC = () => {
           <Button
             variant={showPlagiarism ? 'default' : 'ghost'}
             size="icon"
-            onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); }}
+            onClick={() => { setShowPlagiarism(!showPlagiarism); setChatOpen(false); setHumanizerOpen(false); setShowOutline(false); }}
             className="scale-click"
           >
             <ShieldCheck className="w-4 h-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Plagiarism Check</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={showOutline ? 'default' : 'ghost'}
+            size="icon"
+            onClick={openOutline}
+            className="scale-click"
+          >
+            <ListTree className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">AI Outline</TooltipContent>
       </Tooltip>
     </>
   );
@@ -930,13 +978,15 @@ const EditorPage: React.FC = () => {
       <ToolbarButton onClick={() => execCommand('insertOrderedList')} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} />
       <ToolbarButton onClick={() => execCommand('justifyLeft')} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} />
       <ToolbarButton onClick={() => execCommand('justifyCenter')} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} />
+      <div className="w-px h-6 bg-border my-1" />
+      <ToolbarButton onClick={openOutline} title="AI Outline" icon={<ListTree className="w-4 h-4" />} />
     </>
   );
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden page-enter">
+    <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
-      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0">
+      <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : ''}`}>
         <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="scale-click">
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -983,6 +1033,15 @@ const EditorPage: React.FC = () => {
           <TooltipContent>Version History</TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} className="scale-click">
+              {focusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{focusMode ? 'Exit Focus Mode' : 'Focus Mode'}</TooltipContent>
+        </Tooltip>
+
         <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
@@ -990,30 +1049,30 @@ const EditorPage: React.FC = () => {
       </header>
 
       {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
         {/* Desktop: Left formatting toolbar */}
-        {!isMobile && (
+        {!isMobile && !focusMode && (
           <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto scrollbar-dark">
             {formatButtons}
           </div>
         )}
 
         {/* Editor Canvas */}
-        <div className="flex-1 overflow-auto bg-muted/30 flex justify-center py-6 sm:py-10 px-3 sm:px-6 scrollbar-dark">
+        <div className={`flex-1 overflow-auto flex justify-center py-6 sm:py-10 px-3 sm:px-6 scrollbar-dark transition-colors duration-500 ${focusMode ? 'bg-background' : 'bg-muted/30'}`}>
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
             onInput={updateWordCount}
             onKeyDown={clearPlaceholders}
-            className={`bg-card w-full ${canvasMaxW} min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 shadow-lg rounded-lg border border-border text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow`}
+            className={`bg-card w-full ${focusMode ? 'max-w-[720px] border-transparent shadow-none' : canvasMaxW + ' shadow-lg border border-border'} min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 rounded-lg text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-500`}
             data-intro-id="editor-canvas"
             style={{ fontFamily: 'Georgia, serif', lineHeight, fontSize: 'var(--editor-font-size)' }}
           />
         </div>
 
         {/* Desktop: Right AI tab bar + inline sidebar */}
-        {!isMobile && (
+        {!isMobile && !focusMode && (
           <>
             <div data-intro-id="ai-tools" className="w-10 border-l border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-2 shrink-0">
               {aiToolButtons}
@@ -1028,8 +1087,22 @@ const EditorPage: React.FC = () => {
         )}
       </div>
 
+      {/* Focus mode: floating exit button */}
+      {focusMode && (
+        <div className="fixed bottom-6 right-6 z-50 opacity-30 hover:opacity-100 transition-opacity duration-300">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={() => setFocusMode(false)} className="rounded-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <Minimize className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Exit Focus Mode</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
       {/* Mobile: Bottom toolbar */}
-      {isMobile && (
+      {isMobile && !focusMode && (
         <div className="border-t border-border bg-card/80 backdrop-blur-sm flex items-center px-1 py-1.5 gap-0.5 shrink-0 overflow-x-auto scrollbar-dark">
           <div data-intro-id="format-toolbar" className="flex items-center gap-0.5 shrink-0">
             {formatButtons}
