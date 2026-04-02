@@ -9,10 +9,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
+import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import {
-  Sheet,
-  SheetContent,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerContent,
+} from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import introJs from 'intro.js';
 import 'intro.js/introjs.css';
@@ -41,6 +42,7 @@ import {
   FileText,
   FileDown,
   ChevronDown,
+  History,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
