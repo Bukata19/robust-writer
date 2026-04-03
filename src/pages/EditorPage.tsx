@@ -148,6 +148,9 @@ const EditorPage: React.FC = () => {
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
   const [humanizing, setHumanizing] = useState(false);
   const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string } | null>(null);
+  const [wordCountMode, setWordCountMode] = useState<'unchanged' | 'preset' | 'custom'>('unchanged');
+  const [presetWordCount, setPresetWordCount] = useState<number>(500);
+  const [customWordCount, setCustomWordCount] = useState<string>('');
 
   // Plagiarism
   const [plagiarismRunning, setPlagiarismRunning] = useState(false);
@@ -475,8 +478,9 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(true);
 
     try {
+      const twc = wordCountMode === 'preset' ? presetWordCount : wordCountMode === 'custom' ? (parseInt(customWordCount) || null) : null;
       const { data, error } = await supabase.functions.invoke('humanizer', {
-        body: { text: selectedText, intensity: humanizerIntensity },
+        body: { text: selectedText, intensity: humanizerIntensity, docType: doc?.doc_type || 'general', targetWordCount: twc },
       });
 
       if (error) throw error;
@@ -833,6 +837,46 @@ const EditorPage: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Target Word Count</p>
+              <div className="flex gap-1 mb-2">
+                {(['unchanged', 'preset', 'custom'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setWordCountMode(mode)}
+                    className={`flex-1 py-1.5 text-xs rounded-lg capitalize transition-all ${
+                      wordCountMode === mode
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              {wordCountMode === 'preset' && (
+                <select
+                  value={presetWordCount}
+                  onChange={(e) => setPresetWordCount(Number(e.target.value))}
+                  className="w-full text-xs rounded-lg border border-border bg-background text-foreground p-1.5"
+                >
+                  {[250, 500, 750, 1000, 1500, 2000].map((n) => (
+                    <option key={n} value={n}>{n} words</option>
+                  ))}
+                </select>
+              )}
+              {wordCountMode === 'custom' && (
+                <Input
+                  type="number"
+                  placeholder="Enter word count"
+                  value={customWordCount}
+                  onChange={(e) => setCustomWordCount(e.target.value)}
+                  className="h-8 text-xs"
+                  min={50}
+                  max={10000}
+                />
+              )}
             </div>
             <Button onClick={handleHumanize} disabled={humanizing} className="w-full btn-glow" size="sm">
               {humanizing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
