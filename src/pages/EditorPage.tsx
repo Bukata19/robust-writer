@@ -46,7 +46,6 @@ import {
   History,
   Maximize,
   Minimize,
-  FileText,
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
