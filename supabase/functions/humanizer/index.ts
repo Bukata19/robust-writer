@@ -37,7 +37,7 @@ serve(async (req) => {
       );
     }
 
-    const { text, intensity } = await req.json();
+    const { text, intensity, docType, targetWordCount } = await req.json();
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
       return new Response(
@@ -46,9 +46,9 @@ serve(async (req) => {
       );
     }
 
-    if (text.length > 10000) {
+    if (text.length > 25000) {
       return new Response(
-        JSON.stringify({ error: "Text exceeds 10,000 character limit" }),
+        JSON.stringify({ error: "Text exceeds 25,000 character limit" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -58,21 +58,35 @@ serve(async (req) => {
 
     const intensityPrompts: Record<string, string> = {
       subtle:
-        "Make minimal changes to sound slightly more natural. Only adjust 1-2 phrases. Keep the original structure and vocabulary mostly intact.",
+        "Make light, targeted edits to reduce AI-sounding patterns. Replace overused transition words like 'furthermore', 'moreover', 'it is worth noting', 'delve', 'crucial', and 'in conclusion' with more natural alternatives. Vary 2–3 sentence structures. Do not change the overall writing style or vocabulary significantly.",
       moderate:
-        "Rewrite to sound naturally human-written. Vary sentence lengths, use some colloquial transitions, and adjust vocabulary while keeping the same meaning and arguments.",
+        "Rewrite the text to sound naturally human-written. Eliminate all common AI giveaway phrases and patterns. Vary sentence lengths — mix short punchy sentences with longer ones. Use natural transitions instead of formal connectors. Maintain the academic register if the document type is an essay, research paper, or report. Preserve all arguments, facts, and meaning exactly.",
       full:
-        "Completely rewrite in a natural, human voice. Use varied sentence structures, conversational tone where appropriate, personal perspective hints, and natural imperfections while preserving all key points and arguments.",
+        "Completely rewrite in a confident, natural human voice. Aggressively remove all AI writing patterns — robotic phrasing, repetitive structure, overly formal connectors, and filler phrases. Introduce natural sentence rhythm variation, occasional first-person framing where appropriate for the document type, and genuine-sounding transitions. For academic documents maintain a scholarly tone while still sounding human. For general documents allow a more relaxed, personal voice. Preserve every key argument and fact exactly.",
+    };
+
+    const docTypeInstructions: Record<string, string> = {
+      research_paper: "Maintain formal academic register throughout. Do not make the tone conversational.",
+      report: "Maintain formal academic register throughout. Do not make the tone conversational.",
+      essay: "Keep a confident academic tone but allow natural student voice to come through.",
+      general: "A relaxed, natural everyday writing voice is appropriate.",
     };
 
     const level = intensity && intensityPrompts[intensity] ? intensity : "moderate";
+    const dt = docType && docTypeInstructions[docType] ? docType : "general";
+
+    let intensityInstruction = intensityPrompts[level];
+    intensityInstruction += " " + docTypeInstructions[dt];
+
+    if (targetWordCount && typeof targetWordCount === "number" && targetWordCount > 0) {
+      intensityInstruction += ` The output must be approximately ${targetWordCount} words long. Expand or compress the content naturally to meet this target while preserving all key arguments and meaning.`;
+    }
 
     const systemPrompt = `You are a text humanizer. Your job is to rewrite academic/AI-generated text to sound more naturally human-written.
 
 Rules:
-- ${intensityPrompts[level]}
+- ${intensityInstruction}
 - Preserve the original meaning, facts, and arguments exactly
-- Keep the same approximate length
 - Do NOT add new information or opinions
 - Return ONLY the rewritten text with no explanations, preambles, or meta-commentary`;
 
@@ -116,6 +130,13 @@ Rules:
 
     const data = await response.json();
     const humanizedText = data.choices?.[0]?.message?.content ?? "";
+
+    if (!humanizedText || humanizedText.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Humanizer returned an empty response. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ humanizedText, intensity: level }),
