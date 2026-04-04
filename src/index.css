@@ -332,3 +332,31 @@
   --normal-text: hsl(var(--destructive-foreground)) !important;
   --normal-border: hsl(var(--destructive) / 0.3) !important;
 }
+
+/* TipTap placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+/* Plagiarism highlight marks */
+.plagiarism-highlight {
+  border-radius: 2px;
+  padding: 1px 0;
+}
+.plagiarism-highlight-medium {
+  background-color: hsla(180, 80%, 40%, 0.25);
+  border-bottom: 2px solid hsla(180, 80%, 40%, 0.6);
+}
+.plagiarism-highlight-high {
+  background-color: hsla(0, 80%, 50%, 0.25);
+  border-bottom: 2px solid hsla(0, 80%, 50%, 0.6);
+}
+.hide-plagiarism-highlights .plagiarism-highlight {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}

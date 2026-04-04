@@ -49,6 +49,15 @@ import {
 } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 
+// TipTap
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import UnderlineExt from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import Placeholder from '@tiptap/extension-placeholder';
+import CharacterCount from '@tiptap/extension-character-count';
+import PlagiarismHighlight from '@/extensions/plagiarism-highlight';
+
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
 interface DocumentData {
@@ -64,54 +73,75 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-const templates: Record<DocType, string> = {
-  essay: `<h1 data-placeholder="true">Essay Title</h1>
-<h2 data-placeholder="true">Introduction</h2>
-<p><em data-placeholder="true">Write your thesis statement and introduce the topic here...</em></p>
-<h2 data-placeholder="true">Body Paragraph 1</h2>
-<p><em data-placeholder="true">Present your first main argument with supporting evidence...</em></p>
-<h2 data-placeholder="true">Body Paragraph 2</h2>
-<p><em data-placeholder="true">Present your second main argument with supporting evidence...</em></p>
-<h2 data-placeholder="true">Body Paragraph 3</h2>
-<p><em data-placeholder="true">Present your third main argument with supporting evidence...</em></p>
-<h2 data-placeholder="true">Conclusion</h2>
-<p><em data-placeholder="true">Summarize your arguments and restate your thesis...</em></p>`,
-  research_paper: `<h1 data-placeholder="true">Research Paper Title</h1>
-<h2 data-placeholder="true">Abstract</h2>
-<p><em data-placeholder="true">Provide a brief summary of the research (150-300 words)...</em></p>
-<h2 data-placeholder="true">Introduction</h2>
-<p><em data-placeholder="true">Introduce the research problem, background, and objectives...</em></p>
-<h2 data-placeholder="true">Literature Review</h2>
-<p><em data-placeholder="true">Review relevant existing research and identify gaps...</em></p>
-<h2 data-placeholder="true">Methodology</h2>
-<p><em data-placeholder="true">Describe your research methods, data collection, and analysis approach...</em></p>
-<h2 data-placeholder="true">Results</h2>
-<p><em data-placeholder="true">Present your findings with data, tables, or figures...</em></p>
-<h2 data-placeholder="true">Discussion</h2>
-<p><em data-placeholder="true">Interpret results, compare with existing literature, discuss limitations...</em></p>
-<h2 data-placeholder="true">Conclusion</h2>
-<p><em data-placeholder="true">Summarize key findings and suggest future research directions...</em></p>
-<h2 data-placeholder="true">References</h2>
-<p><em data-placeholder="true">List all cited sources in proper format...</em></p>`,
-  report: `<h1 data-placeholder="true">Report Title</h1>
-<h2 data-placeholder="true">Executive Summary</h2>
-<p><em data-placeholder="true">Provide a concise overview of the report...</em></p>
-<h2 data-placeholder="true">Introduction</h2>
-<p><em data-placeholder="true">State the purpose and scope of the report...</em></p>
-<h2 data-placeholder="true">Findings</h2>
-<p><em data-placeholder="true">Present your research findings and analysis...</em></p>
-<h2 data-placeholder="true">Recommendations</h2>
-<p><em data-placeholder="true">Provide actionable recommendations based on findings...</em></p>
-<h2 data-placeholder="true">Conclusion</h2>
-<p><em data-placeholder="true">Summarize the report and next steps...</em></p>`,
-  general: `<h1 data-placeholder="true">Document Title</h1>
-<p><em data-placeholder="true">Start writing here...</em></p>`,
+// TipTap JSON templates
+const templates: Record<DocType, any> = {
+  essay: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Essay Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Introduction' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Write your thesis statement and introduce the topic here...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Body Paragraph 1' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Present your first main argument with supporting evidence...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Body Paragraph 2' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Present your second main argument with supporting evidence...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Body Paragraph 3' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Present your third main argument with supporting evidence...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Summarize your arguments and restate your thesis...' }] },
+    ],
+  },
+  research_paper: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Research Paper Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Abstract' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Provide a brief summary of the research (150-300 words)...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Introduction' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Introduce the research problem, background, and objectives...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Literature Review' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Review relevant existing research and identify gaps...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Methodology' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Describe your research methods, data collection, and analysis approach...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Results' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Present your findings with data, tables, or figures...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Discussion' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Interpret results, compare with existing literature, discuss limitations...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Summarize key findings and suggest future research directions...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'References' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'List all cited sources in proper format...' }] },
+    ],
+  },
+  report: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Report Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Executive Summary' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Provide a concise overview of the report...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Introduction' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'State the purpose and scope of the report...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Findings' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Present your research findings and analysis...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Recommendations' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Provide actionable recommendations based on findings...' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Summarize the report and next steps...' }] },
+    ],
+  },
+  general: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Document Title' }] },
+      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: 'Start writing here...' }] },
+    ],
+  },
 };
 
-const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode }> = ({ onClick, title, icon }) => (
+const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode; active?: boolean }> = ({ onClick, title, icon, active }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button variant="ghost" size="icon" onClick={onClick} className="scale-click hover:bg-primary/10 hover:text-primary transition-all">
+      <Button variant="ghost" size="icon" onClick={onClick} className={`scale-click hover:bg-primary/10 hover:text-primary transition-all ${active ? 'bg-primary/20 text-primary' : ''}`}>
         {icon}
       </Button>
     </TooltipTrigger>
@@ -174,8 +204,27 @@ const EditorPage: React.FC = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [hasPlaceholders, setHasPlaceholders] = useState(false);
+  // TipTap editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      UnderlineExt,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Placeholder.configure({ placeholder: 'Start writing…' }),
+      CharacterCount,
+      PlagiarismHighlight,
+    ],
+    autofocus: true,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-invert prose-sm max-w-none focus:outline-none',
+        style: 'font-family: Georgia, serif; min-height: 100%;',
+      },
+    },
+    onUpdate: ({ editor: ed }) => {
+      setWordCount(ed.storage.characterCount.words());
+    },
+  });
 
   // Apply chat default state from settings
   useEffect(() => {
@@ -188,25 +237,6 @@ const EditorPage: React.FC = () => {
     if (!id) return;
     fetchDocument();
   }, [id]);
-
-  const clearPlaceholders = useCallback(() => {
-    if (!hasPlaceholders || !editorRef.current) return;
-    const allPlaceholders = editorRef.current.querySelectorAll('[data-placeholder="true"]');
-    allPlaceholders.forEach((el) => {
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'em') {
-        const parent = el.parentElement;
-        el.remove();
-        if (parent && !parent.textContent?.trim() && parent.tagName === 'P') {
-          parent.innerHTML = '<br>';
-        }
-      } else {
-        el.innerHTML = '<br>';
-        el.removeAttribute('data-placeholder');
-      }
-    });
-    setHasPlaceholders(false);
-  }, [hasPlaceholders]);
 
   const fetchDocument = async () => {
     const { data, error } = await supabase
@@ -224,26 +254,29 @@ const EditorPage: React.FC = () => {
     setDoc(data);
     setTitle(data.title);
     setLoading(false);
-
-    setTimeout(() => {
-      if (editorRef.current) {
-        if (data.content && typeof data.content === 'string') {
-          editorRef.current.innerHTML = data.content;
-          setHasPlaceholders(editorRef.current.querySelectorAll('[data-placeholder="true"]').length > 0);
-        } else if (!data.content) {
-          editorRef.current.innerHTML = templates[data.doc_type];
-          setHasPlaceholders(true);
-        }
-        const text = editorRef.current.innerText.trim();
-        setWordCount(text ? text.split(/\s+/).filter(Boolean).length : 0);
-      }
-    }, 100);
   };
 
+  // Load content into editor once both editor and doc are ready
+  useEffect(() => {
+    if (!editor || !doc) return;
+    
+    if (doc.content) {
+      // Try as TipTap JSON first, fall back to HTML string
+      if (typeof doc.content === 'object' && (doc.content as any).type === 'doc') {
+        editor.commands.setContent(doc.content as any);
+      } else if (typeof doc.content === 'string') {
+        editor.commands.setContent(doc.content);
+      }
+    } else {
+      editor.commands.setContent(templates[doc.doc_type]);
+    }
+    setWordCount(editor.storage.characterCount.words());
+  }, [editor, doc]);
+
   const saveDocument = useCallback(async () => {
-    if (!id || !editorRef.current || !user) return;
+    if (!id || !editor || !user) return;
     setSaving(true);
-    const content = editorRef.current.innerHTML;
+    const content = editor.getJSON();
     const { error } = await supabase
       .from('documents')
       .update({ title, content: content as unknown as Json })
@@ -261,7 +294,7 @@ const EditorPage: React.FC = () => {
       toast.success('Document saved!');
     }
     setSaving(false);
-  }, [id, title, user]);
+  }, [id, title, user, editor]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -286,12 +319,12 @@ const EditorPage: React.FC = () => {
   useEffect(() => {
     if (!settings.autosaveEnabled) return;
     const interval = setInterval(() => {
-      if (editorRef.current && id) {
+      if (editor && id) {
         saveDocument();
       }
     }, settings.autosaveInterval * 1000);
     return () => clearInterval(interval);
-  }, [saveDocument, id, settings.autosaveEnabled, settings.autosaveInterval]);
+  }, [saveDocument, id, settings.autosaveEnabled, settings.autosaveInterval, editor]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -305,29 +338,19 @@ const EditorPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [exportMenuOpen]);
 
-  const updateWordCount = () => {
-    if (editorRef.current) {
-      const text = editorRef.current.innerText.trim();
-      setWordCount(text ? text.split(/\s+/).filter(Boolean).length : 0);
-    }
-  };
-
-  const execCommand = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
-    editorRef.current?.focus();
-  };
-
   // ===== EXPORT =====
   const exportToPdf = async () => {
-    if (!editorRef.current) return;
+    if (!editor) return;
     setExporting(true);
     setExportMenuOpen(false);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
-      const element = editorRef.current.cloneNode(true) as HTMLElement;
-      element.style.background = '#ffffff';
-      element.style.padding = '40px';
-      element.style.color = '#1a1a1a';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = editor.getHTML();
+      wrapper.style.background = '#ffffff';
+      wrapper.style.padding = '40px';
+      wrapper.style.color = '#1a1a1a';
+      wrapper.style.fontFamily = 'Georgia, serif';
 
       const opt = {
         margin: 0.5,
@@ -337,7 +360,7 @@ const EditorPage: React.FC = () => {
         jsPDF: { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const },
       };
 
-      await html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(wrapper).save();
       toast.success('PDF exported successfully!');
     } catch (err) {
       console.error('PDF export error:', err);
@@ -348,7 +371,7 @@ const EditorPage: React.FC = () => {
   };
 
   const exportToDocx = async () => {
-    if (!editorRef.current) return;
+    if (!editor) return;
     setExporting(true);
     setExportMenuOpen(false);
     try {
@@ -356,79 +379,59 @@ const EditorPage: React.FC = () => {
       const { saveAs } = await import('file-saver');
 
       const children: any[] = [];
-      const nodes = editorRef.current.childNodes;
+      const json = editor.getJSON();
 
-      type RunInfo = { text: string; bold?: boolean; italics?: boolean; underline?: boolean };
-
-      const extractRuns = (node: Node, parentBold = false, parentItalic = false, parentUnderline = false): RunInfo[] => {
-        const runs: RunInfo[] = [];
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent || '';
-          if (text) runs.push({ text, bold: parentBold, italics: parentItalic, underline: parentUnderline });
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const el = node as HTMLElement;
-          const tag = el.tagName.toLowerCase();
-          if (tag === 'br') {
-            runs.push({ text: '\n' });
-          } else {
-            const isBold = parentBold || tag === 'b' || tag === 'strong';
-            const isItalic = parentItalic || tag === 'i' || tag === 'em';
-            const isUnderline = parentUnderline || tag === 'u';
-            el.childNodes.forEach((child) => {
-              runs.push(...extractRuns(child, isBold, isItalic, isUnderline));
-            });
-          }
-        }
-        return runs;
-      };
-
-      const toTextRuns = (el: Element): any[] => {
-        const infos = extractRuns(el);
-        return infos.map(r =>
-          r.text === '\n'
-            ? new TextRun({ text: '', break: 1 })
-            : new TextRun({ text: r.text, bold: r.bold, italics: r.italics, underline: r.underline ? {} : undefined })
-        );
-      };
-
-      const processElement = (el: Element) => {
-        const tag = el.tagName.toLowerCase();
-        const text = el.textContent?.trim() || '';
-
-        if (tag === 'h1') {
-          children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text, bold: true, size: 32, font: 'Arial' })] }));
-        } else if (tag === 'h2') {
-          children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text, bold: true, size: 28, font: 'Arial' })] }));
-        } else if (tag === 'h3') {
-          children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun({ text, bold: true, size: 24, font: 'Arial' })] }));
-        } else if (tag === 'ul' || tag === 'ol') {
-          el.querySelectorAll(':scope > li').forEach((li) => {
-            const liRuns = toTextRuns(li);
-            children.push(new Paragraph({
-              children: liRuns.length > 0 ? liRuns : [new TextRun(li.textContent || '')],
-              bullet: tag === 'ul' ? { level: 0 } : undefined,
-              numbering: tag === 'ol' ? { reference: 'default-numbering', level: 0 } : undefined,
-            }));
-          });
-        } else if (tag === 'p' || tag === 'div') {
-          const runs = toTextRuns(el);
+      const processNode = (node: any) => {
+        if (!node) return;
+        
+        if (node.type === 'heading') {
+          const level = node.attrs?.level || 1;
+          const text = extractText(node);
+          const headingLevel = level === 1 ? HeadingLevel.HEADING_1 : level === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+          const fontSize = level === 1 ? 32 : level === 2 ? 28 : 24;
+          children.push(new Paragraph({ heading: headingLevel, children: [new TextRun({ text, bold: true, size: fontSize, font: 'Arial' })] }));
+        } else if (node.type === 'paragraph') {
+          const runs = extractRuns(node);
           if (runs.length > 0) {
             children.push(new Paragraph({ children: runs, spacing: { after: 200 } }));
-          } else if (text) {
-            children.push(new Paragraph({ children: [new TextRun(text)], spacing: { after: 200 } }));
           }
-        } else if (text) {
-          children.push(new Paragraph({ children: [new TextRun(text)], spacing: { after: 200 } }));
+        } else if (node.type === 'bulletList') {
+          node.content?.forEach((li: any) => {
+            const text = extractText(li);
+            children.push(new Paragraph({ children: [new TextRun(text)], bullet: { level: 0 } }));
+          });
+        } else if (node.type === 'orderedList') {
+          node.content?.forEach((li: any) => {
+            const text = extractText(li);
+            children.push(new Paragraph({ children: [new TextRun(text)], numbering: { reference: 'default-numbering', level: 0 } }));
+          });
         }
       };
 
-      nodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          processElement(node as Element);
-        } else if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
-          children.push(new Paragraph({ children: [new TextRun(node.textContent.trim())] }));
+      const extractText = (node: any): string => {
+        if (node.text) return node.text;
+        if (node.content) return node.content.map(extractText).join('');
+        return '';
+      };
+
+      const extractRuns = (node: any): any[] => {
+        if (!node.content) return [new TextRun('')];
+        const runs: any[] = [];
+        for (const child of node.content) {
+          if (child.type === 'text') {
+            const marks = child.marks || [];
+            const bold = marks.some((m: any) => m.type === 'bold');
+            const italics = marks.some((m: any) => m.type === 'italic');
+            const underline = marks.some((m: any) => m.type === 'underline');
+            runs.push(new TextRun({ text: child.text || '', bold, italics, underline: underline ? {} : undefined }));
+          } else if (child.content) {
+            runs.push(...extractRuns(child));
+          }
         }
-      });
+        return runs.length > 0 ? runs : [new TextRun('')];
+      };
+
+      json.content?.forEach(processNode);
 
       if (children.length === 0) {
         children.push(new Paragraph({ children: [new TextRun('')] }));
@@ -458,8 +461,9 @@ const EditorPage: React.FC = () => {
   };
 
   const getSelectedText = (): string => {
-    const selection = window.getSelection();
-    return selection ? selection.toString().trim() : '';
+    if (!editor) return '';
+    const { from, to } = editor.state.selection;
+    return editor.state.doc.textBetween(from, to, ' ');
   };
 
   const handleHumanize = async () => {
@@ -468,8 +472,8 @@ const EditorPage: React.FC = () => {
       toast.error('Select text in the editor first');
       return;
     }
-    if (selectedText.length > 10000) {
-      toast.error('Selected text exceeds 10,000 character limit');
+    if (selectedText.length > 25000) {
+      toast.error('Selected text exceeds 25,000 character limit');
       return;
     }
 
@@ -495,11 +499,19 @@ const EditorPage: React.FC = () => {
   };
 
   const acceptHumanized = () => {
-    if (!humanizerResult || !editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    const escaped = humanizerResult.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(escaped, 'g');
-    editorRef.current.innerHTML = html.replace(regex, humanizerResult.humanized);
+    if (!humanizerResult || !editor) return;
+    const { from, to } = editor.state.selection;
+    // If selection still matches, replace it
+    const currentSelection = editor.state.doc.textBetween(from, to, ' ');
+    if (currentSelection === humanizerResult.original) {
+      editor.chain().focus().insertContentAt({ from, to }, humanizerResult.humanized).run();
+    } else {
+      // Fallback: search and replace in HTML
+      const html = editor.getHTML();
+      const escaped = humanizerResult.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'g');
+      editor.commands.setContent(html.replace(regex, humanizerResult.humanized));
+    }
     setHumanizerResult(null);
     toast.success('Humanized text applied!');
   };
@@ -510,8 +522,8 @@ const EditorPage: React.FC = () => {
 
   // ===== PLAGIARISM =====
   const runPlagiarismCheck = async () => {
-    if (!editorRef.current || plagiarismRunning) return;
-    const text = editorRef.current.innerText.trim();
+    if (!editor || plagiarismRunning) return;
+    const text = editor.getText();
     if (text.length < 50) {
       toast.error('Write at least 50 characters before running plagiarism check');
       return;
@@ -531,6 +543,45 @@ const EditorPage: React.FC = () => {
 
       setPlagiarismReport(data);
       setPlagiarismHighlightsVisible(true);
+
+      // Apply plagiarism highlight marks
+      if (data.flagged_passages && editor) {
+        const fullText = editor.getText();
+        // Remove old highlights first
+        editor.chain().focus().selectAll().unsetMark('plagiarismHighlight').run();
+        
+        for (const passage of data.flagged_passages) {
+          const excerpt = passage.excerpt;
+          const idx = fullText.indexOf(excerpt);
+          if (idx >= 0) {
+            // Convert text offset to prosemirror position
+            let pos = 0;
+            let found = false;
+            editor.state.doc.descendants((node, nodePos) => {
+              if (found) return false;
+              if (node.isText) {
+                const nodeText = node.text || '';
+                const textStart = pos;
+                const textEnd = pos + nodeText.length;
+                const excerptStart = idx;
+                const excerptEnd = idx + excerpt.length;
+                if (excerptStart >= textStart && excerptStart < textEnd) {
+                  const from = nodePos + (excerptStart - textStart);
+                  const to = Math.min(nodePos + (excerptEnd - textStart), nodePos + nodeText.length);
+                  editor.chain()
+                    .setTextSelection({ from, to })
+                    .setMark('plagiarismHighlight', { severity: passage.severity === 'high' ? 'high' : 'medium' })
+                    .run();
+                  found = true;
+                }
+                pos += nodeText.length;
+              }
+            });
+          }
+        }
+        // Deselect
+        editor.commands.setTextSelection(0);
+      }
 
       if (id) {
         await supabase
@@ -565,7 +616,7 @@ const EditorPage: React.FC = () => {
     let assistantSoFar = '';
 
     try {
-      const documentContent = editorRef.current?.innerText || '';
+      const documentContent = editor?.getText() || '';
 
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       const accessToken = currentSession?.access_token || '';
@@ -925,10 +976,20 @@ const EditorPage: React.FC = () => {
         <VersionHistoryPanel
           documentId={id}
           onRestore={(content, restoredTitle) => {
-            if (editorRef.current) {
-              editorRef.current.innerHTML = content;
+            if (editor) {
+              // content could be JSON or HTML string
+              try {
+                const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+                if (parsed && parsed.type === 'doc') {
+                  editor.commands.setContent(parsed);
+                } else {
+                  editor.commands.setContent(content);
+                }
+              } catch {
+                editor.commands.setContent(content);
+              }
               setTitle(restoredTitle);
-              updateWordCount();
+              setWordCount(editor.storage.characterCount.words());
             }
           }}
           onClose={() => setShowHistory(false)}
@@ -940,9 +1001,9 @@ const EditorPage: React.FC = () => {
         <OutlinePanel
           docType={doc.doc_type}
           onInsert={(html) => {
-            if (editorRef.current) {
-              editorRef.current.innerHTML = html;
-              updateWordCount();
+            if (editor) {
+              editor.commands.setContent(html);
+              setWordCount(editor.storage.characterCount.words());
             }
           }}
           onClose={() => setShowOutline(false)}
@@ -1010,21 +1071,21 @@ const EditorPage: React.FC = () => {
   );
 
   // ===== Formatting toolbar buttons =====
-  const formatButtons = (
+  const formatButtons = editor ? (
     <>
-      <ToolbarButton onClick={() => execCommand('bold')} title="Bold" icon={<Bold className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('italic')} title="Italic" icon={<Italic className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('underline')} title="Underline" icon={<Underline className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('formatBlock', 'H1')} title="Heading 1" icon={<Heading1 className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('formatBlock', 'H2')} title="Heading 2" icon={<Heading2 className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('insertUnorderedList')} title="Bullet List" icon={<List className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('insertOrderedList')} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('justifyLeft')} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} />
-      <ToolbarButton onClick={() => execCommand('justifyCenter')} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" icon={<Bold className="w-4 h-4" />} active={editor.isActive('bold')} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" icon={<Italic className="w-4 h-4" />} active={editor.isActive('italic')} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" icon={<Underline className="w-4 h-4" />} active={editor.isActive('underline')} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" icon={<Heading1 className="w-4 h-4" />} active={editor.isActive('heading', { level: 1 })} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" icon={<Heading2 className="w-4 h-4" />} active={editor.isActive('heading', { level: 2 })} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List" icon={<List className="w-4 h-4" />} active={editor.isActive('bulletList')} />
+      <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} active={editor.isActive('orderedList')} />
+      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} active={editor.isActive({ textAlign: 'left' })} />
+      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} active={editor.isActive({ textAlign: 'center' })} />
       <div className="w-px h-6 bg-border my-1" />
       <ToolbarButton onClick={openOutline} title="Document Generator" icon={<FileText className="w-4 h-4" />} />
     </>
-  );
+  ) : null;
 
   return (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
@@ -1101,17 +1162,14 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div className={`flex-1 overflow-auto flex justify-center py-6 sm:py-10 px-3 sm:px-6 scrollbar-dark transition-colors duration-500 ${focusMode ? 'bg-background' : 'bg-muted/30'}`}>
+        <div className={`flex-1 overflow-auto flex justify-center py-6 sm:py-10 px-3 sm:px-6 scrollbar-dark transition-colors duration-500 ${focusMode ? 'bg-background' : 'bg-muted/30'} ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={updateWordCount}
-            onKeyDown={clearPlaceholders}
-            className={`bg-card w-full ${focusMode ? 'max-w-[720px] border-transparent shadow-none' : canvasMaxW + ' shadow-lg border border-border'} min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 rounded-lg text-foreground prose prose-invert prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-500`}
+            className={`bg-card w-full ${focusMode ? 'max-w-[720px] border-transparent shadow-none' : canvasMaxW + ' shadow-lg border border-border'} min-h-[600px] sm:min-h-[1056px] p-6 sm:p-16 rounded-lg text-foreground transition-all duration-500 focus-within:ring-2 focus-within:ring-primary/20`}
             data-intro-id="editor-canvas"
-            style={{ fontFamily: 'Georgia, serif', lineHeight, fontSize: 'var(--editor-font-size)' }}
-          />
+            style={{ lineHeight, fontSize: 'var(--editor-font-size)' }}
+          >
+            <EditorContent editor={editor} className="h-full" style={{ fontFamily: 'Georgia, serif' }} />
+          </div>
         </div>
 
         {/* Desktop: Right AI tab bar + inline sidebar */}
