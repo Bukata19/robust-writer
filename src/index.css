@@ -107,6 +107,10 @@
 }
 
 @layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .a4-canvas {
     width: 210mm;
     max-width: 100%;
