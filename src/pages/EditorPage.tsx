@@ -1094,8 +1094,12 @@ const EditorPage: React.FC = () => {
       <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} active={editor.isActive('orderedList')} />
       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} active={editor.isActive({ textAlign: 'left' })} />
       <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} active={editor.isActive({ textAlign: 'center' })} />
-      <div className="w-px h-6 bg-border my-1" />
-      <ToolbarButton onClick={openOutline} title="Document Generator" icon={<FileText className="w-4 h-4" />} />
+      {!isMobile && (
+        <>
+          <div className="w-px h-6 bg-border my-1" />
+          <ToolbarButton onClick={openOutline} title="Document Generator" icon={<FileText className="w-4 h-4" />} />
+        </>
+      )}
     </>
   ) : null;
 
