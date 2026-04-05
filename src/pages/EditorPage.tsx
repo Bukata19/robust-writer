@@ -1180,7 +1180,12 @@ const EditorPage: React.FC = () => {
             data-intro-id="editor-canvas"
             style={{ lineHeight, fontSize: 'var(--editor-font-size)' }}
           >
-            <EditorContent editor={editor} className="h-full" style={{ fontFamily: 'Georgia, serif' }} />
+            <EditorContent
+              editor={editor}
+              className="h-full cursor-text"
+              style={{ fontFamily: 'Georgia, serif' }}
+              onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
+            />
           </div>
         </div>
 
