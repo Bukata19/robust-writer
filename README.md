@@ -2,7 +2,7 @@
 
 > A smart, distraction-free writing platform for students. Write, humanize, check plagiarism, and export — all in one place.
 
-[![Live App](https://img.shields.io/badge/Live%20Demo-robobuddy--writer.lovable.app-00d4b8?style=flat-square&logo=vercel)](https://robobuddy-writer.lovable.app)
+[![Live App](https://img.shields.io/badge/Live%20App-robobuddy--writer.lovable.app-00d4b8?style=flat-square&logo=vercel)](https://robobuddy-writer.lovable.app)
 [![Built with React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react)](https://react.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
