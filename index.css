@@ -1,0 +1,104 @@
+/* Light mode adjustments */
+.light-mode {
+  --foreground: 0 0% 20%;
+  --card-foreground: 0 0% 15%;
+  --muted-foreground: 0 0% 45%;
+  --secondary-foreground: 0 0% 50%;
+  --primary-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 20%;
+  --destructive-foreground: 0 0% 100%;
+  --accent-foreground: 0 0% 100%;
+  --input: 210 14% 88%;
+  --sidebar-foreground: 0 0% 30%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent-foreground: 0 0% 35%;
+}
+
+/* Light mode scrollbar */
+.light-mode .scrollbar-dark::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.4);
+}
+.light-mode .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.6);
+}
+
+.light-mode ::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+}
+.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+/* Light mode shadows */
+.light-mode {
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-a4: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Light mode card styling */
+.light-mode .card-hover-glow:hover {
+  box-shadow: 0 4px 16px -4px hsl(var(--primary) / 0.2), 0 0 0 1px hsl(var(--primary) / 0.2);
+}
+
+/* Light mode glass panel */
+.light-mode .glass-panel {
+  background: hsl(var(--card) / 0.9);
+  border: 1px solid hsl(var(--border) / 0.8);
+}
+
+/* Light mode toolbar glow */
+.light-mode .toolbar-glow {
+  box-shadow: 0 0 8px -3px hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.15);
+}
+
+/* Light mode skeleton */
+.light-mode .skeleton-shimmer {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted) / 0.7) 50%, hsl(var(--muted)) 75%);
+}
+
+/* Light mode gradient pulse */
+.light-mode .btn-glow:hover {
+  animation: gradient-pulse 2s ease-in-out infinite;
+}
+
+/* Light mode intro.js tooltip */
+.light-mode .introjs-tooltip {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border) / 0.5) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 0 12px hsl(var(--primary) / 0.08) !important;
+}
+
+.light-mode .introjs-tooltiptext {
+  color: hsl(var(--foreground)) !important;
+}
+
+.light-mode .introjs-arrow.top { border-bottom-color: hsl(var(--card)) !important; }
+.light-mode .introjs-arrow.bottom { border-top-color: hsl(var(--card)) !important; }
+.light-mode .introjs-arrow.left { border-right-color: hsl(var(--card)) !important; }
+.light-mode .introjs-arrow.right { border-left-color: hsl(var(--card)) !important; }
+
+/* Light mode A4 canvas */
+.light-mode .a4-canvas {
+  background: #fafafa;
+  color: #1a1a1a;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Light mode editor highlights */
+.light-mode .teal-highlight {
+  background-color: hsla(180, 80%, 40%, 0.15);
+  border-bottom-color: hsl(180, 80%, 40%);
+}
+
+.light-mode .teal-highlight:hover {
+  background-color: hsla(180, 80%, 40%, 0.25);
+}
+
+.light-mode .danger-highlight {
+  background-color: hsla(0, 100%, 50%, 0.15);
+  border-bottom-color: hsl(0, 100%, 50%);
+}
