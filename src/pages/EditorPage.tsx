@@ -1301,6 +1301,16 @@ const EditorPage: React.FC = () => {
             style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)' }}
             onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
           />
+          <InlineSuggestionBubble
+            suggestion={coachSuggestion}
+            loading={coachLoading}
+            onDismiss={() => { setCoachSuggestion(null); setCoachLoading(false); }}
+            onSendToChat={(tip) => {
+              setChatInput(tip);
+              setChatOpen(true);
+              setCoachSuggestion(null);
+            }}
+          />
         </div>
 
         {/* Desktop: Right AI tab bar + inline sidebar */}
