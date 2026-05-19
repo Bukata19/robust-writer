@@ -49,7 +49,10 @@ import {
   History,
   Maximize,
   Minimize,
+  Brain,
 } from 'lucide-react';
+import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
+import InlineSuggestionBubble from '@/components/InlineSuggestionBubble';
 import type { Json } from '@/integrations/supabase/types';
 
 // TipTap
@@ -236,6 +239,9 @@ const EditorPage: React.FC = () => {
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [coachEnabled, setCoachEnabled] = useState(() => localStorage.getItem('ra_coach_enabled') !== 'false');
+  const [coachSuggestion, setCoachSuggestion] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -289,7 +295,18 @@ const EditorPage: React.FC = () => {
     },
     onUpdate: ({ editor: ed }) => {
       setWordCount(ed.storage.characterCount.words());
+      setCoachSuggestion(null);
     },
+  });
+
+  useInlineAiSuggestion({
+    editor,
+    docType: doc?.doc_type,
+    enabled: coachEnabled,
+    onSuggestion: useCallback((tip: string | null, loading: boolean) => {
+      setCoachLoading(loading);
+      setCoachSuggestion(tip);
+    }, []),
   });
 
   // Apply chat default state from settings
@@ -1195,6 +1212,28 @@ const EditorPage: React.FC = () => {
 
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                const next = !coachEnabled;
+                setCoachEnabled(next);
+                localStorage.setItem('ra_coach_enabled', String(next));
+                if (!next) {
+                  setCoachSuggestion(null);
+                  setCoachLoading(false);
+                }
+              }}
+              className={`scale-click ${coachEnabled ? 'text-primary' : ''}`}
+            >
+              <Brain className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{coachEnabled ? 'Writing Coach: On' : 'Writing Coach: Off'}</TooltipContent>
+        </Tooltip>
+
         {/* Export dropdown */}
         <div className="relative" ref={exportMenuRef}>
           <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn" className="btn-glow">
@@ -1261,6 +1300,16 @@ const EditorPage: React.FC = () => {
             className={`w-full min-w-0 px-4 sm:px-10 py-6 cursor-text text-foreground ${focusMode ? 'max-w-[720px]' : canvasMaxW}`}
             style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)' }}
             onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
+          />
+          <InlineSuggestionBubble
+            suggestion={coachSuggestion}
+            loading={coachLoading}
+            onDismiss={() => { setCoachSuggestion(null); setCoachLoading(false); }}
+            onSendToChat={(tip) => {
+              setChatInput(tip);
+              setChatOpen(true);
+              setCoachSuggestion(null);
+            }}
           />
         </div>
 
