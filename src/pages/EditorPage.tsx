@@ -1217,6 +1217,7 @@ const EditorPage: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
+              data-intro-id="coach-toggle"
               onClick={() => {
                 const next = !coachEnabled;
                 setCoachEnabled(next);
