@@ -239,6 +239,9 @@ const EditorPage: React.FC = () => {
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [coachEnabled, setCoachEnabled] = useState(() => localStorage.getItem('ra_coach_enabled') !== 'false');
+  const [coachSuggestion, setCoachSuggestion] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
