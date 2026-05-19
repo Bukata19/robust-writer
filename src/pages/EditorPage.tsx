@@ -295,7 +295,18 @@ const EditorPage: React.FC = () => {
     },
     onUpdate: ({ editor: ed }) => {
       setWordCount(ed.storage.characterCount.words());
+      setCoachSuggestion(null);
     },
+  });
+
+  useInlineAiSuggestion({
+    editor,
+    docType: doc?.doc_type,
+    enabled: coachEnabled,
+    onSuggestion: useCallback((tip: string | null, loading: boolean) => {
+      setCoachLoading(loading);
+      setCoachSuggestion(tip);
+    }, []),
   });
 
   // Apply chat default state from settings
