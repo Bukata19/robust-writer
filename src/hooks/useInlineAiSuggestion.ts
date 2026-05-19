@@ -57,11 +57,12 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion }
           const systemPrompt = `You are a concise writing coach. The user is writing a ${docType ?? 'general'}. Analyse the paragraph they just wrote and respond with ONE short, specific, actionable tip (maximum 12 words). Be direct, not generic. Do not repeat what they wrote. Examples of good tips: 'Back this claim with a specific statistic.', 'Missing a topic sentence — start with your main point.', 'Good argument — now acknowledge a counterpoint.'`;
 
           const res = await fetch(CHAT_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
             signal: controller.signal,
             body: JSON.stringify({
               messages: [
