@@ -1184,7 +1184,7 @@ const EditorPage: React.FC = () => {
             variant={showOutline ? 'default' : 'ghost'}
             size="icon"
             onClick={openOutline}
-            data-intro-id="outline-btn"
+            data-intro-id="doc-gen-btn"
             className="scale-click"
           >
             <FileText className="w-4 h-4" />
