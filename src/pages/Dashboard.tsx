@@ -60,6 +60,40 @@ const Dashboard: React.FC = () => {
     fetchDocuments();
   }, []);
 
+  useEffect(() => {
+    const TOUR_KEY = 'rb_dashboard_tour_done';
+    if (localStorage.getItem(TOUR_KEY)) return;
+    const timer = setTimeout(() => {
+      const intro = introJs();
+      intro.setOptions({
+        steps: [
+          {
+            element: '[data-intro-id="new-doc-grid"]',
+            intro: 'Start a new document here. Choose from Essay, Research Paper, Report, or General — each comes with a structured template ready to fill in.',
+          },
+          {
+            element: '[data-intro-id="import-btn"]',
+            intro: 'Already have a document? Import it directly from your device. Supports .txt, .md, and .docx files.',
+          },
+          {
+            element: '[data-intro-id="settings-btn"]',
+            intro: 'Open Settings to switch between light and dark themes, change font size, configure autosave, and more.',
+          },
+        ],
+        showProgress: true,
+        showBullets: false,
+        exitOnOverlayClick: true,
+        doneLabel: 'Got it!',
+        nextLabel: 'Next →',
+        prevLabel: '← Back',
+      });
+      intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
+      intro.start();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
+
   const fetchDocuments = async () => {
     const { data, error } = await supabase
       .from('documents')
