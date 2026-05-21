@@ -127,9 +127,11 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
   const chips = isDark ? DARK_CHIPS : LIGHT_CHIPS;
 
   const resetTour = () => {
-    localStorage.removeItem('rb_editor_tour_done');
-    onOpenChange(false);
-  };
+  localStorage.removeItem('rb_editor_tour_done');
+  localStorage.removeItem('rb_dashboard_tour_done');
+  onOpenChange(false);
+  toast.success('Onboarding tour reset. Visit the dashboard to restart.');
+};
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
