@@ -118,5 +118,5 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
       if (timerRef.current) window.clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [editor, enabled, docType, onSuggestion]);
+  }, [editor, enabled, docType, onSuggestion, assignmentContext]);
 }
