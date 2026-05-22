@@ -910,7 +910,7 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : showDecoder ? 'decoder' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
@@ -918,6 +918,7 @@ const EditorPage: React.FC = () => {
     setShowPlagiarism(false);
     setShowHistory(false);
     setShowOutline(false);
+    setShowDecoder(false);
   };
 
   const openHistory = () => {
@@ -926,6 +927,7 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowOutline(false);
+    setShowDecoder(false);
   };
 
   const openOutline = () => {
@@ -934,6 +936,16 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowHistory(false);
+    setShowDecoder(false);
+  };
+
+  const openDecoder = () => {
+    setShowDecoder(true);
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowPlagiarism(false);
+    setShowHistory(false);
+    setShowOutline(false);
   };
 
   const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
