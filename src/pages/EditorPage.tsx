@@ -1221,6 +1221,19 @@ const EditorPage: React.FC = () => {
         </TooltipTrigger>
         <TooltipContent side="left">Document Generator</TooltipContent>
       </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={showDecoder ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
+            className="scale-click"
+          >
+            <BookOpenCheck className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Assignment Decoder</TooltipContent>
+      </Tooltip>
     </>
   );
 
