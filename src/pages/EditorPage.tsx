@@ -1149,13 +1149,18 @@ const EditorPage: React.FC = () => {
           onClose={() => setShowOutline(false)}
         />
       )}
+
+      {/* Assignment Decoder Sidebar */}
+      {showDecoder && (
+        <AssignmentDecoderPanel decoder={decoder} onClose={() => setShowDecoder(false)} />
+      )}
     </div>
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); };
-  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
