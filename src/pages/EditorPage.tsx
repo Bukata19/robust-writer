@@ -304,10 +304,17 @@ const EditorPage: React.FC = () => {
     },
   });
 
+  const decoder = useAssignmentDecoder({
+    editor,
+    onConfirmReplace: async () =>
+      window.confirm('This will replace your current document content. Continue?'),
+  });
+
   useInlineAiSuggestion({
     editor,
     docType: doc?.doc_type,
     enabled: coachEnabled,
+    assignmentContext: decoder.sessionContext || undefined,
     onSuggestion: useCallback((tip: string | null, loading: boolean) => {
       setCoachLoading(loading);
       setCoachSuggestion(tip);
