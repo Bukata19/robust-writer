@@ -1357,7 +1357,8 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div className={`flex-1 overflow-auto flex justify-center py-4 sm:py-8 lg:py-10 px-2 sm:px-4 lg:px-8 scrollbar-dark transition-colors duration-500 bg-background ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div className={`relative flex-1 overflow-auto flex justify-center py-4 sm:py-8 lg:py-10 px-2 sm:px-4 lg:px-8 scrollbar-dark transition-colors duration-500 bg-background ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+          <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
           <EditorContent
             editor={editor}
             data-intro-id="editor-canvas"
