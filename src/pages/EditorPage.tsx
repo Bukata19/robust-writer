@@ -212,6 +212,7 @@ const EditorPage: React.FC = () => {
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showOutline, setShowOutline] = useState(false);
+  const [showDecoder, setShowDecoder] = useState(false);
 
   // Focus mode
   const [focusMode, setFocusMode] = useState(false);
