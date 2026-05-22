@@ -9,9 +9,10 @@ interface Options {
   docType: string | undefined;
   enabled: boolean;
   onSuggestion: (tip: string | null, loading: boolean) => void;
+  assignmentContext?: string;
 }
 
-export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion }: Options) {
+export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, assignmentContext }: Options) {
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastParagraphRef = useRef<string>('');
@@ -54,7 +55,7 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion }
           const controller = new AbortController();
           abortRef.current = controller;
 
-          const systemPrompt = `You are a concise writing coach. The user is writing a ${docType ?? 'general'}. Analyse the paragraph they just wrote and respond with ONE short, specific, actionable tip (maximum 12 words). Be direct, not generic. Do not repeat what they wrote. Examples of good tips: 'Back this claim with a specific statistic.', 'Missing a topic sentence — start with your main point.', 'Good argument — now acknowledge a counterpoint.'`;
+          const systemPrompt = `You are a concise writing coach. The user is writing a ${docType ?? 'general'}. Analyse the paragraph they just wrote and respond with ONE short, specific, actionable tip (maximum 12 words). Be direct, not generic. Do not repeat what they wrote. Examples of good tips: 'Back this claim with a specific statistic.', 'Missing a topic sentence — start with your main point.', 'Good argument — now acknowledge a counterpoint.'${assignmentContext ? ` The student is answering this assignment: ${assignmentContext}. Tailor your tip to help them answer it better.` : ''}`;
 
           const res = await fetch(CHAT_URL, {
   method: 'POST',
@@ -117,5 +118,5 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion }
       if (timerRef.current) window.clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [editor, enabled, docType, onSuggestion]);
+  }, [editor, enabled, docType, onSuggestion, assignmentContext]);
 }

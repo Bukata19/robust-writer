@@ -50,9 +50,13 @@ import {
   Maximize,
   Minimize,
   Brain,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
 import InlineSuggestionBubble from '@/components/InlineSuggestionBubble';
+import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
+import SectionTip from '@/components/AssignmentDecoder/SectionTip';
+import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
 import type { Json } from '@/integrations/supabase/types';
 
 // TipTap
@@ -208,6 +212,7 @@ const EditorPage: React.FC = () => {
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showOutline, setShowOutline] = useState(false);
+  const [showDecoder, setShowDecoder] = useState(false);
 
   // Focus mode
   const [focusMode, setFocusMode] = useState(false);
@@ -299,10 +304,17 @@ const EditorPage: React.FC = () => {
     },
   });
 
+  const decoder = useAssignmentDecoder({
+    editor,
+    onConfirmReplace: async () =>
+      window.confirm('This will replace your current document content. Continue?'),
+  });
+
   useInlineAiSuggestion({
     editor,
     docType: doc?.doc_type,
     enabled: coachEnabled,
+    assignmentContext: decoder.sessionContext || undefined,
     onSuggestion: useCallback((tip: string | null, loading: boolean) => {
       setCoachLoading(loading);
       setCoachSuggestion(tip);
@@ -898,7 +910,7 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : showDecoder ? 'decoder' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
@@ -906,6 +918,7 @@ const EditorPage: React.FC = () => {
     setShowPlagiarism(false);
     setShowHistory(false);
     setShowOutline(false);
+    setShowDecoder(false);
   };
 
   const openHistory = () => {
@@ -914,6 +927,7 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowOutline(false);
+    setShowDecoder(false);
   };
 
   const openOutline = () => {
@@ -922,6 +936,16 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowHistory(false);
+    setShowDecoder(false);
+  };
+
+  const openDecoder = () => {
+    setShowDecoder(true);
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowPlagiarism(false);
+    setShowHistory(false);
+    setShowOutline(false);
   };
 
   const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
@@ -1125,13 +1149,18 @@ const EditorPage: React.FC = () => {
           onClose={() => setShowOutline(false)}
         />
       )}
+
+      {/* Assignment Decoder Sidebar */}
+      {showDecoder && (
+        <AssignmentDecoderPanel decoder={decoder} onClose={() => setShowDecoder(false)} />
+      )}
     </div>
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); };
-  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
@@ -1191,6 +1220,19 @@ const EditorPage: React.FC = () => {
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Document Generator</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={showDecoder ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
+            className="scale-click"
+          >
+            <BookOpenCheck className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Assignment Decoder</TooltipContent>
       </Tooltip>
     </>
   );
@@ -1315,7 +1357,8 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div className={`flex-1 overflow-auto flex justify-center py-4 sm:py-8 lg:py-10 px-2 sm:px-4 lg:px-8 scrollbar-dark transition-colors duration-500 bg-background ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div className={`relative flex-1 overflow-auto flex justify-center py-4 sm:py-8 lg:py-10 px-2 sm:px-4 lg:px-8 scrollbar-dark transition-colors duration-500 bg-background ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+          <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
           <EditorContent
             editor={editor}
             data-intro-id="editor-canvas"
