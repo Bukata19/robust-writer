@@ -18,6 +18,7 @@ import {
   type ChatDefault,
 } from '@/contexts/SettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface SettingsDrawerProps {
   open: boolean;
