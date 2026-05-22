@@ -50,9 +50,13 @@ import {
   Maximize,
   Minimize,
   Brain,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
 import InlineSuggestionBubble from '@/components/InlineSuggestionBubble';
+import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
+import SectionTip from '@/components/AssignmentDecoder/SectionTip';
+import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
 import type { Json } from '@/integrations/supabase/types';
 
 // TipTap
