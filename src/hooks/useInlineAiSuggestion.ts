@@ -44,7 +44,7 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
           if (words.length < 15) return;
           if (paragraphText === lastParagraphRef.current) return;
           lastParagraphRef.current = paragraphText;
-
+          onLoadingStart?.();
           onSuggestion(null, true);
 
           const { data: sessionData } = await supabase.auth.getSession();
