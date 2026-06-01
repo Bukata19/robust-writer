@@ -53,7 +53,7 @@ import {
   BookOpenCheck,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
-import InlineSuggestionBubble from '@/components/InlineSuggestionBubble';
+import InlineParagraphTip from '@/components/InlineSuggestionBubble';
 import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
 import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
