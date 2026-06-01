@@ -1358,7 +1358,7 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div className={`relative flex-1 overflow-auto flex justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-8 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-8 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
           <EditorContent
             editor={editor}
@@ -1367,9 +1367,11 @@ const EditorPage: React.FC = () => {
               style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)', minHeight: '1056px' }}
             onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
           />
-          <InlineSuggestionBubble
+          <InlineParagraphTip
+            editor={editor}
             suggestion={coachSuggestion}
             loading={coachLoading}
+            tipHistory={tipHistory}
             onDismiss={() => { setCoachSuggestion(null); setCoachLoading(false); }}
             onSendToChat={(tip) => {
               setChatInput(tip);
