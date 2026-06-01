@@ -371,7 +371,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         root.style.setProperty(key, value);
       });
     }
-    const fontSizes: Record<FontSize, string> = { small: '13px', medium: '14px', large: '16px' };
+    const fontSizes: Record<FontSize, string> = { small: '14px', medium: '16px', large: '18px' };
     root.style.setProperty('--editor-font-size', fontSizes[settings.fontSize]);
     root.classList.toggle('reduce-motion', settings.reduceMotion);
     root.classList.toggle('high-contrast', settings.highContrast);
