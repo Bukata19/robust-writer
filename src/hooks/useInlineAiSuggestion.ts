@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,13 +9,15 @@ interface Options {
   docType: string | undefined;
   enabled: boolean;
   onSuggestion: (tip: string | null, loading: boolean) => void;
+  onLoadingStart?: () => void;
   assignmentContext?: string;
 }
 
-export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, assignmentContext }: Options) {
+export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, onLoadingStart, assignmentContext }: Options) {
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastParagraphRef = useRef<string>('');
+  const [tipHistory, setTipHistory] = useState<string[]>([]);
 
   useEffect(() => {
     if (!editor || !enabled) return;
