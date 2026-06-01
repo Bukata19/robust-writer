@@ -1357,13 +1357,13 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div className={`relative flex-1 overflow-auto flex justify-center py-4 sm:py-8 lg:py-10 px-2 sm:px-4 lg:px-8 scrollbar-dark transition-colors duration-500 bg-background ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div className={`relative flex-1 overflow-auto flex justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-8 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
           <EditorContent
             editor={editor}
             data-intro-id="editor-canvas"
-            className={`w-full min-w-0 px-4 sm:px-10 py-6 cursor-text text-foreground ${focusMode ? 'max-w-[720px]' : canvasMaxW}`}
-            style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)' }}
+            className={`w-full min-w-0 px-10 sm:px-16 lg:px-24 py-16 sm:py-20 cursor-text bg-white text-[#1a1a1a] dark:bg-[#1c2030] dark:text-[#e8edf5] shadow-[0_2px_32px_rgba(0,0,0,0.18)] dark:shadow-[0_2px_32px_rgba(0,0,0,0.6)] ${focusMode ? 'max-w-[780px]' : canvasMaxW}`}
+              style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)', minHeight: '1056px' }}
             onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
           />
           <InlineSuggestionBubble
