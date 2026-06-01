@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,13 +9,15 @@ interface Options {
   docType: string | undefined;
   enabled: boolean;
   onSuggestion: (tip: string | null, loading: boolean) => void;
+  onLoadingStart?: () => void;
   assignmentContext?: string;
 }
 
-export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, assignmentContext }: Options) {
+export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, onLoadingStart, assignmentContext }: Options) {
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastParagraphRef = useRef<string>('');
+  const [tipHistory, setTipHistory] = useState<string[]>([]);
 
   useEffect(() => {
     if (!editor || !enabled) return;
@@ -42,7 +44,7 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
           if (words.length < 15) return;
           if (paragraphText === lastParagraphRef.current) return;
           lastParagraphRef.current = paragraphText;
-
+          onLoadingStart?.();
           onSuggestion(null, true);
 
           const { data: sessionData } = await supabase.auth.getSession();
@@ -104,8 +106,13 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
           }
 
           tip = tip.trim().replace(/^["'`]|["'`]$/g, '');
-          if (tip) onSuggestion(tip, false);
-          else onSuggestion(null, false);
+          if (tip) {
+            setTipHistory((prev) => {
+              const next = [...prev, tip];
+              return next.length > 3 ? next.slice(next.length - 3) : next;
+            });
+            onSuggestion(tip, false);
+          } else onSuggestion(null, false);
         } catch {
           onSuggestion(null, false);
         }
@@ -118,5 +125,7 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
       if (timerRef.current) window.clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [editor, enabled, docType, onSuggestion, assignmentContext]);
+  }, [editor, enabled, docType, onSuggestion, onLoadingStart, assignmentContext]);
+
+  return { tipHistory };
 }
