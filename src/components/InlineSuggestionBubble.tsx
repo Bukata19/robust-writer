@@ -23,7 +23,6 @@ export default function InlineParagraphTip({
   const isMobile = useIsMobile();
   const [top, setTop] = useState<number | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-dismiss after 12s
   useEffect(() => {
