@@ -106,8 +106,13 @@ export function useInlineAiSuggestion({ editor, docType, enabled, onSuggestion, 
           }
 
           tip = tip.trim().replace(/^["'`]|["'`]$/g, '');
-          if (tip) onSuggestion(tip, false);
-          else onSuggestion(null, false);
+          if (tip) {
+            setTipHistory((prev) => {
+              const next = [...prev, tip];
+              return next.length > 3 ? next.slice(next.length - 3) : next;
+            });
+            onSuggestion(tip, false);
+          } else onSuggestion(null, false);
         } catch {
           onSuggestion(null, false);
         }
