@@ -310,11 +310,12 @@ const EditorPage: React.FC = () => {
       window.confirm('This will replace your current document content. Continue?'),
   });
 
-  useInlineAiSuggestion({
+  const { tipHistory } = useInlineAiSuggestion({
     editor,
     docType: doc?.doc_type,
     enabled: coachEnabled,
     assignmentContext: decoder.sessionContext || undefined,
+    onLoadingStart: useCallback(() => { setCoachLoading(true); setCoachSuggestion(null); }, []),
     onSuggestion: useCallback((tip: string | null, loading: boolean) => {
       setCoachLoading(loading);
       setCoachSuggestion(tip);
