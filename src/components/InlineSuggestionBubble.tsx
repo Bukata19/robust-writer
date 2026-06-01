@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { Lightbulb, X, Loader2, Send, Clock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
