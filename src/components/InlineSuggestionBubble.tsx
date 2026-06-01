@@ -44,7 +44,6 @@ export default function InlineParagraphTip({
         const para = el.closest('p') as HTMLElement | null;
         const scrollContainer = el.closest('[data-editor-scroll]') as HTMLElement | null;
         if (!para || !scrollContainer) return;
-        containerRef.current = scrollContainer;
         const paraRect = para.getBoundingClientRect();
         const contRect = scrollContainer.getBoundingClientRect();
         const offsetTop = paraRect.bottom - contRect.top + scrollContainer.scrollTop;
