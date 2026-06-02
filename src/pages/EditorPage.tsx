@@ -67,7 +67,32 @@ import UnderlineExt from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
+import TextStyle from '@tiptap/extension-text-style';
+import FontFamily from '@tiptap/extension-font-family';
 import PlagiarismHighlight from '@/extensions/plagiarism-highlight';
+
+const TextStyleWithFontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontSize: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.style.fontSize || null,
+        renderHTML: (attrs: { fontSize?: string | null }) =>
+          attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {},
+      },
+    };
+  },
+});
+
+const FONT_FAMILY_OPTIONS = [
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Arial', value: 'Arial, sans-serif' },
+  { label: 'Calibri', value: 'Calibri, sans-serif' },
+  { label: 'Helvetica', value: 'Helvetica, Arial, sans-serif' },
+];
+const FONT_SIZE_OPTIONS = ['12px', '14px', '16px', '18px', '20px', '24px'];
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
