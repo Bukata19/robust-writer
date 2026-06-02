@@ -316,6 +316,8 @@ const EditorPage: React.FC = () => {
         },
       }),
       CharacterCount,
+      TextStyleWithFontSize,
+      FontFamily,
       PlagiarismHighlight,
     ],
     autofocus: true,
