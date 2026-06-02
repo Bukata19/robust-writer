@@ -1359,15 +1359,19 @@ const EditorPage: React.FC = () => {
         )}
 
         {/* Editor Canvas */}
-        <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-8 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
-          <EditorContent
-            editor={editor}
+          <PagedCanvas
+            maxWidth={focusMode ? 'max-w-[780px]' : canvasMaxW}
             data-intro-id="editor-canvas"
-            className={`w-full min-w-0 px-10 sm:px-16 lg:px-24 py-16 sm:py-20 cursor-text bg-white text-[#1a1a1a] dark:bg-[#1c2030] dark:text-[#e8edf5] shadow-[0_2px_32px_rgba(0,0,0,0.18)] dark:shadow-[0_2px_32px_rgba(0,0,0,0.6)] ${focusMode ? 'max-w-[780px]' : canvasMaxW}`}
-              style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)', minHeight: '1056px' }}
+            style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)' }}
             onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
-          />
+          >
+            <EditorContent
+              editor={editor}
+              className="w-full min-w-0 cursor-text"
+            />
+          </PagedCanvas>
           <InlineParagraphTip
             editor={editor}
             suggestion={coachSuggestion}
