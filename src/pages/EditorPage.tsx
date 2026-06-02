@@ -1267,8 +1267,38 @@ const EditorPage: React.FC = () => {
   );
 
   // ===== Formatting toolbar buttons =====
+  const currentFontFamily = editor?.getAttributes('textStyle').fontFamily as string | undefined;
+  const currentFontSize = editor?.getAttributes('textStyle').fontSize as string | undefined;
+  const fontFamilyValue = FONT_FAMILY_OPTIONS.find(o => o.value === currentFontFamily)?.value ?? FONT_FAMILY_OPTIONS[0].value;
+  const fontSizeValue = currentFontSize && FONT_SIZE_OPTIONS.includes(currentFontSize) ? currentFontSize : '16px';
+
+  const selectClass = `h-7 bg-card border border-border rounded-md text-xs text-foreground px-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors ${isMobile ? 'max-w-[100px]' : 'max-w-[120px] w-[110px]'}`;
+
   const formatButtons = editor ? (
     <>
+      <select
+        aria-label="Font family"
+        title="Font family"
+        value={fontFamilyValue}
+        onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+        className={selectClass}
+      >
+        {FONT_FAMILY_OPTIONS.map(opt => (
+          <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>{opt.label}</option>
+        ))}
+      </select>
+      <select
+        aria-label="Font size"
+        title="Font size"
+        value={fontSizeValue}
+        onChange={(e) => editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run()}
+        className={`h-7 bg-card border border-border rounded-md text-xs text-foreground px-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors ${isMobile ? 'max-w-[70px]' : 'max-w-[70px] w-[64px]'}`}
+      >
+        {FONT_SIZE_OPTIONS.map(sz => (
+          <option key={sz} value={sz}>{sz.replace('px','')}</option>
+        ))}
+      </select>
+      <div className={isMobile ? 'w-px h-6 bg-border mx-0.5' : 'w-px h-6 bg-border my-1'} />
       <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" icon={<Bold className="w-4 h-4" />} active={editor.isActive('bold')} />
       <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" icon={<Italic className="w-4 h-4" />} active={editor.isActive('italic')} />
       <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" icon={<Underline className="w-4 h-4" />} active={editor.isActive('underline')} />
