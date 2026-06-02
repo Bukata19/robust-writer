@@ -57,6 +57,7 @@ import InlineParagraphTip from '@/components/InlineSuggestionBubble';
 import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
 import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
+import PagedCanvas from '@/components/PagedCanvas';
 import type { Json } from '@/integrations/supabase/types';
 
 // TipTap
