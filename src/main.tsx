@@ -1,3 +1,8 @@
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+
+// Service worker registration
 if (import.meta.env.DEV) {
   // Unregister service workers in dev to avoid stale cache issues
   navigator.serviceWorker?.getRegistrations().then((regs) =>
@@ -9,9 +14,11 @@ if (import.meta.env.DEV) {
       .register('/sw.js', { scope: '/' })
       .then((reg) => {
         console.log('SW registered, scope:', reg.scope);
-        // Check for updates every time the app loads
         reg.update();
       })
       .catch((err) => console.error('SW registration failed:', err));
   });
 }
+
+// Mount React app
+createRoot(document.getElementById('root')!).render(<App />);
