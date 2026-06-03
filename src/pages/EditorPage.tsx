@@ -327,9 +327,10 @@ const EditorPage: React.FC = () => {
         style: 'font-family: Georgia, serif; min-height: 100%; width: 100%; word-break: break-word; overflow-wrap: break-word; caret-color: hsl(var(--primary));',      },
     },
     onUpdate: ({ editor: ed }) => {
-      setWordCount(ed.storage.characterCount.words());
-      setCoachSuggestion(null);
-    },
+  setWordCount(ed.storage.characterCount.words());
+  setCoachSuggestion(null);
+  setCoachLoading(false);
+},
   });
 
   const decoder = useAssignmentDecoder({
