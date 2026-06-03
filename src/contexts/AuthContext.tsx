@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
+import { toast } from 'sonner';
 const REMEMBER_KEY = 'rb_remember_me';
 
 interface AuthContextType {
@@ -21,11 +21,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+  setLoading(false);
+
+  if (event === 'SIGNED_OUT') {
+    // Session expired or user signed out from another tab
+    toast.error('Your session has expired. Please sign in again.');
+  }
+
+  if (event === 'TOKEN_REFRESHED') {
+    // Token silently refreshed — no action needed but good to know it's working
+    console.log('Session refreshed successfully');
+  }
+});
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
