@@ -327,6 +327,6 @@ This project is private and proprietary. All rights reserved.
 
 Built by **Sashi** — a student building practical AI tools for students.
 
-> *"Write smarter. Simply Just That."*
+> *"Write Smarter. Feel Smarter."*
 
 [![Live App](https://img.shields.io/badge/Open%20RobAssister-00d4b8?style=for-the-badge)](https://robobuddy-writer.lovable.app)
