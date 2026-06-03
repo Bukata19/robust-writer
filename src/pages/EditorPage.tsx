@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
-import OutlinePanel from '@/components/OutlinePanel';
+import PolishPanel from '@/components/PolishPanel';
 import {
   Drawer,
   DrawerContent,
@@ -51,6 +51,7 @@ import {
   Minimize,
   Brain,
   BookOpenCheck,
+  Wand2,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
@@ -237,7 +238,7 @@ const EditorPage: React.FC = () => {
   const [humanizerOpen, setHumanizerOpen] = useState(false);
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showOutline, setShowOutline] = useState(false);
+  const [showPolish, setShowPolish] = useState(false);
   const [showDecoder, setShowDecoder] = useState(false);
 
   // Focus mode
@@ -940,14 +941,14 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showOutline ? 'outline' : showDecoder ? 'decoder' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowHistory(false);
-    setShowOutline(false);
+    setShowPolish(false);
     setShowDecoder(false);
   };
 
@@ -956,12 +957,12 @@ const EditorPage: React.FC = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
-    setShowOutline(false);
+    setShowPolish(false);
     setShowDecoder(false);
   };
 
-  const openOutline = () => {
-    setShowOutline(true);
+  const openPolish = () => {
+    setShowPolish(true);
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowPlagiarism(false);
@@ -975,7 +976,7 @@ const EditorPage: React.FC = () => {
     setHumanizerOpen(false);
     setShowPlagiarism(false);
     setShowHistory(false);
-    setShowOutline(false);
+    setShowPolish(false);
   };
 
   const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
@@ -1166,18 +1167,9 @@ const EditorPage: React.FC = () => {
         />
       )}
 
-      {/* Outline Sidebar */}
-      {showOutline && doc && (
-        <OutlinePanel
-          docType={doc.doc_type}
-          onInsert={(html) => {
-            if (editor) {
-              editor.commands.setContent(html);
-              setWordCount(editor.storage.characterCount.words());
-            }
-          }}
-          onClose={() => setShowOutline(false)}
-        />
+      {/* Polish Sidebar */}
+      {showPolish && (
+        <PolishPanel editor={editor} onClose={() => setShowPolish(false)} />
       )}
 
       {/* Assignment Decoder Sidebar */}
@@ -1188,9 +1180,9 @@ const EditorPage: React.FC = () => {
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
-  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
@@ -1240,16 +1232,16 @@ const EditorPage: React.FC = () => {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={showOutline ? 'default' : 'ghost'}
+            variant={showPolish ? 'default' : 'ghost'}
             size="icon"
-            onClick={openOutline}
-            data-intro-id="doc-gen-btn"
+            onClick={() => toggleOrOpen(showPolish, openPolish, () => setShowPolish(false))}
+            data-intro-id="polish-btn"
             className="scale-click"
           >
-            <FileText className="w-4 h-4" />
+            <Wand2 className="w-4 h-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Document Generator</TooltipContent>
+        <TooltipContent side="left">Writing Polish</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -1312,7 +1304,7 @@ const EditorPage: React.FC = () => {
       {!isMobile && (
         <>
           <div className="w-px h-6 bg-border my-1" />
-          <ToolbarButton onClick={openOutline} title="Document Generator" icon={<FileText className="w-4 h-4" />} />
+          <ToolbarButton onClick={openPolish} title="Writing Polish" icon={<Wand2 className="w-4 h-4" />} />
         </>
       )}
     </>
