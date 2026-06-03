@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
-import OutlinePanel from '@/components/OutlinePanel';
+import PolishPanel from '@/components/PolishPanel';
 import {
   Drawer,
   DrawerContent,
