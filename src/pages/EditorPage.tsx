@@ -238,7 +238,7 @@ const EditorPage: React.FC = () => {
   const [humanizerOpen, setHumanizerOpen] = useState(false);
   const [showPlagiarism, setShowPlagiarism] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showOutline, setShowOutline] = useState(false);
+  const [showPolish, setShowPolish] = useState(false);
   const [showDecoder, setShowDecoder] = useState(false);
 
   // Focus mode
