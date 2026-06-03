@@ -1167,18 +1167,9 @@ const EditorPage: React.FC = () => {
         />
       )}
 
-      {/* Outline Sidebar */}
-      {showOutline && doc && (
-        <OutlinePanel
-          docType={doc.doc_type}
-          onInsert={(html) => {
-            if (editor) {
-              editor.commands.setContent(html);
-              setWordCount(editor.storage.characterCount.words());
-            }
-          }}
-          onClose={() => setShowOutline(false)}
-        />
+      {/* Polish Sidebar */}
+      {showPolish && (
+        <PolishPanel editor={editor} onClose={() => setShowPolish(false)} />
       )}
 
       {/* Assignment Decoder Sidebar */}
