@@ -786,7 +786,7 @@ const EditorPage: React.FC = () => {
       if (!resp.ok || !resp.body) throw new Error('Failed to start stream');
 
       const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
+      const textDecoder = new TextDecoder();
       let textBuffer = '';
       let streamDone = false;
 
@@ -804,7 +804,7 @@ const EditorPage: React.FC = () => {
       while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
+        textBuffer += textDecoder.decode(value, { stream: true });
 
         let newlineIndex: number;
         while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
@@ -1419,17 +1419,50 @@ const EditorPage: React.FC = () => {
         {/* Editor Canvas */}
         <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
-          <PagedCanvas
-            maxWidth={focusMode ? 'max-w-[780px]' : canvasMaxW}
-            data-intro-id="editor-canvas"
-            style={{ fontFamily: 'Georgia, serif', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight, fontSize: 'var(--editor-font-size)' }}
-            onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
-          >
-            <EditorContent
-              editor={editor}
-              className="w-full min-w-0 cursor-text"
-            />
-          </PagedCanvas>
+            {loading ? (
+  <div className="relative w-full max-w-[816px]">
+    <div className="bg-white dark:bg-[#1c2030] shadow-[0_2px_24px_rgba(0,0,0,0.18)] rounded-sm px-16 py-20">
+      <div className="h-7 bg-muted rounded-md animate-pulse mb-10 w-1/2" />
+      <div className="space-y-4">
+        {Array.from({ length: 12 }, (_, i) => (
+          <div
+            key={i}
+            className="h-4 bg-muted rounded animate-pulse"
+            style={{ width: `${90 - (i % 4) * 8}%`, animationDelay: `${i * 60}ms` }}
+          />
+        ))}
+      </div>
+      <div className="h-6 bg-muted rounded-md animate-pulse mt-12 mb-6 w-1/3" />
+      <div className="space-y-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div
+            key={i}
+            className="h-4 bg-muted rounded animate-pulse"
+            style={{ width: `${88 - (i % 3) * 10}%`, animationDelay: `${(i + 12) * 60}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+) : (
+  <PagedCanvas
+    maxWidth={focusMode ? 'max-w-[780px]' : canvasMaxW}
+    data-intro-id="editor-canvas"
+    style={{
+      fontFamily: 'Georgia, serif',
+      wordBreak: 'break-word',
+      overflowWrap: 'break-word',
+      lineHeight,
+      fontSize: 'var(--editor-font-size)',
+    }}
+    onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
+  >
+    <EditorContent
+      editor={editor}
+      className="w-full min-w-0 cursor-text"
+    />
+  </PagedCanvas>
+)}
           <InlineParagraphTip
             editor={editor}
             suggestion={coachSuggestion}
