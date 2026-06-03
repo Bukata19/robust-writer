@@ -1,6 +1,6 @@
-# 🤖 RobAssister — AI-Powered Writing Assistant
+# RobAssister — AI-Powered Writing Assistant
 
-> A smart, distraction-free writing platform for students. Write, humanize, check plagiarism, and export — all in one place.
+> The comprehensive writing platform for students. Decode assignments, receive real-time coaching, polish your prose, and submit with confidence—all in one distraction-free workspace.
 
 [![Live App](https://img.shields.io/badge/Live%20App-robobuddy--writer.lovable.app-00d4b8?style=flat-square&logo=vercel)](https://robobuddy-writer.lovable.app)
 [![Built with React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react)](https://react.dev)
@@ -10,62 +10,96 @@
 
 ---
 
-## 📸 Overview
+## Overview
 
-RobAssister is a full-stack AI writing assistant built for students who need to produce high-quality academic documents. It combines a rich-text editor with powerful AI tools — an intelligent chat assistant, a text humanizer, and a plagiarism checker — all wrapped in a sleek Deep Dark interface.
+RobAssister transforms how students approach academic writing. Built on a modern, fast tech stack, it combines an intuitive rich-text editor with intelligent AI tools to help you understand assignments, refine your writing in real time, eliminate plagiarism concerns, and export polished documents. Whether you're tackling an essay, research paper, or report, RobAssister guides you from concept to completion.
 
 ---
 
-## ✨ Features
+## Core Features
 
-### 📝 Rich-Text Editor
-- Distraction-free writing environment with a floating formatting toolbar
-- Support for Bold, Italic, Underline, Headings (H1/H2), and ordered/unordered lists
-- A4 and full-width canvas modes
+### Assignment Decoder
+Break down complex assignment prompts with AI-powered analysis. Paste your assignment brief and receive:
+- Key requirements and objectives extracted automatically
+- Writing guidelines and formatting expectations clarified
+- Personalized context that fuels the Writing Coach for better in-line suggestions
+- Active section tracking as you write
+
+### AI Writing Coach
+Your always-on collaborative partner. The Writing Coach:
+- Watches as you write and offers one focused, actionable tip when you pause
+- Draws context from your assignment decoder session for tailored guidance
+- Appears as an inline bubble in your document—never disruptive, always helpful
+- Learns your writing patterns and adapts suggestions accordingly
+- Tracks tip history so you never forget key advice
+
+### Writing Polish Tool
+A dual-panel utility for final refinement:
+- **Clarity Checker** — Scans for complex phrasing, passive constructions, and jargon; suggests simpler alternatives
+- **Context Rewriter** — Restructures sentences and paragraphs while preserving your voice; adjust intensity to suit your needs
+- Side-by-side preview of changes before applying
+- One-click apply or discard changes
+
+### Multi-Page Editor Canvas
+Write seamlessly across multiple pages with a professional, distraction-free layout:
+- Document pages render with realistic spacing and margins
+- Automatic page breaks as content grows
+- Configurable canvas width: A4 or full-width
 - Live word count and reading time display
-- Inline placeholder guidance for each document section
+- Floating formatting toolbar with smart, context-aware options
 
-### 🧠 AI Writing Assistant
-- Real-time AI chat panel powered by Gemini 3.1 Pro (via Supabase Edge Functions)
-- Context-aware suggestions based on your current document content
-- Ask questions, brainstorm ideas, request rewrites, or get outline help
-- Full conversation history maintained per session
+### Rich-Text Editor
+Built for academic writing, powered by TipTap:
+- Bold, Italic, Underline, Headings (H1/H2), and list formatting
+- Pre-structured templates for Essays, Research Papers, Reports, and General documents
+- Smart inline placeholders that guide each section
+- Full font family and size customization
+- Text alignment controls
 
-### 🧬 Text Humanizer
-- Transforms AI-generated or robotic-sounding text into natural, human writing
+### Text Humanizer
+Transform robotic or AI-sounding prose into natural, human writing:
 - Three intensity levels: **Subtle**, **Moderate**, **Full**
-- Side-by-side original vs. humanized comparison before applying changes
-- One-click apply or dismiss
+- Target word count modes: Unchanged, Preset (250–2000), or Custom
+- Side-by-side comparison before applying changes
+- One-click accept or reject humanized text
 
-### 🛡️ Plagiarism Checker
-- AI-powered originality scoring (0–100 scale)
-- Flags specific passages with concern types: `common_phrasing`, `formulaic_structure`, `ai_generated`, `uncited_claim`, `style_inconsistency`
-- Severity rating per flagged passage (Low / Medium / High)
-- Actionable fix suggestions per flagged item
+### Plagiarism Checker
+AI-powered originality analysis to give you peace of mind:
+- Overall originality score (0–100 scale)
+- Flagged passages with concern types: common phrasing, formulaic structure, AI-generated text, uncited claims, and style inconsistencies
+- Severity ratings (Low / Medium / High) per flagged item
+- Actionable fix suggestions for each concern
 - Originality strengths summary
-- Animated circular score gauge with teal → yellow → red colour gradient
-- Plagiarism score stored per document and displayed on dashboard cards
+- Animated score gauge with intuitive visual feedback
+- Plagiarism scores persist across sessions and appear on dashboard cards
 
-### 📄 Document Types & Templates
-Pre-built structured templates for:
-- **Essay** — Introduction, Body Paragraphs, Conclusion
-- **Research Paper** — Abstract, Introduction, Literature Review, Methodology, Results, Discussion, References
-- **Report** — Executive Summary, Findings, Recommendations, Conclusion
-- **General** — Blank canvas
+### Document Types & Templates
+Professionally structured templates for:
+- **Essay** — Introduction, Body Paragraphs (×3), Conclusion
+- **Research Paper** — Abstract, Introduction, Literature Review, Methodology, Results, Discussion, Conclusion, References
+- **Report** — Executive Summary, Introduction, Findings, Recommendations, Conclusion
+- **General** — Blank canvas for flexible writing
 
-### 💾 Save & Export
-- Autosave with configurable intervals (30s / 1min / 2min)
-- Export to **PDF**, **DOCX**, and **TXT**
-- Saved plagiarism scores persist across sessions
-
-### 📊 Dashboard
-- Document grid with search and filter by document type
-- Plagiarism score badges on each document card (Clean / Warning / High Risk)
+### Dashboard & Document Management
+- Clean document grid with instant search and filtering by type
+- Plagiarism score badges on each card (Clean / Warning / High Risk)
 - One-click document creation by type
-- Delete with confirmation dialog
+- Safe delete with confirmation
+- **Streamlined Import** — Quick-access import button to add files directly from your workspace
 
-### ⚙️ Settings Drawer
-Accessible from the Dashboard header:
+### Save & Export
+- Autosave with configurable intervals (30s / 1min / 2min)
+- Export to **PDF**, **DOCX**, or **TXT** formats
+- Plagiarism scores and document metadata persist
+- Version history snapshots on every save
+
+### Version History
+- Browse all saved versions of your document
+- Restore any previous version with one click
+- View version timestamps and content previews
+
+### Settings Drawer
+Fine-tune every aspect of your experience:
 
 | Section | Options |
 |---|---|
@@ -75,19 +109,19 @@ Accessible from the Dashboard header:
 | **Accessibility** | Reduce motion toggle, High contrast mode |
 | **Account** | Display name, Reset onboarding tour, Sign out |
 
-### 🎓 Onboarding Tour
-- Interactive step-by-step guided tour powered by Intro.js
-- Enlarged, teal-accented tour popups for visibility
-- Reset tour at any time from Settings > Account
+### Interactive Onboarding Tour
+- Step-by-step guided tour powered by Intro.js
+- Visually prominent, teal-accented tour popups
+- Reset anytime from Settings > Account
 
-### 🔐 Authentication & Security
+### Authentication & Security
 - Email/password sign up and sign in via Supabase Auth
-- Protected routes — all pages behind authentication
-- Row-Level Security (RLS) on all database tables — users can only access their own documents
+- Protected routes—all pages require authentication
+- Row-Level Security (RLS) on all database tables—users only access their own documents
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -97,6 +131,7 @@ Accessible from the Dashboard header:
 | **State / Data** | TanStack Query v5 |
 | **Backend** | Supabase (Auth, PostgreSQL, Edge Functions) |
 | **AI** | Gemini API via Supabase Edge Functions |
+| **Editor** | TipTap rich-text framework |
 | **Export** | html2pdf.js (PDF), docx (DOCX) |
 | **Notifications** | Sonner |
 | **Onboarding** | Intro.js |
@@ -105,7 +140,7 @@ Accessible from the Dashboard header:
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 ```sql
 -- Document types
@@ -131,7 +166,7 @@ CREATE TABLE public.documents (
 
 ---
 
-## ☁️ Supabase Edge Functions
+## Supabase Edge Functions
 
 | Function | Endpoint | Description |
 |---|---|---|
@@ -143,21 +178,21 @@ All functions require a valid Supabase Bearer token. Rate limiting and credit er
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - [Node.js](https://nodejs.org) 18+ or [Bun](https://bun.sh)
 - A [Supabase](https://supabase.com) project
 - A Gemini API key (via Gemini or Lovable AI gateway)
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Bukata19/robobuddy-writer.git
-cd robobuddy-writer
+git clone https://github.com/Bukata19/robust-writer.git
+cd robust-writer
 ```
 
-### 2. Install dependencies
+### 2. Install Dependencies
 
 ```bash
 npm install
@@ -165,22 +200,22 @@ npm install
 bun install
 ```
 
-### 3. Configure environment variables
+### 3. Configure Environment Variables
 
-Create a `.env` file in the root:
+Create a `.env` file in the project root with your Supabase credentials:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Set the following secrets in your Supabase Edge Functions dashboard:
+Set the following secret in your Supabase Edge Functions dashboard:
 
 ```
 LOVABLE_API_KEY=your-ai-gateway-key
 ```
 
-### 4. Apply database migrations
+### 4. Apply Database Migrations
 
 ```bash
 supabase db push
@@ -194,7 +229,7 @@ supabase functions deploy humanizer
 supabase functions deploy plagiarism
 ```
 
-### 6. Run the development server
+### 6. Run the Development Server
 
 ```bash
 npm run dev
@@ -202,33 +237,40 @@ npm run dev
 bun dev
 ```
 
-Open [http://localhost:8080](http://localhost:8080) in your browser.
+Open [http://localhost:8080](http://localhost:8080) in your browser and sign up to get started.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-robobuddy-writer/
+robust-writer/
 ├── public/                    # Static assets
 ├── src/
 │   ├── components/
 │   │   ├── ui/                # shadcn/ui component library
 │   │   ├── EditorPage.tsx     # Editor wrapper component
-│   │   └── NavLink.tsx        # Navigation link component
+│   │   ├── PolishPanel.tsx    # Writing Polish tool (Clarity + Rewriter)
+│   │   ├── AssignmentDecoder/ # Assignment Decoder components
+│   │   ├── VersionHistoryPanel.tsx
+│   │   ├── PlagiarismPanel.tsx
+│   │   └── PagedCanvas.tsx    # Multi-page editor canvas
 │   ├── contexts/
-│   │   └── AuthContext.tsx    # Global auth state
+│   │   ├── AuthContext.tsx    # Global auth state
+│   │   └── SettingsContext.tsx
 │   ├── hooks/
 │   │   ├── use-mobile.tsx     # Mobile breakpoint hook
-│   │   └── use-toast.ts       # Toast notification hook
+│   │   ├── use-toast.ts       # Toast notification hook
+│   │   ├── useAssignmentDecoder.ts
+│   │   └── useInlineAiSuggestion.ts
 │   ├── integrations/
 │   │   └── supabase/          # Supabase client & generated types
 │   ├── lib/
-│   │   └── utils.ts           # Utility helpers (cn, etc.)
+│   │   └── utils.ts           # Utility helpers
 │   ├── pages/
 │   │   ├── AuthPage.tsx       # Login / Sign up page
-│   │   ├── Dashboard.tsx      # Document management dashboard
-│   │   ├── EditorPage.tsx     # Main rich-text editor (41KB)
+│   │   ├── Dashboard.tsx      # Document management & import
+│   │   ├── EditorPage.tsx     # Main editor (rich-text + AI tools)
 │   │   ├── Index.tsx          # Root redirect
 │   │   └── NotFound.tsx       # 404 page
 │   ├── App.tsx                # Router, providers, protected routes
@@ -249,9 +291,9 @@ robobuddy-writer/
 
 ---
 
-## 🎨 Design System
+## Design System
 
-RobAssister uses a **Deep Dark** colour theme throughout:
+RobAssister uses a cohesive **Deep Dark** theme throughout with a modern, approachable aesthetic:
 
 | Token | Value | Usage |
 |---|---|---|
@@ -262,11 +304,11 @@ RobAssister uses a **Deep Dark** colour theme throughout:
 | Foreground | `#e8edf5` | Primary text |
 | Muted | `#7a8599` | Secondary text |
 
-Additional themes available via Settings: **Midnight Blue**, **Forest Dark**, **Crimson Dark**.
+Additional themes available: **Midnight Blue**, **Forest Dark**, **Crimson Dark**.
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ```bash
 # Unit tests
@@ -281,7 +323,7 @@ npx playwright test
 
 ---
 
-## 📦 Available Scripts
+## Available Scripts
 
 | Script | Description |
 |---|---|
@@ -293,19 +335,18 @@ npx playwright test
 
 ---
 
-## 🔮 Planned Upgrades
+## Roadmap
 
-- [ ] TipTap rich-text editor integration
-- [ ] AI document Generator
-- [ ] Major Humanizer overhaul 
 - [ ] Citation generator (APA / MLA / Harvard)
-- [ ] Document version history
+- [ ] Document collaboration (real-time multiplayer)
+- [ ] AI outline and full-document generation
 - [ ] Mobile-optimised bottom sheet panels
 - [ ] Dark/light theme toggle
+- [ ] Advanced plagiarism source detection
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please open an issue first to discuss any changes you'd like to make.
 
@@ -317,16 +358,16 @@ Contributions are welcome! Please open an issue first to discuss any changes you
 
 ---
 
-## 📄 License
+## License
 
 This project is private and proprietary. All rights reserved.
 
 ---
 
-## 👤 Author
+## Author
 
 Built by **Sashi** — a student building practical AI tools for students.
 
 > *"Write Smarter. Feel Smarter."*
 
-[![Live App](https://img.shields.io/badge/Open%20RobAssister-00d4b8?style=for-the-badge)](https://robobuddy-writer.lovable.app)
+[![Open RobAssister](https://img.shields.io/badge/Open%20RobAssister-00d4b8?style=for-the-badge)](https://robobuddy-writer.lovable.app)
