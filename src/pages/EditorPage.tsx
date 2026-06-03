@@ -1232,16 +1232,16 @@ const EditorPage: React.FC = () => {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={showOutline ? 'default' : 'ghost'}
+            variant={showPolish ? 'default' : 'ghost'}
             size="icon"
-            onClick={openOutline}
-            data-intro-id="doc-gen-btn"
+            onClick={() => toggleOrOpen(showPolish, openPolish, () => setShowPolish(false))}
+            data-intro-id="polish-btn"
             className="scale-click"
           >
-            <FileText className="w-4 h-4" />
+            <Wand2 className="w-4 h-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Document Generator</TooltipContent>
+        <TooltipContent side="left">Writing Polish</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
