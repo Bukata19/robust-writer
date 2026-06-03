@@ -1,31 +1,53 @@
-const CACHE_NAME = 'robassister-v1';
-const SHELL_URLS = ['/', '/index.html', '/offline.html'];
+const CACHE_VERSION = 'robassister-v3';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
-// Install — cache app shell + offline page
+// Core files to pre-cache on install
+const PRECACHE_URLS = [
+  '/',
+  '/index.html',
+  '/offline.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/favicon.ico',
+];
+
+// Install — pre-cache critical shell files
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS))
+    caches.open(STATIC_CACHE).then((cache) => {
+      return cache.addAll(PRECACHE_URLS).catch((err) => {
+        console.warn('Pre-cache failed for some files:', err);
+      });
+    })
   );
 });
 
-// Activate — clean old caches, claim clients
+// Activate — remove old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter((key) => key.startsWith('robassister-') && key !== STATIC_CACHE && key !== DYNAMIC_CACHE)
+          .map((key) => caches.delete(key))
+      )
     ).then(() => self.clients.claim())
   );
 });
 
-// Fetch — network first, cache fallback; never cache Supabase calls
+// Fetch — network first with cache fallback
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  // Skip caching for Supabase API / Edge Functions / non-GET
+  // Skip non-GET and API/Supabase requests — never cache these
   if (
-    event.request.method !== 'GET' ||
+    request.method !== 'GET' ||
     url.hostname.includes('supabase') ||
+    url.hostname.includes('googleapis') ||
     url.pathname.startsWith('/functions/') ||
     url.pathname.startsWith('/rest/') ||
     url.pathname.startsWith('/auth/') ||
@@ -34,25 +56,64 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // For navigation requests (HTML pages) — network first, offline fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request)
+            .then((cached) => cached || caches.match('/offline.html'))
+            .then((fallback) => fallback || new Response('<h1>You are offline</h1>', {
+              headers: { 'Content-Type': 'text/html' },
+            }));
+        })
+    );
+    return;
+  }
+
+  // For static assets — cache first, network fallback
+  if (
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/)
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Everything else — network first, cache fallback
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // Cache successful responses
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
         }
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cached) => {
-          if (cached) return cached;
-          // For navigation requests, serve offline page
-          if (event.request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
-          return new Response('Offline', { status: 503 });
-        });
-      })
+      .catch(() => caches.match(request))
   );
+});
+
+// Listen for messages from the app (e.g. skip waiting)
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
