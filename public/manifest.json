@@ -4,26 +4,45 @@
   "description": "AI-powered writing assistant for students",
   "start_url": "/",
   "id": "/",
+  "dir": "ltr",
+  "lang": "en-US",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait",
   "background_color": "#080a0c",
   "theme_color": "#00d4b8",
   "prefer_related_applications": false,
   "categories": ["education", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "New Essay",
+      "short_name": "Essay",
+      "description": "Create a new essay document",
+      "url": "/dashboard?new=essay",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View all your documents",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "screenshots": [
     {
       "src": "/screenshot-wide.png",
-      "sizes": "1280x720",
+      "sizes": "1190x669",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "RobAssister Dashboard"
+      "label": "RobAssister Dashboard — manage your documents"
     },
     {
       "src": "/screenshot-narrow.png",
-      "sizes": "390x844",
+      "sizes": "316x858",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "RobAssister Editor on Mobile"
+      "label": "RobAssister Editor — write with AI assistance"
     }
   ],
   "icons": [
@@ -31,13 +50,25 @@
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
