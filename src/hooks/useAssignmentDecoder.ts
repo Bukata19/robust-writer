@@ -16,8 +16,22 @@ export interface OutlineSection {
   wordCountSuggestion: number;
 }
 
+const DECODER_STORAGE_KEY = (docId: string) => `rb_decoder_${docId}`;
+
+interface PersistedDecoderState {
+  question: string;
+  detectedDocType: DecoderDocType | null;
+  detectionReason: string;
+  confirmedDocType: DecoderDocType | null;
+  academicLevel: AcademicLevel;
+  outline: OutlineSection[];
+  sessionContext: string;
+  step: DecoderStep;
+}
+
 interface UseAssignmentDecoderOptions {
   editor: Editor | null;
+  documentId?: string;
   onConfirmReplace?: () => Promise<boolean> | boolean;
 }
 
@@ -76,33 +90,72 @@ function extractJson(raw: string): any | null {
   }
 }
 
-export function useAssignmentDecoder({ editor, onConfirmReplace }: UseAssignmentDecoderOptions) {
-  const [question, setQuestion] = useState('');
-  const [detectedDocType, setDetectedDocType] = useState<DecoderDocType | null>(null);
-  const [detectionReason, setDetectionReason] = useState<string>('');
-  const [confirmedDocType, setConfirmedDocType] = useState<DecoderDocType | null>(null);
-  const [academicLevel, setAcademicLevel] = useState<AcademicLevel>(null);
-  const [outline, setOutline] = useState<OutlineSection[]>([]);
-  const [sessionContext, setSessionContext] = useState<string>('');
+export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: UseAssignmentDecoderOptions) {
+
+  // Load persisted state for this document if it exists
+  const loadPersisted = (): Partial<PersistedDecoderState> => {
+    if (!documentId) return {};
+    try {
+      const raw = localStorage.getItem(DECODER_STORAGE_KEY(documentId));
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  };
+
+  const persisted = loadPersisted();
+
+  const [question, setQuestion] = useState(persisted.question ?? '');
+  const [detectedDocType, setDetectedDocType] = useState<DecoderDocType | null>(persisted.detectedDocType ?? null);
+  const [detectionReason, setDetectionReason] = useState<string>(persisted.detectionReason ?? '');
+  const [confirmedDocType, setConfirmedDocType] = useState<DecoderDocType | null>(persisted.confirmedDocType ?? null);
+  const [academicLevel, setAcademicLevel] = useState<AcademicLevel>(persisted.academicLevel ?? null);
+  const [outline, setOutline] = useState<OutlineSection[]>(persisted.outline ?? []);
+  const [sessionContext, setSessionContext] = useState<string>(persisted.sessionContext ?? '');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [generatingSection, setGeneratingSection] = useState<string | null>(null);
   const [sectionDraft, setSectionDraft] = useState<{ heading: string; content: string } | null>(null);
-  const [step, setStep] = useState<DecoderStep>('input');
+  const [step, setStep] = useState<DecoderStep>(persisted.step ?? 'input');
   const [analysing, setAnalysing] = useState(false);
 
+// Persist decoder state to localStorage whenever meaningful state changes
+useEffect(() => {
+  if (!documentId || step === 'input') {
+    // Don't persist empty/reset state — clear any old data
+    if (documentId && step === 'input' && !question.trim()) {
+      localStorage.removeItem(DECODER_STORAGE_KEY(documentId));
+    }
+    return;
+  }
+  try {
+    const toSave: PersistedDecoderState = {
+      question,
+      detectedDocType,
+      detectionReason,
+      confirmedDocType,
+      academicLevel,
+      outline,
+      sessionContext,
+      step,
+    };
+    localStorage.setItem(DECODER_STORAGE_KEY(documentId), JSON.stringify(toSave));
+  } catch { /* ignore storage errors */ }
+}, [documentId, question, detectedDocType, detectionReason, confirmedDocType, academicLevel, outline, sessionContext, step]);
+  
   const reset = useCallback(() => {
-    setQuestion('');
-    setDetectedDocType(null);
-    setDetectionReason('');
-    setConfirmedDocType(null);
-    setAcademicLevel(null);
-    setOutline([]);
-    setSessionContext('');
-    setActiveSection(null);
-    setGeneratingSection(null);
-    setSectionDraft(null);
-    setStep('input');
-  }, []);
+  if (documentId) {
+    try { localStorage.removeItem(DECODER_STORAGE_KEY(documentId)); } catch { /* ignore */ }
+  }
+  setQuestion('');
+  setDetectedDocType(null);
+  setDetectionReason('');
+  setConfirmedDocType(null);
+  setAcademicLevel(null);
+  setOutline([]);
+  setSessionContext('');
+  setActiveSection(null);
+  setGeneratingSection(null);
+  setSectionDraft(null);
+  setStep('input');
+}, [documentId]);
 
   const analyseQuestion = useCallback(async () => {
     if (!question.trim()) return;
