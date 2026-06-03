@@ -340,7 +340,12 @@ const EditorPage: React.FC = () => {
     onConfirmReplace: async () =>
       window.confirm('This will replace your current document content. Continue?'),
   });
-
+// Clear decoder state when navigating to a different document
+useEffect(() => {
+  decoder.reset();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [id]);
+  
   const { tipHistory } = useInlineAiSuggestion({
     editor,
     docType: doc?.doc_type,
