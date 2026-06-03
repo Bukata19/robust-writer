@@ -337,11 +337,8 @@ npx playwright test
 
 ## Roadmap
 
-- [ ] Citation generator (APA / MLA / Harvard)
 - [ ] Document collaboration (real-time multiplayer)
-- [ ] AI outline and full-document generation
 - [ ] Mobile-optimised bottom sheet panels
-- [ ] Dark/light theme toggle
 - [ ] Advanced plagiarism source detection
 
 ---
