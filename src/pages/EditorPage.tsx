@@ -1273,7 +1273,10 @@ const EditorPage: React.FC = () => {
         aria-label="Font family"
         title="Font family"
         value={fontFamilyValue}
-        onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+        onChange={(e) => {
+          if (!editor) return;
+          editor.chain().focus().setFontFamily(e.target.value).run();
+        }}
         className={selectClass}
       >
         {FONT_FAMILY_OPTIONS.map(opt => (
@@ -1284,7 +1287,10 @@ const EditorPage: React.FC = () => {
         aria-label="Font size"
         title="Font size"
         value={fontSizeValue}
-        onChange={(e) => editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run()}
+        onChange={(e) => {
+          if (!editor) return;
+          editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
+        }}
         className={`h-7 bg-card border border-border rounded-md text-xs text-foreground px-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors ${isMobile ? 'max-w-[70px]' : 'max-w-[70px] w-[64px]'}`}
       >
         {FONT_SIZE_OPTIONS.map(sz => (
