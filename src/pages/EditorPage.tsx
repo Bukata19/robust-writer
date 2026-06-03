@@ -1273,7 +1273,10 @@ const EditorPage: React.FC = () => {
         aria-label="Font family"
         title="Font family"
         value={fontFamilyValue}
-        onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+        onChange={(e) => {
+          if (!editor) return;
+          editor.chain().focus().setFontFamily(e.target.value).run();
+        }}
         className={selectClass}
       >
         {FONT_FAMILY_OPTIONS.map(opt => (
