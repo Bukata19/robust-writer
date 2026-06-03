@@ -1304,7 +1304,7 @@ const EditorPage: React.FC = () => {
       {!isMobile && (
         <>
           <div className="w-px h-6 bg-border my-1" />
-          <ToolbarButton onClick={openOutline} title="Document Generator" icon={<FileText className="w-4 h-4" />} />
+          <ToolbarButton onClick={openPolish} title="Writing Polish" icon={<Wand2 className="w-4 h-4" />} />
         </>
       )}
     </>
