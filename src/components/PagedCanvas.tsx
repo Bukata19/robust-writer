@@ -69,7 +69,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
           paddingRight: PAGE_PADDING_X,
           paddingTop: PAGE_PADDING_Y,
           // Bottom padding: fill to end of last page
-          paddingBottom: totalHeight - (contentRef.current?.scrollHeight ?? PAGE_HEIGHT) + PAGE_PADDING_Y,
+          paddingBottom: PAGE_PADDING_Y,  
           ...style,
         }}
       >
