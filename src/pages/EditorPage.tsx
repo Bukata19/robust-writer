@@ -336,6 +336,7 @@ const EditorPage: React.FC = () => {
 
   const decoder = useAssignmentDecoder({
     editor,
+    documentId: id,
     onConfirmReplace: async () =>
       window.confirm('This will replace your current document content. Continue?'),
   });
