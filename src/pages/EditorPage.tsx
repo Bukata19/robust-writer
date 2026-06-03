@@ -51,6 +51,7 @@ import {
   Minimize,
   Brain,
   BookOpenCheck,
+  Wand2,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
