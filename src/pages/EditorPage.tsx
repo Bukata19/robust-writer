@@ -1180,9 +1180,9 @@ const EditorPage: React.FC = () => {
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
-  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowOutline(false); setShowDecoder(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
