@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.lovable.robobuddy_writer.twa",
+        "sha256_cert_fingerprints": ["E4:AA:28:26:E2:A6:8D:B2:CE:1C:BF:0B:4E:94:68:EB:B9:9E:A0:1D:CB:A8:20:A8:D6:02:A1:C8:91:7F:98:3E"]
+      }
+    }]
