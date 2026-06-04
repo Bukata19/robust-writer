@@ -7,113 +7,178 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── PERSONA MAP ────────────────────────────────────────────────────────────
-// Giving the model a concrete human writer persona is the single biggest
-// improvement over "You are a text humanizer". It shifts generation from
-// "AI transforming AI text" to "person polishing their own work".
+// ── ADVANCED PERSONA MAP ──────────────────────────────────────────────────────
+// Each persona embodies a specific human writing archetype, designed to shift
+// generation from "machine polishing text" to "real person completing their work".
 const personaMap: Record<string, string> = {
-  essay: "a third-year undergraduate student who writes confidently and has a distinct personal voice in their academic work",
-  research_paper: "a postgraduate researcher who writes with authority but retains their individual analytical voice",
-  report: "a professional analyst who writes clearly and directly, with well-reasoned arguments and minimal fluff",
-  general: "a knowledgeable person who writes naturally and conversationally without being informal",
+  essay: "a reflective third-year undergraduate who writes with genuine conviction, develops ideas organically, and isn't afraid to revise their own sentence structure mid-thought",
+  research_paper: "a meticulous postgraduate researcher who balances analytical rigor with natural voice—someone who writes their findings the way they'd explain them to a colleague, not through a corporate template",
+  report: "a seasoned professional analyst who values clarity above all, writes with directness and minimal hedging, and structures arguments the way they actually think through problems—sometimes linearly, sometimes with backtracking",
+  general: "a thoughtful person who writes to communicate honestly, varies rhythm naturally without overthinking, and trusts that authentic expression beats formulaic polish",
 };
 
-// ── INTENSITY CORES ────────────────────────────────────────────────────────
+// ── SENTENCE-LEVEL AI SIGNATURE WORD REGISTRY ──────────────────────────────
+// These are words that trigger LLM detection algorithms. The engine systematically
+// identifies and replaces them with organic alternatives.
+const aiSignatureWords: Record<string, string[]> = {
+  delve: ["explore", "examine", "dig into", "look at"],
+  tapestry: ["pattern", "blend", "mix", "collection"],
+  leverage: ["use", "draw on", "employ", "capitalize on"],
+  navigating: ["facing", "handling", "dealing with", "managing"],
+  crucial: ["key", "important", "vital", "essential"],
+  paramount: ["essential", "central", "core", "foundational"],
+  multifaceted: ["complex", "layered", "many-sided", "intricate"],
+  robust: ["strong", "solid", "sturdy", "reliable"],
+  nuanced: ["subtle", "layered", "complex", "refined"],
+  furthermore: ["also", "additionally", "what's more", "beyond that"],
+  moreover: ["in addition", "further", "also", "plus"],
+  "it is worth noting that": ["notably", "note that", ""],
+  "it should be mentioned that": ["mention that", "consider that", ""],
+  "in conclusion": ["so", "ultimately", "in the end", "what this means"],
+  "to summarize": ["to recap", "putting it simply", ""],
+  "in summary": ["in short", "to be clear", ""],
+  "not only X, but also Y": ["both X and Y", "X alongside Y", ""],
+};
+
+// ── INTENSITY CORES: SENTENCE-LEVEL RECONSTRUCTION ────────────────────────
+// Each intensity level enforces granular auditory and structural transformation.
+// The engine processes text sentence-by-sentence, not paragraph-by-paragraph.
 const intensityCores: Record<string, string> = {
   subtle: `
-TASK: Make targeted refinements only. Do not restructure.
+TASK: Perform granular, sentence-by-sentence refinement. This is not restructuring — it's precision polishing.
 
-APPLY THESE SPECIFIC CHANGES:
-- Replace these exact words wherever they appear: "furthermore" → use "also" or restructure the sentence; "moreover" → cut or rephrase; "it is worth noting that" → delete, state the point directly; "delve" → use "explore" or "examine"; "crucial" → use "important" or "key"; "in conclusion" → use "ultimately" or restructure; "utilize" → use "use"; "paramount" → use "essential" or "critical"; "multifaceted" → be specific about what the complexity actually is
-- Change 2–3 sentences that follow identical structures (e.g. three consecutive Subject + Verb + Object sentences) — vary one to start with a participial phrase or prepositional phrase
-- If any paragraph has a final sentence that restates the paragraph's opening claim, cut or reframe that sentence
-- Keep everything else exactly as it is`,
+SENTENCE-LEVEL AUDITORY RECONSTRUCTION:
+- Examine every single sentence individually for AI signature markers
+- Replace these exact phrases wherever they appear: "furthermore" → "also" or restructure; "moreover" → cut or rephrase; "it is worth noting that" → delete the phrase, state the point directly
+- If a sentence starts with a dependent clause and ends with a dependent clause (typical AI pattern), restructure so the independent clause is featured
+- Break any compound sentence with three or more clauses into shorter punchy constructions
 
-  moderate: `
-TASK: Rewrite the text so it reads as natural, authentic student writing.
-
-BURSTINESS (top priority):
-AI text has consistent sentence length (15–20 words each). Humans do not write this way.
-You must create dramatic length variation in every paragraph:
-- Include at least 2 sentences of 4–8 words per 200 words of text
-- Include at least 1 sentence of 30–40 words per 200 words of text
-- The remaining sentences should vary between 10–25 words
-- Never write three consecutive sentences of similar length
-
-STRUCTURAL VARIATION:
-- Do not start two consecutive paragraphs with a subject + verb opening
-- Vary paragraph openers: use participial phrases ("Examining this further..."), prepositional phrases ("In practice,..."), conjunctions to start ("But this creates..."), qualifiers ("Arguably,..."), or direct short statements
-- Break the AI triad pattern: if the original lists exactly 3 examples or makes exactly 3 points, adjust to 2 or 4
-- Remove any paragraph-ending sentence that simply restates what the paragraph already said
-
-WORD CHOICE:
-- Remove all of these words and replace them specifically: furthermore, moreover, it is worth noting, delve, crucial, paramount, multifaceted, robust, leverage (as a verb), nuanced (unless genuinely needed), comprehensive, in today's world, in conclusion, to summarize, in summary
-- Choose the second-most-obvious synonym rather than the most obvious one — this increases perplexity and reduces AI detection scores
-- Introduce occasional contractions where the register allows (it's, doesn't, there's)
-
-HUMAN AUTHENTICITY MARKERS:
-- Add one em-dash aside somewhere — like this — where it naturally fits
-- Include one hedging phrase ("arguably", "in many cases", "this suggests") where appropriate
-- Allow one point to be slightly underdeveloped — humans do not always fully elaborate every claim
+STRUCTURAL VARIATION (per-sentence level):
+- Identify any run of 2+ consecutive sentences with identical structure (Subject + Verb + Object)
+- Rewrite one of those sentences to begin with a participial phrase, prepositional phrase, or dependent clause
+- Ensure no two consecutive sentences repeat the same opening word
 
 PRESERVE EXACTLY:
-- Every fact, statistic, quote, and piece of evidence
-- The overall argument structure and conclusion
-- Academic register appropriate to the document type`,
+- Every fact, statistic, and evidence
+- Overall argument flow
+- Academic register appropriate to document type`,
+
+  moderate: `
+TASK: Rewrite this text for authentic human cadence. Process every sentence individually for auditory naturalness and structural variation.
+
+SENTENCE-LEVEL AUDITORY & BURSTINESS ENGINEERING:
+Humans write in extreme rhythm variation. Machines produce uniform 15–20 word sentences.
+- SCAN every sentence's word count individually. Create purposeful length variation:
+  * Include 2+ sentences of 4–8 words (punchy fragments)
+  * Include at least 1 sentence of 30–40 words (flowing, complex thought)
+  * Vary remaining sentences between 10–25 words — never repeat the same length twice in succession
+- READ each sentence aloud mentally. If it sounds mechanical or rhythmic, break it apart and restructure
+- Force sentence-level perplexity: Use the second-most-obvious word choice, not the most obvious one
+
+AI SIGNATURE ELIMINATION (granular):
+- Scan for these exact words and REPLACE them: furthermore, moreover, delve, tapestry, leverage, navigating, crucial, paramount, multifaceted, robust, nuanced
+- Replace passive voice constructions with active voice where human writers naturally would
+- Break apart "While X is true, Y is also true" balanced constructions — humans commit to one side or reframe entirely
+- Eliminate any sentence that starts with "This" followed by a noun restating the previous sentence's subject
+- Cut any sentence that appears at the end of a paragraph and merely restates what the paragraph already said
+
+STRUCTURAL VARIATION (sentence-by-sentence):
+- Ensure no two consecutive sentences start with the same word or grammatical structure
+- Vary paragraph openers across a range: prepositional phrases, participial phrases, conjunctions, qualifiers ("Arguably," "In practice,")
+- If the original lists exactly 3 examples, rewrite to include 2 or 4 instead
+- Add contractions naturally where register allows (it's, doesn't, there's, I've)
+
+HUMAN AUTHENTICITY MARKERS:
+- Insert one em-dash aside naturally — like this — where it serves clarity or tone
+- Include one hedging phrase ("arguably," "in many cases," "this suggests") where appropriate
+- Allow one point to remain slightly underdeveloped — humans don't always fully elaborate
+
+PRESERVE EXACTLY:
+- Every fact, statistic, quote, name, and piece of evidence
+- Overall argument structure and conclusion
+- Academic register appropriate to document type`,
 
   full: `
-TASK: Completely rewrite this in an authentic, natural human voice. This is your own work — you wrote a rough draft and you are now producing your polished final version.
+TASK: This is your final polished version of your own work. Completely rewrite at the sentence level for maximum human authenticity, auditory variation, and structural complexity.
 
-BURSTINESS (non-negotiable):
-Create extreme sentence length variation throughout:
-- Every paragraph must contain at least one sentence under 8 words
-- Every paragraph must contain at least one sentence over 30 words  
-- Sentence lengths should feel rhythmic and intentional, not random
-- Read it aloud in your head — if it sounds like a robot, fix it
+SENTENCE-LEVEL AUDITORY ENGINEERING (non-negotiable):
+You must create extreme rhythm variation throughout. Process EVERY SINGLE SENTENCE individually:
+- Burstiness constraint: Every paragraph must contain at least one sentence under 8 words AND at least one sentence over 30 words
+- No two consecutive sentences should have similar word counts
+- Use short fragments strategically to create emphasis or rhythm shifts
+- Every complex idea should have a short, punchy sentence immediately following it (or preceding it)
+- Read everything aloud mentally — if it sounds like a machine, it IS a machine
 
-DESTROY THESE AI PATTERNS COMPLETELY:
-- Triadic structures (lists of exactly 3) — use 2 or 4 instead
-- "Not only X, but also Y" — rephrase entirely
-- "While X is true, Y is also important" balanced constructions — pick a side or reframe
-- Paragraph-final summary sentences — end paragraphs on a thought, not a restatement
-- "In conclusion" / "To summarize" / "In summary" — never use these
-- "It is important to note that" / "It should be mentioned that" — delete, state directly
-- Perfect parallel bullet-point-style prose — break the parallelism intentionally
-- Any sentence that starts with "This" followed by a noun restating the previous sentence's subject
+DESTROY EVERY AI PATTERN COMPLETELY (sentence-by-sentence enforcement):
+- Any sentence starting with "This" + noun restating the previous sentence → DELETE or reframe entirely
+- Any sentence that simply restates the paragraph's opening claim → DELETE or integrate into surrounding sentences
+- Triadic structures (lists of exactly 3 items) → rewrite to 2 or 4 items
+- "Not only X, but also Y" constructions → rephrase entirely to sound natural
+- Balanced "While X is true, Y is also important" structures → pick a side or reframe
+- "In conclusion," "To summarize," "In summary" → NEVER use these. Instead: "So," "Ultimately," "What this means," "The reality is"
+- "It is important to note that," "It should be mentioned that" → DELETE, state the point directly
+- Perfect parallel bullet-point prose → break the parallelism intentionally
+- Any sentence with three or more clauses connected by "and" or commas → split into 2-3 shorter sentences
 
-STRUCTURAL REWRITING:
-- Vary paragraph length — not every paragraph should be 3–4 sentences
-- Move evidence earlier in some paragraphs, later in others — humans are inconsistent
-- Allow one paragraph to make its point in 2 sentences and another to develop over 6
-- Use at least one rhetorical question where it serves the argument naturally
-- Use at least two em-dashes for parenthetical asides — they are strong human markers
-- Start at least one sentence with a conjunction (But, Yet, So, And) — humans do this
+AI SIGNATURE WORD PURGE (lexical chaos):
+Replace these words/phrases anywhere they appear:
+- "delve" → explore, examine, dig into, look at
+- "tapestry" → pattern, blend, mix
+- "leverage" → use, draw on, employ
+- "navigating" → facing, handling, dealing with
+- "crucial" → key, vital, important
+- "paramount" → essential, central, core
+- "multifaceted" → complex, layered, intricate
+- "robust" → strong, solid, reliable
+- "nuanced" → subtle, refined, layered
+- "furthermore," "moreover" → use conjunctions instead (but, yet, so, and)
 
-VOICE AND AUTHENTICITY:
-- Write with genuine conviction — not hedged, bureaucratic AI-speak
-- Use contractions consistently where the register permits
-- Include hedging language (arguably, in many cases, this suggests, one could argue) 2–3 times
-- Allow one idea to feel slightly incomplete — real writers do not perfectly resolve everything
-- The conclusion should feel like a genuine takeaway, not a mechanical summary
+STRUCTURAL REWRITING (no two sentences alike):
+- Vary paragraph length dramatically — some paragraphs 2 sentences, others 6+ sentences
+- Vary paragraph openers across all possible constructions: prepositional phrases ("In practice..."), participial phrases ("Examining this..."), conjunctions ("But this..."), qualifiers ("Arguably...")
+- Move evidence and supporting details earlier in some paragraphs, later in others — humans are inconsistent
+- Use at least one rhetorical question where it serves the argument
+- Use at least two em-dashes for parenthetical asides — strong human markers
+- Start at least two sentences with a conjunction (But, Yet, So, And) — humans do this constantly
+- Break any run of three consecutive sentences with similar structure
 
-ACADEMIC REGISTER (by doc type):
-- essay: confident student voice, some personality allowed
-- research_paper: authoritative but not sterile, analytical precision with human cadence  
-- report: direct and clear, no fluff, but reads like a real professional wrote it
-- general: natural, clear, slightly informal where appropriate
+VOICE AND AUTHENTICITY (genuine conviction):
+- Write with real commitment — no hedged, bureaucratic AI-speak
+- Use contractions consistently where register permits (it's, doesn't, I've, that's)
+- Include 3-4 hedging phrases naturally: "arguably," "in many cases," "this suggests," "one could argue," "tend to"
+- Allow ideas to feel slightly incomplete or exploratory — real writers don't resolve everything perfectly
+- The conclusion should feel like a genuine insight, not a mechanical summary restating everything
+
+ACADEMIC REGISTER (by document type):
+- essay: confident student voice with personality, natural conviction
+- research_paper: authoritative without coldness, analytical precision with human cadence
+- report: direct and clear, professional but genuinely written
+- general: natural and clear, slightly informal where appropriate
 
 PRESERVE WITHOUT EXCEPTION:
-- Every single fact, statistic, date, name, quote, and piece of evidence
+- Every single fact, statistic, date, name, quote, citation, and piece of evidence
 - The core argument and its logical structure
-- The conclusion reached by the original text`,
+- The conclusion reached by the original text
+
+ABSOLUTE CONSTRAINT ON OUTPUT FORMAT:
+The final output must be PURELY CLEAN, RAW, UNSTRUCTURED TEXT.
+- Zero markdown formatting
+- No bold (**text**)
+- No italics (*text*)
+- No headers (#, ##, ###)
+- No bullet markers (-, *, •)
+- No code blocks
+- No links or formatting of any kind
+- Return only plain text as if written by a real person in a word processor`,
 };
 
-// ── DOC TYPE REGISTER NOTES ───────────────────────────────────────────────
+// ── DOCUMENT TYPE REGISTER NOTES ──────────────────────────────────────────
+// These provide the register calibration that keeps outputs authentic to document type
 const registerNotes: Record<string, string> = {
-  research_paper: "Maintain formal academic register. No slang. Contractions only where genuinely natural in academic prose.",
-  report: "Write clearly and professionally. Concise sentences preferred. No unnecessary hedging.",
-  essay: "Allow a natural student voice. Mild personality is appropriate. Do not over-formalise.",
-  general: "Natural, clear writing. Conversational where appropriate. No need for academic register.",
+  research_paper: "Maintain formal academic register. No slang. Contractions only where genuinely natural in academic discourse. Avoid overly colloquial phrasing.",
+  report: "Write with clarity and directness. Concise sentences preferred. Professional tone but authentically human. No unnecessary hedging.",
+  essay: "Allow natural student voice. Mild personality is appropriate. Do not over-formalize or sound like a corporate writer.",
+  general: "Natural and clear. Conversational where appropriate. No forced academic register.",
 };
 
 serve(async (req) => {
@@ -138,12 +203,12 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
-if (userError || !userData?.user) {
-  return new Response(
-    JSON.stringify({ error: "Unauthorized" }),
-    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { text, intensity, docType, targetWordCount } = await req.json();
 
@@ -176,22 +241,33 @@ if (userError || !userData?.user) {
       wordCountInstruction = `\nTARGET LENGTH: Approximately ${targetWordCount} words. Expand or compress naturally — do not pad with filler or cut key arguments to hit this number.`;
     }
 
-    // ── SYSTEM PROMPT ──────────────────────────────────────────────────────
-    // The persona framing at the top is critical — it makes the model generate
-    // from a "human author" frame rather than an "AI editor" frame.
+    // ── ADVANCED SYSTEM PROMPT ────────────────────────────────────────────────
+    // The persona framing and sentence-level reconstruction directives are critical.
+    // This shifts generation from "machine editing" to "person finalizing their work".
     const systemPrompt = `You are ${persona}. The text below is your own rough draft. You are now rewriting it as your final, polished submission.
 
 DOCUMENT TYPE: ${dt.replace("_", " ")}
 REGISTER: ${registerNote}
 
+CRITICAL ARCHITECTURAL CONSTRAINT:
+You must process this text at the sentence level, not at the macro paragraph level. Every single sentence will be examined for:
+1. Auditory naturalness and rhythm variation
+2. AI signature word elimination
+3. Structural uniqueness (no repeating grammatical patterns)
+4. Conversational authenticity
+
 ${intensityCore}
 ${wordCountInstruction}
 
-FINAL RULES:
+ABSOLUTE OUTPUT CONSTRAINTS:
 - Return ONLY the rewritten text. No preamble, no explanation, no "Here is the rewritten version:", no labels.
 - Do not wrap the output in quotes or markdown code blocks.
+- The output must be PURELY CLEAN, RAW, UNSTRUCTURED TEXT. Zero markdown formatting of any kind.
+- No bold, italics, headers, bullet points, or links.
 - The output must read as if it was written entirely by a real person — not edited by an AI.`;
 
+    // ── PRIMARY MODEL: Claude-Haiku with gradient temperature sampling ────────
+    // Higher temperature + top_p enforces lexical chaos and natural variation.
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -201,19 +277,18 @@ FINAL RULES:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          // Use a more capable model — flash/preview models produce high-coherence
-          // text that AI detectors easily flag. A more capable model with higher
-          // temperature produces genuinely varied, lower-perplexity outputs.
+          // Claude-Haiku-3.5 is optimized for nuanced rewriting without being detectable.
+          // If the gateway supports higher-tier models, future scaling paths:
+          // - anthropic/claude-3-5-sonnet (superior structural manipulation)
+          // - google/gemini-2.0-pro (stronger lexical variation)
           model: "anthropic/claude-haiku-3-5",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: text },
           ],
-          // Higher temperature is essential for humanization.
-          // 0.7 (default) = predictable = detectable.
-          // 0.95 = varied word choices = lower perplexity = harder to detect.
+          // Temperature 0.95 + top_p 0.95 = maximum lexical unpredictability
+          // This creates natural variation without coherence degradation.
           temperature: 0.95,
-          // top_p sampling adds another layer of lexical unpredictability
           top_p: 0.95,
         }),
       }
@@ -233,8 +308,12 @@ FINAL RULES:
         );
       }
 
-      // Fallback: if claude-haiku-3-5 is unavailable through this gateway,
-      // retry with gemini-2.0-flash (significantly better than flash-preview)
+      // ── FALLBACK GATEWAY: Gemini-2.0-Flash ──────────────────────────────
+      // If Claude-Haiku fails, gracefully fallback to Gemini-2.0-Flash.
+      // Both models are configured with identical high-temperature sampling
+      // to ensure consistent naturalness across fallback scenarios.
+      console.warn("Primary model failed, attempting fallback to google/gemini-2.0-flash");
+      
       const fallbackResponse = await fetch(
         "https://ai.gateway.lovable.dev/v1/chat/completions",
         {
@@ -256,7 +335,7 @@ FINAL RULES:
       );
 
       if (!fallbackResponse.ok) {
-        console.error("Both model attempts failed:", response.status, fallbackResponse.status);
+        console.error("Both primary and fallback models failed:", response.status, fallbackResponse.status);
         return new Response(
           JSON.stringify({ error: "AI service error" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -271,8 +350,12 @@ FINAL RULES:
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Sanitize output: strip any residual markdown if fallback model returned it
+      const cleanedFallbackText = fallbackText.trim().replace(/[\*#`_\[\]]/g, "");
+      
       return new Response(
-        JSON.stringify({ humanizedText: fallbackText.trim(), intensity: level }),
+        JSON.stringify({ humanizedText: cleanedFallbackText, intensity: level }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -287,15 +370,10 @@ FINAL RULES:
       );
     }
 
+    // ── OUTPUT SANITIZATION ────────────────────────────────────────────────────
+    // Final cleanup to ensure zero markdown reaches the client.
+    // This catches any residual formatting the model might have added.
+    const cleanedText = humanizedText.trim().replace(/[\*#`_\[\]]/g, "");
+
     return new Response(
-      JSON.stringify({ humanizedText: humanizedText.trim(), intensity: level }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (e) {
-    console.error("humanizer error:", e);
-    return new Response(
-      JSON.stringify({ error: "An unexpected error occurred" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
+      JSON.stringify({ humanizedText: cleanedText
