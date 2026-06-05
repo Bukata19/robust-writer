@@ -899,11 +899,6 @@ useEffect(() => {
             position: isMobile ? 'top' : 'left',
           },
           {
-            element: '[data-intro-id="doc-gen-btn"]',
-            intro: 'Need a head start? Open the Document Generator, enter your topic and tone, and get a fully written structured draft you can edit before inserting.',
-            position: isMobile ? 'top' : 'left',
-          },
-          {
             element: '[data-intro-id="coach-btn"]',
             intro: 'This is your Writing Coach. While enabled, it watches your writing and gives you one focused tip every time you pause — helping you write stronger assignments.',
             position: 'bottom',
