@@ -871,7 +871,7 @@ useEffect(() => {
   // Intro.js onboarding tour
   useEffect(() => {
     if (loading) return;
-    const TOUR_KEY = 'rb_editor_tour_done';
+    const TOUR_KEY = 'rb_editor_tour_v2_done';
     if (localStorage.getItem(TOUR_KEY)) return;
 
     const timer = setTimeout(() => {
@@ -891,6 +891,11 @@ useEffect(() => {
           {
             element: '[data-intro-id="ai-tools"]',
             intro: 'Your AI toolkit lives here. Chat with your AI assistant, humanize selected text, or run a plagiarism check — all without leaving the editor.',
+            position: isMobile ? 'top' : 'left',
+          },
+          {
+            element: '[data-intro-id="polish-btn"]',
+            intro: 'Writing Polish helps you refine your work. Use Clarity Check to scan for passive voice, wordy phrases, and complex sentences, or Smart Rewrite to generate alternative versions of selected text.',
             position: isMobile ? 'top' : 'left',
           },
           {
