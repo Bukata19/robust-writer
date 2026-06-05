@@ -1273,54 +1273,57 @@ useEffect(() => {
 
   const selectClass = `h-7 bg-card border border-border rounded-md text-xs text-foreground px-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors ${isMobile ? 'max-w-[100px]' : 'max-w-[120px] w-[110px]'}`;
 
-  const formatButtons = editor ? (
-    <>
-      <select
-        aria-label="Font family"
-        title="Font family"
-        value={fontFamilyValue}
-        onChange={(e) => {
-          if (!editor) return;
-          editor.chain().focus().setFontFamily(e.target.value).run();
-        }}
-        className={selectClass}
-      >
-        {FONT_FAMILY_OPTIONS.map(opt => (
-          <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>{opt.label}</option>
-        ))}
-      </select>
-      <select
-        aria-label="Font size"
-        title="Font size"
-        value={fontSizeValue}
-        onChange={(e) => {
-          if (!editor) return;
-          editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
-        }}
-        className={`h-7 bg-card border border-border rounded-md text-xs text-foreground px-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors ${isMobile ? 'max-w-[70px]' : 'max-w-[70px] w-[64px]'}`}
-      >
-        {FONT_SIZE_OPTIONS.map(sz => (
-          <option key={sz} value={sz}>{sz.replace('px','')}</option>
-        ))}
-      </select>
-      <div className={isMobile ? 'w-px h-6 bg-border mx-0.5' : 'w-px h-6 bg-border my-1'} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" icon={<Bold className="w-4 h-4" />} active={editor.isActive('bold')} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" icon={<Italic className="w-4 h-4" />} active={editor.isActive('italic')} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" icon={<Underline className="w-4 h-4" />} active={editor.isActive('underline')} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" icon={<Heading1 className="w-4 h-4" />} active={editor.isActive('heading', { level: 1 })} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" icon={<Heading2 className="w-4 h-4" />} active={editor.isActive('heading', { level: 2 })} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List" icon={<List className="w-4 h-4" />} active={editor.isActive('bulletList')} />
-      <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} active={editor.isActive('orderedList')} />
-      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} active={editor.isActive({ textAlign: 'left' })} />
-      <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} active={editor.isActive({ textAlign: 'center' })} />
-      {!isMobile && (
-        <>
-          <div className="w-px h-6 bg-border my-1" />
-          <ToolbarButton onClick={openPolish} title="Writing Polish" icon={<Wand2 className="w-4 h-4" />} />
-        </>
-      )}
-    </>
-  ) : null;
+  // Font selects — rendered in horizontal bar on desktop, inline on mobile
+const fontControls = editor ? (
+  <>
+    <select
+      aria-label="Font family"
+      title="Font family"
+      value={fontFamilyValue}
+      onChange={(e) => {
+        if (!editor) return;
+        editor.chain().focus().setFontFamily(e.target.value).run();
+      }}
+      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[130px]"
+    >
+      {FONT_FAMILY_OPTIONS.map(opt => (
+        <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+    <select
+      aria-label="Font size"
+      title="Font size"
+      value={fontSizeValue}
+      onChange={(e) => {
+        if (!editor) return;
+        editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
+      }}
+      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[72px]"
+    >
+      {FONT_SIZE_OPTIONS.map(sz => (
+        <option key={sz} value={sz}>{sz.replace('px', '')}</option>
+      ))}
+    </select>
+  </>
+) : null;
+
+// Icon buttons only — no selects here
+const formatButtons = editor ? (
+  <>
+    <div className={isMobile ? 'w-px h-6 bg-border mx-0.5' : 'w-px h-6 bg-border my-1'} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" icon={<Bold className="w-4 h-4" />} active={editor.isActive('bold')} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" icon={<Italic className="w-4 h-4" />} active={editor.isActive('italic')} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" icon={<Underline className="w-4 h-4" />} active={editor.isActive('underline')} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" icon={<Heading1 className="w-4 h-4" />} active={editor.isActive('heading', { level: 1 })} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" icon={<Heading2 className="w-4 h-4" />} active={editor.isActive('heading', { level: 2 })} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List" icon={<List className="w-4 h-4" />} active={editor.isActive('bulletList')} />
+    <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List" icon={<ListOrdered className="w-4 h-4" />} active={editor.isActive('orderedList')} />
+    <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left" icon={<AlignLeft className="w-4 h-4" />} active={editor.isActive({ textAlign: 'left' })} />
+    <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center" icon={<AlignCenter className="w-4 h-4" />} active={editor.isActive({ textAlign: 'center' })} />
+  </>
+) : null;
 
   return (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
@@ -1413,14 +1416,27 @@ useEffect(() => {
 
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
-        {/* Desktop: Left formatting toolbar */}
-        {!isMobile && !focusMode && (
-          <div data-intro-id="format-toolbar" className="w-12 border-r border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto scrollbar-dark">
-            {formatButtons}
-          </div>
-        )}
+       {/* Desktop: Left formatting toolbar — icon buttons only */}
+{!isMobile && !focusMode && (
+  <div
+    data-intro-id="format-toolbar"
+    className="w-12 border-r border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto scrollbar-dark"
+  >
+    {formatButtons}
+  </div>
+)}
 
         {/* Editor Canvas */}
+        {/* Desktop: Font controls horizontal bar */}
+{!isMobile && !focusMode && (
+  <div className="border-b border-border bg-card/50 px-4 py-1.5 flex items-center gap-2 shrink-0">
+    {fontControls}
+    <div className="w-px h-5 bg-border mx-1" />
+    <span className="text-xs text-muted-foreground">
+      {editor?.storage?.characterCount?.words?.() ?? 0} words
+    </span>
+  </div>
+)}
         <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
             {loading ? (
@@ -1520,7 +1536,8 @@ useEffect(() => {
           </div>
           {/* Row 2: Formatting buttons */}
           <div data-intro-id="format-toolbar" className="flex items-center gap-0.5 px-1.5 py-1.5 overflow-x-auto scrollbar-dark">
-            {formatButtons}
+            {fontControls}
+              {formatButtons}
           </div>
         </div>
       )}
