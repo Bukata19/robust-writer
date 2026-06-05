@@ -894,6 +894,11 @@ useEffect(() => {
             position: isMobile ? 'top' : 'left',
           },
           {
+            element: '[data-intro-id="polish-btn"]',
+            intro: 'Writing Polish helps you refine your work. Use Clarity Check to scan for passive voice, wordy phrases, and complex sentences, or Smart Rewrite to generate alternative versions of selected text.',
+            position: isMobile ? 'top' : 'left',
+          },
+          {
             element: '[data-intro-id="doc-gen-btn"]',
             intro: 'Need a head start? Open the Document Generator, enter your topic and tone, and get a fully written structured draft you can edit before inserting.',
             position: isMobile ? 'top' : 'left',
