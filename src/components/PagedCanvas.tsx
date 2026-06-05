@@ -1,9 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-const PAGE_HEIGHT = 1056; // A4 at 96dpi
-const PAGE_GAP = 24;      // gap between pages in px
-const PAGE_PADDING_X = 96; // horizontal padding per page (px-24 equivalent)
-const PAGE_PADDING_Y = 80; // vertical padding per page (py-20 equivalent)
+const PAGE_HEIGHT = 1056;
+const PAGE_GAP = 4;
+const PAGE_PADDING_X = 96;
+const PAGE_PADDING_Y = 80;
+const PAGE_PADDING_X_MOBILE = 20;
+const PAGE_PADDING_Y_MOBILE = 40;
 
 interface PagedCanvasProps {
   children: React.ReactNode;
@@ -43,7 +45,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
       {Array.from({ length: pageCount }, (_, i) => (
         <div
           key={i}
-          className="absolute left-0 right-0 bg-white dark:bg-[#1c2030] shadow-[0_2px_24px_rgba(0,0,0,0.18)] dark:shadow-[0_2px_24px_rgba(0,0,0,0.55)] rounded-sm"
+          className="absolute left-0 right-0 bg-white dark:bg-[#1c2030] shadow-[0_1px_8px_rgba(0,0,0,0.12)] dark:shadow-[0_1px_8px_rgba(0,0,0,0.4)] rounded-sm"
           style={{
             top: i * (PAGE_HEIGHT + PAGE_GAP),
             height: PAGE_HEIGHT,
@@ -65,13 +67,16 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
         ref={contentRef}
         className={`relative z-10 text-[#1a1a1a] dark:text-[#e8edf5] ${className ?? ''}`}
         style={{
-          paddingLeft: PAGE_PADDING_X,
-          paddingRight: PAGE_PADDING_X,
-          paddingTop: PAGE_PADDING_Y,
-          // Bottom padding: fill to end of last page
-          paddingBottom: PAGE_PADDING_Y,  
-          ...style,
-        }}
+  paddingLeft: typeof window !== 'undefined' && window.innerWidth < 640
+    ? PAGE_PADDING_X_MOBILE : PAGE_PADDING_X,
+  paddingRight: typeof window !== 'undefined' && window.innerWidth < 640
+    ? PAGE_PADDING_X_MOBILE : PAGE_PADDING_X,
+  paddingTop: typeof window !== 'undefined' && window.innerWidth < 640
+    ? PAGE_PADDING_Y_MOBILE : PAGE_PADDING_Y,
+  paddingBottom: typeof window !== 'undefined' && window.innerWidth < 640
+    ? PAGE_PADDING_Y_MOBILE : PAGE_PADDING_Y,
+  ...style,
+}}
       >
         {children}
       </div>
