@@ -871,7 +871,7 @@ useEffect(() => {
   // Intro.js onboarding tour
   useEffect(() => {
     if (loading) return;
-    const TOUR_KEY = 'rb_editor_tour_done';
+    const TOUR_KEY = 'rb_editor_tour_v2_done';
     if (localStorage.getItem(TOUR_KEY)) return;
 
     const timer = setTimeout(() => {
