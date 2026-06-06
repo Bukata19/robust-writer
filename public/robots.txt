@@ -12,3 +12,6 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /editor/
+
+Sitemap: https://robobuddy-writer.lovable.app/sitemap.xml
