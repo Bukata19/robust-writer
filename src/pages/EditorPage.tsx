@@ -1402,7 +1402,7 @@ const formatButtons = editor ? (
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} data-intro-id="focus-btn" className="scale-click">
+            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} aria-label={focusMode ? 'Exit focus mode' : 'Focus mode'} data-intro-id="focus-btn" className="scale-click">
               {focusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
