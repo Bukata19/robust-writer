@@ -365,6 +365,13 @@ useEffect(() => {
     }
   }, []);
 
+  import { usePageTitle } from '@/hooks/usePageTitle';
+
+// Inside the component, after the title state is declared:
+usePageTitle(
+  title || 'Untitled Document',
+  `Editing "${title || 'Untitled Document'}" on RobAssister — AI writing assistant.`
+);
   useEffect(() => {
     if (!id) return;
     fetchDocument();
