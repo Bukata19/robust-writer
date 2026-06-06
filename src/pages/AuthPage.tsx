@@ -60,7 +60,7 @@ usePageTitle(
               <Terminal className="w-6 h-6 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">
-              RobAssister — AI-powered assignment editor
+              RobAssister
             </h1>
           </div>
           <p className="text-muted-foreground text-sm">
