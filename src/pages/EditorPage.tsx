@@ -1520,7 +1520,7 @@ const formatButtons = editor ? (
         <div className="fixed bottom-6 right-6 z-50 opacity-30 hover:opacity-100 transition-opacity duration-300">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={() => setFocusMode(false)} className="rounded-full shadow-lg bg-card/80 backdrop-blur-sm">
+              <Button variant="outline" size="icon" onClick={() => setFocusMode(false)} aria-label="Exit focus mode" className="rounded-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <Minimize className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
