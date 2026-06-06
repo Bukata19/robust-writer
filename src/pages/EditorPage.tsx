@@ -210,7 +210,7 @@ const templates: Record<DocType, any> = {
 const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode; active?: boolean }> = ({ onClick, title, icon, active }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button variant="ghost" size="icon" onClick={onClick} className={`scale-click hover:bg-primary/10 hover:text-primary transition-all ${active ? 'bg-primary/20 text-primary' : ''}`}>
+      <Button variant="ghost" size="icon" onClick={onClick} aria-label={title} className={`scale-click hover:bg-primary/10 hover:text-primary transition-all ${active ? 'bg-primary/20 text-primary' : ''}`}>
         {icon}
       </Button>
     </TooltipTrigger>
@@ -999,7 +999,7 @@ useEffect(() => {
               <Bot className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">AI Chat</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)}>
+            <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)} aria-label="Close sidebar">
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -1043,7 +1043,7 @@ useEffect(() => {
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Humanizer</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)}>
+            <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)} aria-label="Close sidebar">
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -1202,6 +1202,7 @@ useEffect(() => {
             variant={chatOpen ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(chatOpen, openChat, () => setChatOpen(false))}
+            aria-label="AI Chat"
             className="scale-click"
           >
             <MessageCircle className="w-4 h-4" />
@@ -1215,6 +1216,7 @@ useEffect(() => {
             variant={humanizerOpen ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
+            aria-label="Humanizer"
             className="scale-click"
           >
             <Sparkles className="w-4 h-4" />
@@ -1228,6 +1230,7 @@ useEffect(() => {
             variant={showPlagiarism ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showPlagiarism, openPlagiarism, () => setShowPlagiarism(false))}
+            aria-label="Plagiarism Check"
             className="scale-click"
           >
             <ShieldCheck className="w-4 h-4" />
@@ -1241,6 +1244,7 @@ useEffect(() => {
             variant={showPolish ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showPolish, openPolish, () => setShowPolish(false))}
+            aria-label="Writing Polish"
             data-intro-id="polish-btn"
             className="scale-click"
           >
@@ -1255,6 +1259,7 @@ useEffect(() => {
             variant={showDecoder ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
+            aria-label="Assignment Decoder"
             className="scale-click"
           >
             <BookOpenCheck className="w-4 h-4" />
@@ -1329,7 +1334,7 @@ const formatButtons = editor ? (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
       <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : 'relative z-10'}`}>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="scale-click">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="scale-click">
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
@@ -1337,6 +1342,7 @@ const formatButtons = editor ? (
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled document"
+          aria-label="Document title"
           className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
 
@@ -1348,6 +1354,7 @@ const formatButtons = editor ? (
               variant="ghost"
               size="icon"
               data-intro-id="coach-btn"
+              aria-label="Writing Coach"
               onClick={() => {
                 const next = !coachEnabled;
                 setCoachEnabled(next);
@@ -1392,7 +1399,7 @@ const formatButtons = editor ? (
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={openHistory} data-intro-id="history-btn" className="scale-click">
+            <Button variant="ghost" size="icon" onClick={openHistory} aria-label="Version history" data-intro-id="history-btn" className="scale-click">
               <History className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
@@ -1401,7 +1408,7 @@ const formatButtons = editor ? (
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} data-intro-id="focus-btn" className="scale-click">
+            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} aria-label={focusMode ? 'Exit focus mode' : 'Focus mode'} data-intro-id="focus-btn" className="scale-click">
               {focusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
@@ -1413,6 +1420,7 @@ const formatButtons = editor ? (
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
       </header>
+      <h1 className="sr-only">{title || 'Untitled Document'}</h1>
 
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
@@ -1518,7 +1526,7 @@ const formatButtons = editor ? (
         <div className="fixed bottom-6 right-6 z-50 opacity-30 hover:opacity-100 transition-opacity duration-300">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={() => setFocusMode(false)} className="rounded-full shadow-lg bg-card/80 backdrop-blur-sm">
+              <Button variant="outline" size="icon" onClick={() => setFocusMode(false)} aria-label="Exit focus mode" className="rounded-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <Minimize className="w-4 h-4" />
               </Button>
             </TooltipTrigger>

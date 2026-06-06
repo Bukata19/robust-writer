@@ -155,7 +155,7 @@ const Dashboard: React.FC = () => {
             <span className="font-display font-bold text-foreground text-lg tracking-tight">RobAssister</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} title="Settings" data-intro-id="settings-btn">
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" data-intro-id="settings-btn">
               <Settings className="w-4 h-4" />
             </Button>
           </div>
@@ -166,7 +166,7 @@ const Dashboard: React.FC = () => {
         {/* Hero Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-display font-bold gradient-hero mb-2">
-            Welcome back
+            Your Assignment Dashboard
           </h1>
           <p className="text-muted-foreground text-sm">Create, edit, and polish your documents with AI</p>
         </div>
@@ -263,6 +263,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <button
                       onClick={(e) => deleteDocument(doc.id, e)}
+                      aria-label="Delete document"
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
