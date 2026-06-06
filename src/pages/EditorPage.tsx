@@ -1415,7 +1415,7 @@ const formatButtons = editor ? (
           <TooltipContent>{focusMode ? 'Exit Focus Mode' : 'Focus Mode'}</TooltipContent>
         </Tooltip>
 
-        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow">
+        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow" aria-label={saving ? 'Saving document' : 'Save document'}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
@@ -1486,9 +1486,12 @@ const formatButtons = editor ? (
     onClick={() => { if (editor && !editor.isFocused) editor.commands.focus('end'); }}
   >
     <EditorContent
-      editor={editor}
-      className="w-full min-w-0 cursor-text"
-    />
+  editor={editor}
+  className="w-full min-w-0 cursor-text"
+  role="textbox"
+  aria-label="Document editor"
+  aria-multiline="true"
+/>
   </PagedCanvas>
 )}
           <InlineParagraphTip
