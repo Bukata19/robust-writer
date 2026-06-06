@@ -1,3 +1,10 @@
+import { usePageTitle } from '@/hooks/usePageTitle';
+
+// Inside the component function, add:
+usePageTitle(
+  'Sign In',
+  'Sign in to RobAssister — your AI-powered writing assistant for essays, research papers and assignments.'
+);
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
