@@ -71,6 +71,7 @@ import CharacterCount from '@tiptap/extension-character-count';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-text-style';
 import PlagiarismHighlight from '@/extensions/plagiarism-highlight';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 const TextStyleWithFontSize = TextStyle.extend({
   addAttributes() {
@@ -365,7 +366,6 @@ useEffect(() => {
     }
   }, []);
 
-  import { usePageTitle } from '@/hooks/usePageTitle';
 
 // Inside the component, after the title state is declared:
 usePageTitle(
@@ -1497,7 +1497,7 @@ const formatButtons = editor ? (
   className="w-full min-w-0 cursor-text"
   role="textbox"
   aria-label="Document editor"
-  aria-multiline="true"
+  aria-multiline={true}
 />
   </PagedCanvas>
 )}
