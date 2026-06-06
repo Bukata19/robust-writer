@@ -1,10 +1,4 @@
 import { usePageTitle } from '@/hooks/usePageTitle';
-
-// Inside the component function, add:
-usePageTitle(
-  'Sign In',
-  'Sign in to RobAssister — your AI-powered writing assistant for essays, research papers and assignments.'
-);
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +9,11 @@ import { toast } from 'sonner';
 import { Terminal, FileText, Bot } from 'lucide-react';
 
 const AuthPage: React.FC = () => {
+  // Inside the component function, add:
+usePageTitle(
+  'Sign In',
+  'Sign in to RobAssister — your AI-powered writing assistant for essays, research papers and assignments.'
+);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
