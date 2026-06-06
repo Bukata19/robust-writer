@@ -1329,7 +1329,7 @@ const formatButtons = editor ? (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
       <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : 'relative z-10'}`}>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="scale-click">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="scale-click">
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
@@ -1337,6 +1337,7 @@ const formatButtons = editor ? (
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled document"
+          aria-label="Document title"
           className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
 
@@ -1392,7 +1393,7 @@ const formatButtons = editor ? (
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={openHistory} data-intro-id="history-btn" className="scale-click">
+            <Button variant="ghost" size="icon" onClick={openHistory} aria-label="Version history" data-intro-id="history-btn" className="scale-click">
               <History className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
