@@ -1202,6 +1202,7 @@ useEffect(() => {
             variant={chatOpen ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(chatOpen, openChat, () => setChatOpen(false))}
+            aria-label="AI Chat"
             className="scale-click"
           >
             <MessageCircle className="w-4 h-4" />
@@ -1215,6 +1216,7 @@ useEffect(() => {
             variant={humanizerOpen ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
+            aria-label="Humanizer"
             className="scale-click"
           >
             <Sparkles className="w-4 h-4" />
@@ -1228,6 +1230,7 @@ useEffect(() => {
             variant={showPlagiarism ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showPlagiarism, openPlagiarism, () => setShowPlagiarism(false))}
+            aria-label="Plagiarism Check"
             className="scale-click"
           >
             <ShieldCheck className="w-4 h-4" />
@@ -1241,6 +1244,7 @@ useEffect(() => {
             variant={showPolish ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showPolish, openPolish, () => setShowPolish(false))}
+            aria-label="Writing Polish"
             data-intro-id="polish-btn"
             className="scale-click"
           >
@@ -1255,6 +1259,7 @@ useEffect(() => {
             variant={showDecoder ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
+            aria-label="Assignment Decoder"
             className="scale-click"
           >
             <BookOpenCheck className="w-4 h-4" />
