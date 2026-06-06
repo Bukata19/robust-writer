@@ -2,12 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
-
-// Inside the component function, add:
-usePageTitle(
-  'Dashboard',
-  'Manage your documents on RobAssister — create essays, research papers, reports and more with AI assistance.'
-);
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
 import introJs from 'intro.js';
@@ -55,6 +49,11 @@ const getPlagiarismBadge = (score: number | null) => {
 };
 
 const Dashboard: React.FC = () => {
+  // Inside the component function, add:
+usePageTitle(
+  'Dashboard',
+  'Manage your documents on RobAssister — create essays, research papers, reports and more with AI assistance.'
+);
   const { user, signOut } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
