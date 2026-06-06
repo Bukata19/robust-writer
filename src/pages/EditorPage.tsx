@@ -999,7 +999,7 @@ useEffect(() => {
               <Bot className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">AI Chat</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)}>
+            <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)} aria-label="Close sidebar">
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -1043,7 +1043,7 @@ useEffect(() => {
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Humanizer</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)}>
+            <Button variant="ghost" size="icon" onClick={() => setHumanizerOpen(false)} aria-label="Close sidebar">
               <X className="w-4 h-4" />
             </Button>
           </div>
