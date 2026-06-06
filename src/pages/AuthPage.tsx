@@ -1,4 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { usePageTitle } from '@/hooks/usePageTitle';
+
+// Inside the component function, add:
+usePageTitle(
+  'Sign In',
+  'Sign in to RobAssister — your AI-powered writing assistant for essays, research papers and assignments.'
+);
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Terminal, FileText, Bot } from 'lucide-react';
-import { usePageTitle } from '@/hooks/usePageTitle';
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,13 +22,6 @@ const AuthPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    usePageTitle(
-      'Sign In',
-      'Sign in to RobAssister — your AI-powered writing assistant for essays, research papers and assignments.'
-    );
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,3 +167,4 @@ const AuthPage: React.FC = () => {
 };
 
 export default AuthPage;
+      

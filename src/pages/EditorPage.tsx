@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -366,12 +365,14 @@ useEffect(() => {
     }
   }, []);
 
-  useEffect(() => {
-    usePageTitle(
-      title || 'Untitled Document',
-      `Editing "${title || 'Untitled Document'}" on RobAssister — AI writing assistant.`
-    );
+  import { usePageTitle } from '@/hooks/usePageTitle';
 
+// Inside the component, after the title state is declared:
+usePageTitle(
+  title || 'Untitled Document',
+  `Editing "${title || 'Untitled Document'}" on RobAssister — AI writing assistant.`
+);
+  useEffect(() => {
     if (!id) return;
     fetchDocument();
   }, [id]);
