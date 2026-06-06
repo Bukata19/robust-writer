@@ -210,7 +210,7 @@ const templates: Record<DocType, any> = {
 const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode; active?: boolean }> = ({ onClick, title, icon, active }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button variant="ghost" size="icon" onClick={onClick} className={`scale-click hover:bg-primary/10 hover:text-primary transition-all ${active ? 'bg-primary/20 text-primary' : ''}`}>
+      <Button variant="ghost" size="icon" onClick={onClick} aria-label={title} className={`scale-click hover:bg-primary/10 hover:text-primary transition-all ${active ? 'bg-primary/20 text-primary' : ''}`}>
         {icon}
       </Button>
     </TooltipTrigger>
