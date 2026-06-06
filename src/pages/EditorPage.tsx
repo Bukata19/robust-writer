@@ -1349,6 +1349,7 @@ const formatButtons = editor ? (
               variant="ghost"
               size="icon"
               data-intro-id="coach-btn"
+              aria-label="Writing Coach"
               onClick={() => {
                 const next = !coachEnabled;
                 setCoachEnabled(next);
