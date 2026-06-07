@@ -878,7 +878,7 @@ usePageTitle(
   // Intro.js onboarding tour
   useEffect(() => {
     if (loading) return;
-    const TOUR_KEY = 'rb_editor_tour_v2_done';
+    const TOUR_KEY = 'rb_editor_tour_v3_done';
     if (localStorage.getItem(TOUR_KEY)) return;
 
     const timer = setTimeout(() => {
@@ -887,56 +887,134 @@ usePageTitle(
         steps: [
           {
             element: '[data-intro-id="editor-canvas"]',
-            intro: 'This is your writing canvas. Your document sections are pre-structured with smart placeholders — click any section and start typing.',
-            position: 'right',
+            intro: `<strong>Your Writing Canvas</strong><br/><br/>
+    This is where you write. The canvas is structured like a real document — your template sections (Introduction, Body, Conclusion, etc.) come pre-labelled with smart placeholder text that disappears the moment you click into that section and start typing.<br/><br/>
+    Each section stays empty until you fill it, so you always know exactly where you are in your document structure. The canvas grows into multiple pages automatically as your content fills up, just like Microsoft Word.`,
           },
           {
             element: '[data-intro-id="format-toolbar"]',
-            intro: 'Format your text here — bold, italic, underline, headings, lists, and alignment. Active formats highlight as you write.',
-            position: isMobile ? 'top' : 'right',
+            intro: `<strong>Formatting Toolbar</strong><br/><br/>
+    All your text formatting tools in one place:<br/><br/>
+    • <strong>B I U</strong> — Bold, Italic, Underline for emphasis<br/>
+    • <strong>H1 H2</strong> — Section headings (H1 for main sections, H2 for sub-sections)<br/>
+    • <strong>Lists</strong> — Bullet and numbered lists for structured points<br/>
+    • <strong>Alignment</strong> — Left align or centre your text<br/><br/>
+    The font family and size selectors at the top let you switch between Georgia, Times New Roman, Arial, and more — and adjust size from 12pt to 24pt. Each formatting button highlights when your cursor is inside text with that format applied.`,
           },
           {
             element: '[data-intro-id="ai-tools"]',
-            intro: 'Your AI toolkit lives here. Chat with your AI assistant, humanize selected text, or run a plagiarism check — all without leaving the editor.',
-            position: isMobile ? 'top' : 'left',
+            intro: `<strong>AI Tools Panel</strong><br/><br/>
+    This column is your AI toolkit. Each icon opens a different AI-powered panel on the side of your canvas:<br/><br/>
+    💬 <strong>Chat</strong> — Talk to your AI writing assistant<br/>
+    ✨ <strong>Humanizer</strong> — Make your text sound more natural<br/>
+    🛡️ <strong>Plagiarism</strong> — Check originality<br/>
+    🧠 <strong>Writing Coach</strong> — Get live tips as you write<br/>
+    📚 <strong>Assignment Decoder</strong> — Get guided help with your assignment question<br/>
+    🪄 <strong>Writing Polish</strong> — Clarity and rewrite tools<br/><br/>
+    Only one panel is open at a time. The next few steps walk you through each one.`,
+          },
+          {
+            element: '[data-intro-id="ai-tools"]',
+            intro: `<strong>AI Chat Assistant</strong><br/><br/>
+    Your personal writing tutor available at any moment. The AI already knows what document you are working on and what type it is — you don't need to explain anything.<br/><br/>
+    You can ask it to:<br/>
+    • <em>"Can you suggest how to strengthen my argument in paragraph 2?"</em><br/>
+    • <em>"Write a topic sentence for the Methodology section"</em><br/>
+    • <em>"Is my introduction clear enough?"</em><br/>
+    • <em>"Give me three counterarguments I should address"</em><br/><br/>
+    The conversation history is kept for the entire session, so it remembers what you discussed earlier. Use <strong>Ctrl+Enter</strong> to send messages quickly.`,
+          },
+          {
+            element: '[data-intro-id="ai-tools"]',
+            intro: `<strong>Text Humanizer</strong><br/><br/>
+    Select any text in your document, open the Humanizer, and click Humanize Selection. The AI rewrites your text to sound authentically human — reducing AI detection scores on tools like ZeroGPT.<br/><br/>
+    Three intensity levels:<br/>
+    • <strong>Subtle</strong> — Light edits. Replaces overused AI phrases, varies a few sentence structures. Best for text that's mostly good already.<br/>
+    • <strong>Moderate</strong> — Meaningful rewrite. Creates sentence length variation, removes AI patterns, adds natural transitions. Good for typical AI-assisted drafts.<br/>
+    • <strong>Full</strong> — Complete rewrite at sentence level. Aggressive AI pattern removal, dramatic rhythm variation, authentic voice. Best for heavily AI-generated text.<br/><br/>
+    You can also set a target word count — Unchanged, a preset length, or a custom number — before humanizing.`,
+          },
+          {
+            element: '[data-intro-id="ai-tools"]',
+            intro: `<strong>Plagiarism Checker</strong><br/><br/>
+    Analyses your document for originality and returns a score from 0 to 100.<br/><br/>
+    What you get in the results:<br/>
+    • An <strong>originality score</strong> — teal means clean, yellow is a warning, red is high risk<br/>
+    • <strong>Flagged passages</strong> — specific sentences or phrases that are potentially problematic, with a severity rating (Low, Medium, High)<br/>
+    • <strong>Concern types</strong> — tells you WHY each passage was flagged: common phrasing, formulaic structure, possible AI generation, uncited claims, or style inconsistency<br/>
+    • <strong>Fix suggestions</strong> — one specific actionable tip per flagged passage<br/>
+    • <strong>Originality strengths</strong> — things your writing is doing well<br/><br/>
+    Your score is saved to the document and shown as a badge on the Dashboard.`,
+          },
+          {
+            element: '[data-intro-id="decoder-btn"]',
+            intro: `<strong>Assignment Decoder</strong><br/><br/>
+    Paste your assignment question and let RobAssister decode it for you. This tool is specifically built for students who receive a question and need a structured plan to answer it.<br/><br/>
+    How it works:<br/>
+    1. <strong>Paste your question</strong> — single questions, multi-part questions (1a, 1b, 2...), or full assignment briefs<br/>
+    2. <strong>Confirm the document type</strong> — the AI suggests Essay, Research Paper, or Report based on your question. You can change it.<br/>
+    3. <strong>Get your outline</strong> — a structured breakdown of every section you need to write, each with a specific guidance tip telling you what to cover<br/>
+    4. <strong>Write section by section</strong> — click "Write This Section" for any section and the AI writes a full draft for it. You see a preview before anything is inserted — accept it or request a rewrite.<br/><br/>
+    The AI remembers your assignment question throughout the session and uses it to make the Writing Coach tips more relevant.`,
           },
           {
             element: '[data-intro-id="polish-btn"]',
-            intro: 'Writing Polish helps you refine your work. Use Clarity Check to scan for passive voice, wordy phrases, and complex sentences, or Smart Rewrite to generate alternative versions of selected text.',
-            position: isMobile ? 'top' : 'left',
+            intro: `<strong>Writing Polish — Two Tools in One</strong><br/><br/>
+    🔍 <strong>Clarity Check</strong> — Scans your entire document and gives you an overall clarity score plus a list of specific issues: passive voice overuse, overly complex sentences, wordy phrases, weak openers, and ambiguous phrasing. Each issue comes with a suggested fix and a one-click replace button.<br/><br/>
+    🔄 <strong>Smart Rewrite</strong> — Select any sentence or paragraph that feels wrong but you can't figure out why. The AI generates 3 different versions of it — Shorter & Clearer, More Authoritative, and More Engaging — each with a word count comparison. Pick the one that works best and insert it instantly.<br/><br/>
+    These two tools are most useful after you've finished a draft and are ready to polish it to a high standard.`,
           },
           {
             element: '[data-intro-id="coach-btn"]',
-            intro: 'This is your Writing Coach. While enabled, it watches your writing and gives you one focused tip every time you pause — helping you write stronger assignments.',
-            position: 'bottom',
+            intro: `<strong>Writing Coach — Live Inline Tips</strong><br/><br/>
+    When enabled (teal brain icon), the Writing Coach watches your writing in real time. Every time you pause typing for a few seconds, it analyses the paragraph you're currently in and shows you one focused, specific tip directly below that paragraph — like a form validation message, but for writing quality.<br/><br/>
+    Examples of tips it gives:<br/>
+    • <em>"This paragraph lacks a clear topic sentence — state your main point first"</em><br/>
+    • <em>"Back this claim with a specific statistic or citation"</em><br/>
+    • <em>"Good argument — now acknowledge a counterpoint to strengthen it"</em><br/><br/>
+    Tips are contextual — if you have the Assignment Decoder active, they're tailored specifically to your assignment question. Dismiss any tip with the X button. Toggle the coach off anytime using this brain icon.`,
           },
           {
             element: '[data-intro-id="history-btn"]',
-            intro: 'Every time you save, a version snapshot is created. Open Version History to browse past versions and restore any of them.',
-            position: 'bottom',
+            intro: `<strong>Version History</strong><br/><br/>
+    Every time you manually save your document, RobAssister takes a complete snapshot of it and stores it in your version history.<br/><br/>
+    This means you can:<br/>
+    • Browse a list of every saved version with timestamps<br/>
+    • Preview any past version to see exactly what it looked like<br/>
+    • Restore any version with one click — your current content is replaced with the selected version<br/><br/>
+    This is your safety net. If you ever accidentally delete a section, make a change you regret, or want to go back to an earlier draft, Version History has you covered. Save regularly to give yourself more restore points.`,
           },
           {
             element: '[data-intro-id="focus-btn"]',
-            intro: 'Focus Mode hides all panels and toolbars so you can write without distractions. Press Esc or click the button again to return.',
-            position: 'bottom',
+            intro: `<strong>Focus Mode</strong><br/><br/>
+    Clears everything from the screen except your document. The toolbar, AI panels, header, and all controls disappear — leaving only the writing canvas and your words.<br/><br/>
+    The toolbar reappears if you hover near the top of the screen in case you need it.<br/><br/>
+    Press <strong>Esc</strong> or click this button again to return to the normal view with all tools visible.<br/><br/>
+    Best used when you want a distraction-free session — once your outline is set up and you just want to write without interruptions.`,
           },
           {
             element: '[data-intro-id="export-btn"]',
-            intro: 'Export your finished document as a PDF or DOCX file with one click.',
-            position: 'bottom',
+            intro: `<strong>Export Your Document</strong><br/><br/>
+    When your document is ready, export it in your preferred format:<br/><br/>
+    📄 <strong>PDF</strong> — A clean, formatted PDF exactly as it appears on screen. Ideal for submitting assignments digitally or printing.<br/><br/>
+    📝 <strong>DOCX</strong> — A Microsoft Word document. Preserves your headings, bold, italic, lists, and paragraph structure. Ideal if your institution requires a Word file submission or if you want to do final edits in Word.<br/><br/>
+    Your default export format can be set in Dashboard Settings → Behaviour so the right option is always pre-selected.`,
           },
           {
             element: '[data-intro-id="save-btn"]',
-            intro: 'Save manually anytime with this button or Ctrl+S. Your document also auto-saves in the background.',
-            position: 'bottom',
+            intro: `<strong>Saving Your Work</strong><br/><br/>
+    Click this button or press <strong>Ctrl+S</strong> to save manually at any time. A "Document saved!" confirmation appears when your work is safely stored in the cloud.<br/><br/>
+    <strong>Autosave</strong> also runs automatically in the background — the interval is configurable in Settings (30 seconds, 1 minute, or 2 minutes).<br/><br/>
+    Every manual save also creates a snapshot in Version History, giving you a restore point. It's good practice to save after completing each section of your document.<br/><br/>
+    You're all set. Start writing — and remember, your AI tools are always one click away. Good luck! 🎓`,
           },
         ],
-        showProgress: true,
         showBullets: false,
+        showProgress: true,
         exitOnOverlayClick: true,
-        doneLabel: 'Got it!',
         nextLabel: 'Next →',
         prevLabel: '← Back',
+        doneLabel: "Let's Write! ✓",
       });
       intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
       intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
@@ -1263,6 +1341,7 @@ usePageTitle(
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
+            data-intro-id="decoder-btn"
             variant={showDecoder ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}

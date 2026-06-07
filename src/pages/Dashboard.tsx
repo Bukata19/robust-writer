@@ -68,7 +68,7 @@ usePageTitle(
   }, []);
 
   useEffect(() => {
-    const TOUR_KEY = 'rb_dashboard_tour_done';
+    const TOUR_KEY = 'rb_dashboard_tour_v2_done';
     if (localStorage.getItem(TOUR_KEY)) return;
     const timer = setTimeout(() => {
       const intro = introJs();
@@ -76,23 +76,39 @@ usePageTitle(
         steps: [
           {
             element: '[data-intro-id="new-doc-grid"]',
-            intro: 'Start a new document here. Choose from Essay, Research Paper, Report, or General — each comes with a structured template ready to fill in.',
+            intro: `<strong>Start a New Document</strong><br/><br/>
+    Choose the type of document you want to write:<br/><br/>
+    📝 <strong>Essay</strong> — For arguments, analysis, and reflective writing. You get a pre-built structure with Introduction, Body Paragraphs, and Conclusion sections already labelled — your thesis and arguments have a clear home from the start.<br/><br/>
+    🔬 <strong>Research Paper</strong> — For academic research and investigation. Comes with all the sections your institution expects: Abstract, Introduction, Literature Review, Methodology, Results, Discussion, Conclusion, and References.<br/><br/>
+    📊 <strong>Report</strong> — For professional and academic reports. Structured around Executive Summary, Findings, and Recommendations — ideal for case studies, business analysis, and technical reports.<br/><br/>
+    📄 <strong>General</strong> — A blank canvas for anything else: notes, letters, creative writing, or any assignment that doesn't fit the other types.`,
           },
           {
             element: '[data-intro-id="import-btn"]',
-            intro: 'Already have a document? Import it directly from your device. Supports .txt, .md, and .docx files.',
+            intro: `<strong>Import an Existing Document</strong><br/><br/>
+    Already started your work somewhere else? Import it directly from your device.<br/><br/>
+    Supported formats:<br/>
+    • <strong>.txt</strong> — Plain text files<br/>
+    • <strong>.md</strong> — Markdown files<br/>
+    • <strong>.docx</strong> — Word documents<br/><br/>
+    RobAssister reads the file, converts it to the editor format, and opens it ready for you to continue editing. The document type is automatically detected from the filename.`,
           },
           {
             element: '[data-intro-id="settings-btn"]',
-            intro: 'Open Settings to switch between light and dark themes, change font size, configure autosave, and more.',
+            intro: `<strong>Settings & Personalisation</strong><br/><br/>
+    Customise RobAssister to match how you work:<br/><br/>
+    🎨 <strong>Appearance</strong> — Switch between 4 dark themes (Deep Dark, Midnight Blue, Forest Dark, Crimson Dark) and 4 light themes (Ivory Mist, Arctic Blue, Sage Breeze, Rose Petal). Change font size and document card density.<br/><br/>
+    ✏️ <strong>Editor Defaults</strong> — Set your preferred document type, humanizer intensity, canvas width, and line spacing so every new document starts exactly how you like it.<br/><br/>
+    ⚙️ <strong>Behaviour</strong> — Toggle autosave on or off, set the autosave interval (30s, 1min, 2min), and choose your default export format.<br/><br/>
+    ♿ <strong>Accessibility</strong> — Reduce motion and enable high contrast mode.`,
           },
         ],
-        showProgress: true,
         showBullets: false,
+        showProgress: true,
         exitOnOverlayClick: true,
-        doneLabel: 'Got it!',
         nextLabel: 'Next →',
         prevLabel: '← Back',
+        doneLabel: 'Start Writing',
       });
       intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
       intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
