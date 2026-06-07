@@ -1263,6 +1263,7 @@ usePageTitle(
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
+            data-intro-id="decoder-btn"
             variant={showDecoder ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
