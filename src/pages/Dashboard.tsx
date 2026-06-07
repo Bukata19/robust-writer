@@ -74,35 +74,34 @@ usePageTitle(
       const intro = introJs();
       intro.setOptions({
         steps: [
-          {
-            element: '[data-intro-id="new-doc-grid"]',
-            intro: `<strong>Start a New Document</strong><br/><br/>
-    Choose the type of document you want to write:<br/><br/>
-    📝 <strong>Essay</strong> — For arguments, analysis, and reflective writing. You get a pre-built structure with Introduction, Body Paragraphs, and Conclusion sections already labelled — your thesis and arguments have a clear home from the start.<br/><br/>
-    🔬 <strong>Research Paper</strong> — For academic research and investigation. Comes with all the sections your institution expects: Abstract, Introduction, Literature Review, Methodology, Results, Discussion, Conclusion, and References.<br/><br/>
-    📊 <strong>Report</strong> — For professional and academic reports. Structured around Executive Summary, Findings, and Recommendations — ideal for case studies, business analysis, and technical reports.<br/><br/>
-    📄 <strong>General</strong> — A blank canvas for anything else: notes, letters, creative writing, or any assignment that doesn't fit the other types.`,
-          },
-          {
-            element: '[data-intro-id="import-btn"]',
-            intro: `<strong>Import an Existing Document</strong><br/><br/>
-    Already started your work somewhere else? Import it directly from your device.<br/><br/>
-    Supported formats:<br/>
-    • <strong>.txt</strong> — Plain text files<br/>
-    • <strong>.md</strong> — Markdown files<br/>
-    • <strong>.docx</strong> — Word documents<br/><br/>
-    RobAssister reads the file, converts it to the editor format, and opens it ready for you to continue editing. The document type is automatically detected from the filename.`,
-          },
-          {
-            element: '[data-intro-id="settings-btn"]',
-            intro: `<strong>Settings & Personalisation</strong><br/><br/>
-    Customise RobAssister to match how you work:<br/><br/>
-    🎨 <strong>Appearance</strong> — Switch between 4 dark themes (Deep Dark, Midnight Blue, Forest Dark, Crimson Dark) and 4 light themes (Ivory Mist, Arctic Blue, Sage Breeze, Rose Petal). Change font size and document card density.<br/><br/>
-    ✏️ <strong>Editor Defaults</strong> — Set your preferred document type, humanizer intensity, canvas width, and line spacing so every new document starts exactly how you like it.<br/><br/>
-    ⚙️ <strong>Behaviour</strong> — Toggle autosave on or off, set the autosave interval (30s, 1min, 2min), and choose your default export format.<br/><br/>
-    ♿ <strong>Accessibility</strong> — Reduce motion and enable high contrast mode.`,
-          },
-        ],
+  {
+    intro: 'Welcome to RobAssister! 👋 This quick tour shows you around. Use the arrows to move through each tip.',
+  },
+  {
+    element: '[data-intro-id="new-doc-grid"]',
+    intro: '<strong>📝 Essay</strong><br/>For arguments, analysis, and reflective writing. Comes with Introduction, Body Paragraphs, and Conclusion sections already set up.',
+  },
+  {
+    element: '[data-intro-id="new-doc-grid"]',
+    intro: '<strong>🔬 Research Paper</strong><br/>For academic research. Includes Abstract, Introduction, Literature Review, Methodology, Results, Discussion, Conclusion, and References.',
+  },
+  {
+    element: '[data-intro-id="new-doc-grid"]',
+    intro: '<strong>📊 Report</strong><br/>For professional and academic reports. Structured around Executive Summary, Findings, and Recommendations.',
+  },
+  {
+    element: '[data-intro-id="new-doc-grid"]',
+    intro: '<strong>📄 General</strong><br/>A blank canvas. Use this for notes, letters, creative writing, or anything that does not fit the other types.',
+  },
+  {
+    element: '[data-intro-id="import-btn"]',
+    intro: '<strong>Import a File</strong><br/>Already started writing elsewhere? Import a .txt, .md, or .docx file directly from your device and continue editing here.',
+  },
+  {
+    element: '[data-intro-id="settings-btn"]',
+    intro: '<strong>Settings</strong><br/>Change your theme, font size, autosave interval, default export format, and accessibility options here.',
+  },
+],
         showBullets: false,
         showProgress: true,
         exitOnOverlayClick: true,
