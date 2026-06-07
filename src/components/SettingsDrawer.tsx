@@ -130,11 +130,13 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
   const resetTour = () => {
   localStorage.removeItem('rb_editor_tour_done');
   localStorage.removeItem('rb_editor_tour_v2_done');
+  localStorage.removeItem('rb_editor_tour_v3_done');
   localStorage.removeItem('rb_dashboard_tour_done');
+  localStorage.removeItem('rb_dashboard_tour_v2_done');
   onOpenChange(false);
   toast.success('Onboarding tour reset. Visit the dashboard to restart.');
 };
-
+  
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[340px] sm:w-[400px] overflow-y-auto scrollbar-dark p-0">
