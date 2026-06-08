@@ -1304,7 +1304,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setFontFamily(e.target.value).run();
       }}
-      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[130px]"
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
     >
       {FONT_FAMILY_OPTIONS.map(opt => (
         <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
