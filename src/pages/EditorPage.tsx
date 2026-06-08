@@ -1320,7 +1320,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
       }}
-      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[72px]"
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
     >
       {FONT_SIZE_OPTIONS.map(sz => (
         <option key={sz} value={sz}>{sz.replace('px', '')}</option>
