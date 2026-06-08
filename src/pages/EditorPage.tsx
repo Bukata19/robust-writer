@@ -1358,7 +1358,7 @@ const formatButtons = editor ? (
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled document"
           aria-label="Document title"
-          className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
+          className="min-w-0 max-w-[260px] bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
 
         {!isMobile && !focusMode && (
@@ -1366,6 +1366,8 @@ const formatButtons = editor ? (
             {fontControls}
           </div>
         )}
+
+        <div className="flex-1" />
 
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
