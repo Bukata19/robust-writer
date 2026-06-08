@@ -1361,6 +1361,12 @@ const formatButtons = editor ? (
           className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
 
+        {!isMobile && !focusMode && (
+          <div className="flex items-center gap-2 shrink-0">
+            {fontControls}
+          </div>
+        )}
+
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
         <Tooltip>
