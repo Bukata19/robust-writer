@@ -1304,7 +1304,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setFontFamily(e.target.value).run();
       }}
-      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[130px]"
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
     >
       {FONT_FAMILY_OPTIONS.map(opt => (
         <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
@@ -1320,7 +1320,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
       }}
-      className="h-8 bg-card border border-border rounded-md text-xs text-foreground px-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-[72px]"
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
     >
       {FONT_SIZE_OPTIONS.map(sz => (
         <option key={sz} value={sz}>{sz.replace('px', '')}</option>
@@ -1358,8 +1358,16 @@ const formatButtons = editor ? (
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled document"
           aria-label="Document title"
-          className="flex-1 min-w-0 bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
+          className="min-w-0 max-w-[260px] bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
+
+        {!isMobile && !focusMode && (
+          <div className="flex items-center gap-2 shrink-0">
+            {fontControls}
+          </div>
+        )}
+
+        <div className="flex-1" />
 
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
@@ -1450,16 +1458,6 @@ const formatButtons = editor ? (
 )}
 
         {/* Editor Canvas */}
-        {/* Desktop: Font controls horizontal bar */}
-{!isMobile && !focusMode && (
-  <div className="border-b border-border bg-card/50 px-4 py-1.5 flex items-center gap-2 shrink-0">
-    {fontControls}
-    <div className="w-px h-5 bg-border mx-1" />
-    <span className="text-xs text-muted-foreground">
-      {editor?.storage?.characterCount?.words?.() ?? 0} words
-    </span>
-  </div>
-)}
         <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
             {loading ? (
