@@ -1450,16 +1450,6 @@ const formatButtons = editor ? (
 )}
 
         {/* Editor Canvas */}
-        {/* Desktop: Font controls horizontal bar */}
-{!isMobile && !focusMode && (
-  <div className="border-b border-border bg-card/50 px-4 py-1.5 flex items-center gap-2 shrink-0">
-    {fontControls}
-    <div className="w-px h-5 bg-border mx-1" />
-    <span className="text-xs text-muted-foreground">
-      {editor?.storage?.characterCount?.words?.() ?? 0} words
-    </span>
-  </div>
-)}
         <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
             {loading ? (
