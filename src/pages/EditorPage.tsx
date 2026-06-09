@@ -255,18 +255,7 @@ const EditorPage: React.FC = () => {
 
   // Plagiarism
   const [plagiarismRunning, setPlagiarismRunning] = useState(false);
-  const [plagiarismReport, setPlagiarismReport] = useState<{
-    overall_score: number;
-    summary: string;
-    flagged_passages: Array<{
-      excerpt: string;
-      concern_type: string;
-      reason: string;
-      severity: string;
-      suggestion?: string;
-    }>;
-    originality_strengths?: string[];
-  } | null>(null);
+  const [plagiarismReport, setPlagiarismReport] = useState<import('@/components/PlagiarismPanel').PlagiarismReport | null>(null);
   const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
 
   // Chat
