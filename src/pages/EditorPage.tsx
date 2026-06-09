@@ -1443,7 +1443,7 @@ const formatButtons = editor ? (
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
       </header>
-      <h1 className="sr-only">{title || 'Untitled Document'}</h1>
+      <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground px-6 sm:px-12 lg:px-16 pt-6 pb-2">{title || 'Untitled Document'}</h1>
 
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
