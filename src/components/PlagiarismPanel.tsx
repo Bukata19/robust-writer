@@ -132,7 +132,7 @@ const ScoreGauge: React.FC<{ score: number }> = ({ score }) => {
   );
 };
 
-// ── Mini signal bar ───────────────────────────────────────────────────────
+// ── Mini signal bar ───────────────────────���───────────────────────────────
 const SignalBar: React.FC<{ label: string; value: number; max?: number; colorThresholds?: [number, number] }> = ({
   label, value, max = 100, colorThresholds = [40, 70],
 }) => {
@@ -238,16 +238,19 @@ const SourceIndicatorsCard: React.FC<{ indicators: SourceIndicators; rawSignals?
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-3 text-left hover:bg-muted/20 transition-colors"
+        aria-expanded={open}
+        aria-controls="detection-signals-content"
+        aria-label="Detection Signals"
       >
         <div className="flex items-center gap-2">
-          <Cpu className="w-3.5 h-3.5 text-purple-400" />
+          <Cpu className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
           <span className="text-xs font-medium text-foreground">Detection Signals</span>
         </div>
-        {open ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+        {open ? <ChevronUp className="w-3 h-3 text-muted-foreground" aria-hidden="true" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" aria-hidden="true" />}
       </button>
 
       {open && (
-        <div className="px-3 pb-3 space-y-3 animate-fade-in border-t border-border/50">
+        <div id="detection-signals-content" className="px-3 pb-3 space-y-3 animate-fade-in border-t border-border/50">
           {/* Signal bars */}
           {rawSignals && (
             <div className="space-y-2 pt-2">
@@ -338,7 +341,7 @@ const SourceIndicatorsCard: React.FC<{ indicators: SourceIndicators; rawSignals?
   );
 };
 
-// ── Main panel ─────────────────────────────────────────────────────────────
+// ── Main panel ──────────────────────────────────────────────────────────
 const PlagiarismPanel: React.FC<PlagiarismPanelProps> = ({
   report, running, highlightsVisible, onRun, onToggleHighlights, onClose,
 }) => {
