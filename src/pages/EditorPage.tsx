@@ -256,7 +256,6 @@ const EditorPage: React.FC = () => {
   // Plagiarism
   const [plagiarismRunning, setPlagiarismRunning] = useState(false);
   const [plagiarismReport, setPlagiarismReport] = useState<{
-  const [plagiarismReport, setPlagiarismReport] = useState<{
   overall_score: number;
   risk_level?: string;
   summary: string;
