@@ -38,7 +38,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
     const container = contentRef.current;
     if (!container) return;
 
-    const proseRoot = container.querySelector('.tiptap') as HTMLElement | null;
+    const proseRoot = container.querySelector('.ProseMirror') as HTMLElement | null;
     if (!proseRoot) return;
 
     const blocks = Array.from(proseRoot.children) as HTMLElement[];
