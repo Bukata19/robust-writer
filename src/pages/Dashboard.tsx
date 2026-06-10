@@ -139,8 +139,6 @@ const Dashboard: React.FC = () => {
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Due date picker trigger refs (one per card)
-  const dateInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Force re-render when due dates change
   const [dueDateTick, setDueDateTick] = useState(0);
@@ -270,11 +268,11 @@ const Dashboard: React.FC = () => {
 
   const cancelRename = () => setRenamingId(null);
 
-  const handleDueDateChange = (id: string, value: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    saveDueDate(id, value);
-    setDueDateTick((t) => t + 1); // force re-render
-  };
+  const handleDueDateChange = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  e.stopPropagation();
+  saveDueDate(id, e.target.value);
+  setDueDateTick((t) => t + 1);
+};
 
   // Sort + filter
   const filteredDocuments = documents
@@ -520,29 +518,26 @@ const Dashboard: React.FC = () => {
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        {/* Due date picker */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            dateInputRefs.current[doc.id]?.click();
-                          }}
+                        {/* Due date picker — label triggers input natively on all browsers */}
+                        <label
+                          htmlFor={`due-${doc.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 hover:text-primary rounded transition-colors cursor-pointer"
                           aria-label="Set due date"
                           title="Set due date"
-                          className="p-1 hover:text-primary rounded transition-colors"
                         >
                           <Calendar className="w-3.5 h-3.5" />
-                        </button>
-                        <input
-                          ref={(el) => { dateInputRefs.current[doc.id] = el; }}
-                          type="date"
-                          value={dueDate}
-                          min={new Date().toISOString().split('T')[0]}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => handleDueDateChange(doc.id, e.target.value, e)}
-                          className="absolute w-0 h-0 opacity-0 pointer-events-none"
-                          tabIndex={-1}
-                          aria-hidden="true"
-                        />
+                          <input
+                            id={`due-${doc.id}`}
+                            type="date"
+                            value={dueDate}
+                            min={new Date().toISOString().split('T')[0]}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleDueDateChange(doc.id, e)}
+                            className="sr-only"
+                            tabIndex={-1}
+                          />
+                        </label>
                         {/* Delete button */}
                         <button
                           onClick={(e) => deleteDocument(doc.id, e)}
