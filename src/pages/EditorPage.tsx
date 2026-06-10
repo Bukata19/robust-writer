@@ -1156,10 +1156,15 @@ usePageTitle(
           report={plagiarismReport}
           running={plagiarismRunning}
           highlightsVisible={plagiarismHighlightsVisible}
-          onRun={runPlagiarismCheck}
-          onToggleHighlights={() => setPlagiarismHighlightsVisible(!plagiarismHighlightsVisible)}
+          onRun={handlePlagiarismCheck}
+          onToggleHighlights={() => setPlagiarismHighlightsVisible(v => !v)}
           onClose={() => setShowPlagiarism(false)}
-        />
+         onHumanizePassage={(passage) => {
+        navigator.clipboard.writeText(passage);
+       setHumanizerOpen(true);
+    toast.info('Passage copied — select it in the editor then click Humanize');
+  }}
+/>
       )}
 
       {/* Version History Sidebar */}
