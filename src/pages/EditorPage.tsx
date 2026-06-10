@@ -1004,9 +1004,9 @@ usePageTitle(
     setShowPolish(false);
   };
 
-  const lineHeight = settings.lineSpacing === 'relaxed' ? 2.2 : 1.8;
-  const canvasMaxW = settings.canvasWidth === 'full' ? 'max-w-none' : 'max-w-[816px]';
-
+  const [lineSpacingOverride, setLineSpacingOverride] = useState<number | null>(null);
+  const lineHeight = lineSpacingOverride ?? (settings.lineSpacing === 'relaxed' ? 2.2 : 1.8);
+  const canvasMaxW = settings.canvasWidth === 'full' ? 'max-w-none' : 'max-w-[816px] xl:max-w-[920px]';
   // ===== Sidebar content =====
   const sidebarContent = (
     <div className="flex flex-col h-full glass-panel">
@@ -1316,25 +1316,21 @@ const fontControls = editor ? (
       }}
       className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
     >
-      {FONT_FAMILY_OPTIONS.map(opt => (
-        <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
-    <select
-      aria-label="Font size"
-      title="Font size"
-      value={fontSizeValue}
-      onChange={(e) => {
-        if (!editor) return;
-        editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
-      }}
-      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
-    >
       {FONT_SIZE_OPTIONS.map(sz => (
         <option key={sz} value={sz}>{sz.replace('px', '')}</option>
       ))}
+    </select>
+    <select
+      aria-label="Line spacing"
+      title="Line spacing"
+      value={String(lineHeight)}
+      onChange={(e) => setLineSpacingOverride(parseFloat(e.target.value))}
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[88px]"
+    >
+      <option value="1.5">1.5 ×</option>
+      <option value="1.8">1.8 ×</option>
+      <option value="2">2.0 ×</option>
+      <option value="2.2">2.2 ×</option>
     </select>
   </>
 ) : null;
@@ -1453,8 +1449,7 @@ const formatButtons = editor ? (
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
       </header>
-      <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground px-6 sm:px-12 lg:px-16 pt-6 pb-2">{title || 'Untitled Document'}</h1>
-
+      
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
        {/* Desktop: Left formatting toolbar — icon buttons only */}
