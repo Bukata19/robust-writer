@@ -69,7 +69,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import { TextStyle } from '@tiptap/extension-text-style';
-import { FontFamily } from '@tiptap/extension-text-style';
+import { FontFamily } from '@tiptap/extension-font-family';
 import PlagiarismHighlight from '@/extensions/plagiarism-highlight';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
