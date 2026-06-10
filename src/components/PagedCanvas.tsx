@@ -28,97 +28,110 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
   const padY = isMobile ? PAGE_PADDING_Y_MOBILE : PAGE_PADDING_Y;
   const padX = isMobile ? PAGE_PADDING_X_MOBILE : PAGE_PADDING_X;
 
-  // The usable content height of a single page (page height minus top+bottom padding)
+  // Usable writing height inside one page (page minus its top+bottom padding)
   const usablePageHeight = PAGE_HEIGHT - padY * 2;
+  // Full vertical distance from the top of one page's content to the next
+  const pageStride = PAGE_HEIGHT + PAGE_GAP;
 
   // ── TRUE PAGE-BREAK LOGIC ──────────────────────────────────────────────
-  // Measures every top-level block in the editor. When a block would cross a
-  // page boundary, injects top-margin to push it onto the next page — so text
-  // never appears in the grey gap between pages.
   const applyPageBreaks = useCallback(() => {
     const container = contentRef.current;
     if (!container) return;
 
-    // The actual editor content lives inside .tiptap (ProseMirror root)
     const proseRoot = container.querySelector('.tiptap') as HTMLElement | null;
     if (!proseRoot) return;
 
     const blocks = Array.from(proseRoot.children) as HTMLElement[];
     if (blocks.length === 0) return;
 
-    // Reset any previously-injected spacing first
-    for (const block of blocks) {
-      block.style.marginTop = '';
-    }
+    // STEP 1: clear all previously injected margins so we measure natural flow
+    for (const block of blocks) block.style.marginTop = '';
 
-    // The vertical stride of one page = usable height + the gap + the two paddings
-    const pageStride = usablePageHeight + PAGE_GAP + padY * 2;
+    // Force layout flush after clearing
+    void proseRoot.offsetHeight;
 
-    let currentPageTop = 0; // top boundary (content-space) of the current page
+    // STEP 2: walk blocks, re-measuring LIVE after each injection.
+    // We track the running boundary of the current page in content-space.
+    // contentTop of a block = its offsetTop within proseRoot (which already
+    // starts at 0 at the top of the writing area, since padding is on the parent).
+    let pageIndex = 0;
 
-    for (const block of blocks) {
-      const blockTop = block.offsetTop;          // relative to proseRoot
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+
+      // Live measurement — reflects any margins injected on earlier blocks
+      const blockTop = block.offsetTop;
       const blockHeight = block.offsetHeight;
       const blockBottom = blockTop + blockHeight;
 
-      // The bottom edge of the current usable page area
-      const pageBottomLimit = currentPageTop + usablePageHeight;
+      // Bottom limit of the page this block currently starts on
+      const currentPageBottom = pageIndex * pageStride + usablePageHeight;
 
-      // If this block overflows the current page AND it isn't taller than a
-      // whole page (a giant block can't be pushed, it just flows), push it down.
-      if (blockBottom > pageBottomLimit && blockHeight <= usablePageHeight) {
-        const pushTo = currentPageTop + pageStride;        // top of next page
-        const gapToPush = pushTo - blockTop;
-        if (gapToPush > 0) {
-          block.style.marginTop = `${gapToPush}px`;
+      // If the block fits entirely within a page but crosses the bottom edge,
+      // and it's not taller than a full page, push it to the next page.
+      if (blockBottom > currentPageBottom && blockHeight <= usablePageHeight) {
+        const nextPageTop = (pageIndex + 1) * pageStride;
+        const push = nextPageTop - blockTop;
+        if (push > 0) {
+          block.style.marginTop = `${push}px`;
+          void proseRoot.offsetHeight; // flush so next iteration measures correctly
         }
-        currentPageTop = pushTo;
-      } else if (blockBottom > pageBottomLimit) {
-        // Block taller than a page — advance the boundary past it
-        while (currentPageTop + usablePageHeight < blockBottom) {
-          currentPageTop += pageStride;
+        pageIndex += 1;
+      } else if (blockBottom > currentPageBottom) {
+        // Block taller than a page — let it flow, advance pageIndex past it
+        while ((pageIndex + 1) * pageStride < blockBottom + (pageStride - usablePageHeight)) {
+          pageIndex += 1;
         }
       }
     }
 
-    // Recalculate page count from the final laid-out height
-    const totalHeight = proseRoot.scrollHeight;
-    setPageCount(Math.max(1, Math.ceil(totalHeight / pageStride)));
-  }, [usablePageHeight, padY]);
+    // STEP 3: recompute page count from final laid-out height
+    const finalBottom = (() => {
+      const last = blocks[blocks.length - 1];
+      return last.offsetTop + last.offsetHeight;
+    })();
+    const pages = Math.max(1, Math.ceil((finalBottom + 1) / pageStride));
+    setPageCount(pages);
+  }, [usablePageHeight, pageStride]);
 
-  // Re-apply on resize
+  // Track viewport for mobile padding
   useEffect(() => {
-    const onResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
+    const onResize = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Observe content changes (typing, deleting, formatting)
+  // Re-run breaks whenever content changes
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
 
-    // Run once on mount
-    const raf = requestAnimationFrame(applyPageBreaks);
+    let frame = 0;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(applyPageBreaks);
+    };
 
-    const observer = new MutationObserver(() => {
-      requestAnimationFrame(applyPageBreaks);
-    });
+    schedule(); // initial
+
+    const observer = new MutationObserver(schedule);
     observer.observe(container, {
       childList: true,
       subtree: true,
       characterData: true,
     });
 
+    // Re-run when fonts finish loading (affects heights)
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(schedule).catch(() => {});
+    }
+
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [applyPageBreaks]);
 
-  const pageStride = usablePageHeight + PAGE_GAP + padY * 2;
   const totalHeight = pageCount * PAGE_HEIGHT + (pageCount - 1) * PAGE_GAP;
 
   return (
