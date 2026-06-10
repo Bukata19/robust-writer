@@ -256,17 +256,22 @@ const EditorPage: React.FC = () => {
   // Plagiarism
   const [plagiarismRunning, setPlagiarismRunning] = useState(false);
   const [plagiarismReport, setPlagiarismReport] = useState<{
-    overall_score: number;
-    summary: string;
-    flagged_passages: Array<{
-      excerpt: string;
-      concern_type: string;
-      reason: string;
-      severity: string;
-      suggestion?: string;
-    }>;
-    originality_strengths?: string[];
-  } | null>(null);
+  const [plagiarismReport, setPlagiarismReport] = useState<{
+  overall_score: number;
+  risk_level?: string;
+  summary: string;
+  flagged_passages: Array<{
+    excerpt: string;
+    concern_type: string;
+    reason: string;
+    severity: string;
+    confidence?: number;
+    suggestion?: string;
+  }>;
+  originality_strengths?: string[];
+  source_indicators?: Record<string, unknown>;
+  raw_signals?: Record<string, unknown>;
+} | null>(null);
   const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
 
   // Chat
@@ -1156,14 +1161,14 @@ usePageTitle(
           report={plagiarismReport}
           running={plagiarismRunning}
           highlightsVisible={plagiarismHighlightsVisible}
-          onRun={handlePlagiarismCheck}
+          onRun={runPlagiarismCheck}
           onToggleHighlights={() => setPlagiarismHighlightsVisible(v => !v)}
           onClose={() => setShowPlagiarism(false)}
          onHumanizePassage={(passage) => {
-        navigator.clipboard.writeText(passage);
-       setHumanizerOpen(true);
-    toast.info('Passage copied — select it in the editor then click Humanize');
-  }}
+  navigator.clipboard.writeText(passage).catch(() => {});
+  setHumanizerOpen(true);
+  toast.success('Passage copied — select it in the editor then click Humanize');
+}}
 />
       )}
 
