@@ -435,6 +435,7 @@ usePageTitle(
         title,
         content: content as unknown as Json,
       });
+      localStorage.setItem(`rb_wc_${id}`, String(editor.storage.characterCount.words()));
       toast.success('Document saved!');
     }
     setSaving(false);
