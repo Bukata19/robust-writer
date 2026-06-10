@@ -231,6 +231,7 @@ const EditorPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [wordCount, setWordCount] = useState(0);
+  const [lineSpacingOverride, setLineSpacingOverride] = useState<number | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -1004,7 +1005,6 @@ usePageTitle(
     setShowPolish(false);
   };
 
-  const [lineSpacingOverride, setLineSpacingOverride] = useState<number | null>(null);
   const lineHeight = lineSpacingOverride ?? (settings.lineSpacing === 'relaxed' ? 2.2 : 1.8);
   const canvasMaxW = settings.canvasWidth === 'full' ? 'max-w-none' : 'max-w-[816px] xl:max-w-[920px]';
   // ===== Sidebar content =====
