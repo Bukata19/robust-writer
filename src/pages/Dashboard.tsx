@@ -522,11 +522,11 @@ const Dashboard: React.FC = () => {
                         <label
                           htmlFor={`due-${doc.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="p-1 hover:text-primary rounded transition-colors cursor-pointer"
+                          className="relative p-1 hover:text-primary rounded transition-colors cursor-pointer"
                           aria-label="Set due date"
                           title="Set due date"
                         >
-                          <Calendar className="w-3.5 h-3.5" />
+                          <Calendar className="w-3.5 h-3.5 relative z-10 pointer-events-none" />
                           <input
                             id={`due-${doc.id}`}
                             type="date"
@@ -534,7 +534,7 @@ const Dashboard: React.FC = () => {
                             min={new Date().toISOString().split('T')[0]}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleDueDateChange(doc.id, e)}
-                            className="sr-only"
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                             tabIndex={-1}
                           />
                         </label>
