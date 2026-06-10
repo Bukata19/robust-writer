@@ -1316,6 +1316,22 @@ const fontControls = editor ? (
       }}
       className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
     >
+      {FONT_FAMILY_OPTIONS.map(opt => (
+        <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+    <select
+      aria-label="Font size"
+      title="Font size"
+      value={fontSizeValue}
+      onChange={(e) => {
+        if (!editor) return;
+        editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
+      }}
+      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
+    >
       {FONT_SIZE_OPTIONS.map(sz => (
         <option key={sz} value={sz}>{sz.replace('px', '')}</option>
       ))}
