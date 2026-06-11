@@ -28,12 +28,20 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
   const padY = isMobile ? PAGE_PADDING_Y_MOBILE : PAGE_PADDING_Y;
   const padX = isMobile ? PAGE_PADDING_X_MOBILE : PAGE_PADDING_X;
 
-  // Usable writing height inside one page (page minus its top+bottom padding)
-  const usablePageHeight = PAGE_HEIGHT - padY * 2;
-  // Full vertical distance from the top of one page's content to the next
+  // Vertical distance from the top of one page to the top of the next.
   const pageStride = PAGE_HEIGHT + PAGE_GAP;
 
   // ── TRUE PAGE-BREAK LOGIC ──────────────────────────────────────────────
+  // A block's offsetTop is measured from the content div's border box, so it
+  // ALREADY INCLUDES the div's top padding (padY). All boundary math below is
+  // expressed in that same padding-inclusive space.
+  //
+  //   Page i content area (in offsetTop space):
+  //     top    = i * pageStride + padY
+  //     bottom = i * pageStride + PAGE_HEIGHT - padY
+  //
+  // A block must not extend past its page's content bottom. If it does, we push
+  // it so its top lands exactly at the next page's content top.
   const applyPageBreaks = useCallback(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -44,75 +52,87 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
     const blocks = Array.from(proseRoot.children) as HTMLElement[];
     if (blocks.length === 0) return;
 
-    // STEP 1: clear all previously injected margins so we measure natural flow
+    // STEP 1: clear previously injected margins, flush layout
     for (const block of blocks) block.style.marginTop = '';
-
-    // Force layout flush after clearing
     void proseRoot.offsetHeight;
 
-    // STEP 2: walk blocks, re-measuring LIVE after each injection.
-    // We track the running boundary of the current page in content-space.
-    // contentTop of a block = its offsetTop within proseRoot (which already
-    // starts at 0 at the top of the writing area, since padding is on the parent).
+    const usableHeight = PAGE_HEIGHT - padY * 2;
+
+    // STEP 2: assign each block to a page, pushing when it would overflow
     let pageIndex = 0;
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
 
-      // Live measurement — reflects any margins injected on earlier blocks
-      const blockTop = block.offsetTop;
+      const blockTop = block.offsetTop;          // padding-inclusive
       const blockHeight = block.offsetHeight;
       const blockBottom = blockTop + blockHeight;
 
-      // Bottom limit of the page this block currently starts on
-      const currentPageBottom = pageIndex * pageStride + usablePageHeight;
+      // Bottom edge of the current page's usable content area
+      const pageContentBottom = pageIndex * pageStride + (PAGE_HEIGHT - padY);
 
-      // If the block fits entirely within a page but crosses the bottom edge,
-      // and it's not taller than a full page, push it to the next page.
-      if (blockBottom > currentPageBottom && blockHeight <= usablePageHeight) {
-        const nextPageTop = (pageIndex + 1) * pageStride;
-        const push = nextPageTop - blockTop;
+      if (blockBottom > pageContentBottom && blockHeight <= usableHeight) {
+        // Block overflows the page but fits within one page → push to next page
+        const nextPageContentTop = (pageIndex + 1) * pageStride + padY;
+        const push = nextPageContentTop - blockTop;
         if (push > 0) {
           block.style.marginTop = `${push}px`;
-          void proseRoot.offsetHeight; // flush so next iteration measures correctly
+          void proseRoot.offsetHeight; // flush so following blocks measure correctly
         }
         pageIndex += 1;
-      } else if (blockBottom > currentPageBottom) {
-        // Block taller than a page — let it flow, advance pageIndex past it
-        while ((pageIndex + 1) * pageStride < blockBottom + (pageStride - usablePageHeight)) {
+      } else if (blockBottom > pageContentBottom) {
+        // Block taller than a whole page → can't push it. Advance pageIndex to
+        // the page where this block's BOTTOM lands, so the next block is
+        // measured against the correct page boundary (prevents re-bleed after
+        // an oversized block such as a large pasted image or table).
+        while (pageIndex * pageStride + (PAGE_HEIGHT - padY) < blockBottom) {
           pageIndex += 1;
         }
       }
     }
 
-    // STEP 3: recompute page count from final laid-out height
-    const finalBottom = (() => {
-      const last = blocks[blocks.length - 1];
-      return last.offsetTop + last.offsetHeight;
-    })();
-    const pages = Math.max(1, Math.ceil((finalBottom + 1) / pageStride));
+    // STEP 3: recompute page count from final layout
+    const last = blocks[blocks.length - 1];
+    const finalBottom = last.offsetTop + last.offsetHeight;
+    const pages = Math.max(1, Math.ceil(finalBottom / pageStride));
     setPageCount(pages);
-  }, [usablePageHeight, pageStride]);
+  }, [padY, pageStride]);
 
-  // Track viewport for mobile padding
+  // Track viewport for responsive padding
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Re-run breaks whenever content changes
+  // Recalculate whenever content changes
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
 
     let frame = 0;
+    let tries = 0;
+
+    // Debounced scheduler. Also guards the initial mount: if TipTap hasn't
+    // injected .ProseMirror yet, it retries on the next frame (up to ~30
+    // frames) so the first paint still gets paginated without waiting for the
+    // user to type. KEEP the single-rAF debounce — it is what prevents the
+    // observer (which fires on the margins we inject) from looping infinitely.
     const schedule = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(applyPageBreaks);
+      frame = requestAnimationFrame(() => {
+        const hasEditor = contentRef.current?.querySelector('.ProseMirror');
+        if (!hasEditor && tries < 30) {
+          tries += 1;
+          schedule();
+          return;
+        }
+        tries = 0;
+        applyPageBreaks();
+      });
     };
 
-    schedule(); // initial
+    schedule(); // initial run
 
     const observer = new MutationObserver(schedule);
     observer.observe(container, {
@@ -121,7 +141,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
       characterData: true,
     });
 
-    // Re-run when fonts finish loading (affects heights)
+    // Fonts change line heights — re-run once they're ready
     if (document.fonts?.ready) {
       document.fonts.ready.then(schedule).catch(() => {});
     }
@@ -164,16 +184,18 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
         </div>
       ))}
 
-      {/* Editor content */}
+      {/* Editor content. Paddings are forced LAST so a caller-supplied `style`
+          can never override them — the page-break math depends on padY/padX
+          being exactly these values. */}
       <div
         ref={contentRef}
         className={`relative z-10 text-[#1a1a1a] dark:text-[#e8edf5] ${className ?? ''}`}
         style={{
+          ...style,
           paddingLeft: padX,
           paddingRight: padX,
           paddingTop: padY,
           paddingBottom: padY,
-          ...style,
         }}
       >
         {children}
