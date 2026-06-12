@@ -15,9 +15,31 @@ interface Version {
 
 interface VersionHistoryPanelProps {
   documentId: string;
-  onRestore: (content: string, title: string) => void;
+  onRestore: (content: Json | null, title: string) => void;
   onClose: () => void;
 }
+
+// Renders a TipTap JSON doc as plain readable text for preview
+const VersionPreview: React.FC<{ content: Json | null }> = ({ content }) => {
+  if (!content || typeof content !== 'object') {
+    return <p className="text-muted-foreground text-sm">No preview available.</p>;
+  }
+  const extractText = (node: any): string => {
+    if (!node) return '';
+    if (node.type === 'text') return node.text ?? '';
+    if (Array.isArray(node.content)) {
+      const text = node.content.map(extractText).join('');
+      // Add line breaks after block-level nodes
+      if (['paragraph', 'heading'].includes(node.type)) return text + '\n\n';
+      return text;
+    }
+    return '';
+  };
+  const text = extractText(content as any).trim();
+  return text
+    ? <div className="whitespace-pre-wrap text-sm leading-relaxed">{text}</div>
+    : <p className="text-muted-foreground text-sm">Empty document.</p>;
+};
 
 const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ documentId, onRestore, onClose }) => {
   const [versions, setVersions] = useState<Version[]>([]);
@@ -46,10 +68,10 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ documentId, o
   };
 
   const handleRestore = (version: Version) => {
-    const content = typeof version.content === 'string' ? version.content : '';
-    onRestore(content, version.title);
-    toast.success('Version restored! Remember to save.');
-  };
+  // content is stored as a TipTap JSON object — pass it through as-is
+  onRestore(version.content, version.title);
+  toast.success('Version restored! Remember to save.');
+};
 
   const previewVersion = previewId ? versions.find(v => v.id === previewId) : null;
 
@@ -86,10 +108,9 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ documentId, o
               Back
             </Button>
           </div>
-          <div
-            className="flex-1 overflow-y-auto p-4 prose prose-sm prose-invert max-w-none text-foreground scrollbar-dark"
-            dangerouslySetInnerHTML={{ __html: typeof previewVersion.content === 'string' ? previewVersion.content : '' }}
-          />
+          <div className="flex-1 overflow-y-auto p-4 prose prose-sm prose-invert max-w-none text-foreground scrollbar-dark">
+            <VersionPreview content={previewVersion.content} />
+           </div>
           <div className="p-3 border-t border-border shrink-0">
             <Button size="sm" className="w-full btn-glow" onClick={() => handleRestore(previewVersion)}>
               <RotateCcw className="w-3 h-3 mr-1" /> Restore this version
