@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import Dashboard from "./pages/Dashboard";
 import EditorPage from "./pages/EditorPage";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<PublicRoute><AuthPage /></PublicRoute>} />
+              {/* Standalone: the recovery session must not be redirected by PublicRoute. */}
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/editor/:id" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
