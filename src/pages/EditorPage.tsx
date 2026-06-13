@@ -72,7 +72,15 @@ import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
-import PlagiarismHighlight from '@/extensions/plagiarism-highlight';
+import AiHighlight from '@/extensions/ai-highlight';
+import AiHighlightPopover from '@/components/AiHighlightPopover';
+import {
+  computeAiHighlights,
+  DEFAULT_FILTERS,
+  type HighlightFilters,
+  type HighlightCategory,
+  type HighlightMeta,
+} from '@/lib/aiHighlightCompute';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 const TextStyleWithFontSize = TextStyle.extend({
@@ -276,6 +284,15 @@ const EditorPage: React.FC = () => {
   raw_signals?: Record<string, unknown>;
 } | null>(null);
   const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
+  // AI Detector highlight controls
+  const [highlightFilters, setHighlightFilters] = useState<HighlightFilters>(DEFAULT_FILTERS);
+  const [liveDetect, setLiveDetect] = useState(true);
+  const [aiHighlightCounts, setAiHighlightCounts] = useState<Record<HighlightCategory, number>>({
+    word: 0, phrase: 0, passage: 0, structure: 0,
+  });
+  const [popoverMeta, setPopoverMeta] = useState<HighlightMeta | null>(null);
+  const [popoverRect, setPopoverRect] = useState<DOMRect | null>(null);
+  const highlightMetaRef = useRef<Record<string, HighlightMeta>>({});
 
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -328,7 +345,7 @@ const EditorPage: React.FC = () => {
       CharacterCount,
       TextStyleWithFontSize,
       FontFamily,
-      PlagiarismHighlight,
+      AiHighlight,
     ],
     autofocus: true,
     editorProps: {
@@ -342,6 +359,79 @@ const EditorPage: React.FC = () => {
   setCoachLoading(false);
 },
   });
+
+  // ===== AI DETECTOR HIGHLIGHTS (ephemeral ProseMirror decorations) =====
+  // Recompute highlight targets from the live lexicon + any flagged passages,
+  // then push them to the decoration plugin. Never mutates the document.
+  const refreshAiHighlights = useCallback(() => {
+    if (!editor) return;
+    if (!plagiarismHighlightsVisible) {
+      editor.commands.clearAiHighlights();
+      highlightMetaRef.current = {};
+      setAiHighlightCounts({ word: 0, phrase: 0, passage: 0, structure: 0 });
+      return;
+    }
+    const { targets, metaById, counts } = computeAiHighlights(
+      editor,
+      plagiarismReport?.flagged_passages,
+      highlightFilters,
+    );
+    editor.commands.setAiHighlights(targets);
+    highlightMetaRef.current = metaById;
+    setAiHighlightCounts(counts);
+  }, [editor, plagiarismReport, highlightFilters, plagiarismHighlightsVisible]);
+
+  // Refresh when the report, filters, or visibility change.
+  useEffect(() => { refreshAiHighlights(); }, [refreshAiHighlights]);
+
+  // Live (debounced) re-detection of AI words/phrases as the user types.
+  useEffect(() => {
+    if (!editor) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const handler = () => {
+      if (!liveDetect || !plagiarismHighlightsVisible) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => refreshAiHighlights(), 300);
+    };
+    editor.on('update', handler);
+    return () => { clearTimeout(timer); editor.off('update', handler); };
+  }, [editor, liveDetect, plagiarismHighlightsVisible, refreshAiHighlights]);
+
+  // Click a highlight → open the action popover.
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest('[data-ai-id]') as HTMLElement | null;
+      if (!el) return;
+      const id = el.getAttribute('data-ai-id');
+      const meta = id ? highlightMetaRef.current[id] : null;
+      if (meta) {
+        setPopoverMeta(meta);
+        setPopoverRect(el.getBoundingClientRect());
+      }
+    };
+    dom.addEventListener('click', onClick);
+    return () => dom.removeEventListener('click', onClick);
+  }, [editor]);
+
+  const toggleHighlightFilter = useCallback((cat: HighlightCategory) => {
+    setHighlightFilters((f) => ({ ...f, [cat]: !f[cat] }));
+  }, []);
+
+  const handleSwapWord = useCallback((meta: HighlightMeta) => {
+    if (!editor || !meta.swapText) return;
+    editor.chain().focus().insertContentAt({ from: meta.from, to: meta.to }, meta.swapText).run();
+    setPopoverMeta(null);
+    setTimeout(() => refreshAiHighlights(), 50);
+  }, [editor, refreshAiHighlights]);
+
+  const handleHumanizeMeta = useCallback((meta: HighlightMeta) => {
+    navigator.clipboard.writeText(meta.text).catch(() => {});
+    setHumanizerOpen(true);
+    setPopoverMeta(null);
+    toast.success('Passage copied — select it in the editor then click Humanize');
+  }, []);
 
   const decoder = useAssignmentDecoder({
     editor,
@@ -692,57 +782,8 @@ usePageTitle(
 
       setPlagiarismReport(data);
       setPlagiarismHighlightsVisible(true);
-
-      // Apply plagiarism highlight marks
-      if (data.flagged_passages && editor) {
-        const fullText = editor.getText();
-        // Remove old highlights first
-        editor.chain().selectAll().unsetMark('plagiarismHighlight').run();
-        
-        for (const passage of data.flagged_passages) {
-          const excerpt = passage.excerpt;
-          const idx = fullText.indexOf(excerpt);
-          if (idx >= 0) {
-            // Build a text-offset-to-prosemirror-position map
-            let textOffset = 0;
-            const posMap: { textStart: number; textEnd: number; nodePos: number }[] = [];
-            editor.state.doc.descendants((node, nodePos) => {
-              if (node.isText) {
-                const len = node.text?.length || 0;
-                posMap.push({ textStart: textOffset, textEnd: textOffset + len, nodePos });
-                textOffset += len;
-              } else if (node.isBlock && textOffset > 0) {
-                // Account for block boundaries that getText() renders as separators
-                textOffset += 1;
-              }
-            });
-
-            const excerptStart = idx;
-            const excerptEnd = idx + excerpt.length;
-            let from: number | null = null;
-            let to: number | null = null;
-
-            for (const entry of posMap) {
-              if (from === null && excerptStart >= entry.textStart && excerptStart < entry.textEnd) {
-                from = entry.nodePos + (excerptStart - entry.textStart);
-              }
-              if (excerptEnd > entry.textStart && excerptEnd <= entry.textEnd) {
-                to = entry.nodePos + (excerptEnd - entry.textStart);
-              }
-            }
-
-            if (from !== null && to !== null && from < to) {
-              editor.chain()
-                .setTextSelection({ from, to })
-                .setMark('plagiarismHighlight', { severity: passage.severity === 'high' ? 'high' : 'medium' })
-                .run();
-            }
-          }
-        }
-        // Deselect - position 1 is the first valid position inside the doc
-        const docSize = editor.state.doc.content.size;
-        editor.commands.setTextSelection(Math.min(1, docSize));
-      }
+      // Highlights are recomputed automatically by the refreshAiHighlights
+      // effect when plagiarismReport changes (decoration overlay, not marks).
 
       if (id) {
         await supabase
@@ -755,7 +796,7 @@ usePageTitle(
         setDoc((prev) => prev ? { ...prev, plagiarism_score: data.overall_score, plagiarism_data: data as unknown as Json } : prev);
       }
 
-      toast.success(`Plagiarism check complete: ${data.overall_score}% risk`);
+      toast.success(`AI analysis complete: ${data.overall_score}% AI-likelihood`);
     } catch (err: any) {
       toast.error(err.message || 'Plagiarism check failed');
     } finally {
@@ -1158,7 +1199,7 @@ usePageTitle(
         </>
       )}
 
-      {/* Plagiarism Sidebar */}
+      {/* AI Detector Sidebar */}
       {showPlagiarism && (
         <PlagiarismPanel
           report={plagiarismReport}
@@ -1167,6 +1208,11 @@ usePageTitle(
           onRun={runPlagiarismCheck}
           onToggleHighlights={() => setPlagiarismHighlightsVisible(v => !v)}
           onClose={() => setShowPlagiarism(false)}
+          filters={highlightFilters}
+          counts={aiHighlightCounts}
+          onToggleFilter={toggleHighlightFilter}
+          liveDetect={liveDetect}
+          onToggleLiveDetect={() => setLiveDetect(v => !v)}
          onHumanizePassage={(passage) => {
   navigator.clipboard.writeText(passage).catch(() => {});
   setHumanizerOpen(true);
@@ -1174,6 +1220,15 @@ usePageTitle(
 }}
 />
       )}
+
+      {/* Click-to-act popover for AI highlights */}
+      <AiHighlightPopover
+        meta={popoverMeta}
+        anchorRect={popoverRect}
+        onClose={() => setPopoverMeta(null)}
+        onSwap={handleSwapWord}
+        onHumanize={handleHumanizeMeta}
+      />
 
       {/* Version History Sidebar */}
       {showHistory && id && (
@@ -1493,7 +1548,7 @@ const formatButtons = editor ? (
 )}
 
         {/* Editor Canvas */}
-        <div data-editor-scroll className={`relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b] ${!plagiarismHighlightsVisible ? 'hide-plagiarism-highlights' : ''}`}>
+        <div data-editor-scroll className="relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b]">
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
             {loading ? (
   <div className="relative w-full max-w-[816px]">

@@ -417,20 +417,37 @@
   color: hsl(var(--muted-foreground));
 }
 
-/* Plagiarism highlight marks */
-.plagiarism-highlight {
+/* AI Detector highlights (ProseMirror decorations — never saved to the doc) */
+.ai-hl {
   border-radius: 2px;
   padding: 1px 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
-.plagiarism-highlight-medium {
-  background-color: hsla(180, 80%, 40%, 0.25);
+/* Individual AI-favoured words — amber, dotted underline */
+.ai-hl-word {
+  background-color: hsla(38, 92%, 50%, 0.16);
+  border-bottom: 2px dotted hsla(38, 92%, 50%, 0.7);
+}
+/* Formulaic AI phrases — violet */
+.ai-hl-phrase {
+  background-color: hsla(265, 85%, 60%, 0.18);
+  border-bottom: 2px solid hsla(265, 85%, 60%, 0.6);
+}
+/* Model-flagged passages — cyan (medium) / red (high) */
+.ai-hl-passage-medium {
+  background-color: hsla(180, 80%, 40%, 0.22);
   border-bottom: 2px solid hsla(180, 80%, 40%, 0.6);
 }
-.plagiarism-highlight-high {
-  background-color: hsla(0, 80%, 50%, 0.25);
-  border-bottom: 2px solid hsla(0, 80%, 50%, 0.6);
+.ai-hl-passage-high {
+  background-color: hsla(0, 80%, 50%, 0.22);
+  border-bottom: 2px solid hsla(0, 80%, 50%, 0.65);
 }
-.hide-plagiarism-highlights .plagiarism-highlight {
-  background-color: transparent !important;
-  border-bottom: none !important;
+/* Structural signals — sky blue, wavy */
+.ai-hl-structure {
+  background-color: hsla(199, 89%, 55%, 0.16);
+  border-bottom: 2px dashed hsla(199, 89%, 55%, 0.65);
+}
+.ai-hl:hover {
+  filter: brightness(1.15);
 }

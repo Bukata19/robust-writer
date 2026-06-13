@@ -594,6 +594,11 @@ CONCERN TYPES:
       paragraph_risks: signals.paragraphRisks,
     };
 
+    // The exact deterministic AI words/phrases found, for the editor to
+    // highlight every occurrence (independent of the model's quoting).
+    report.ai_words_found = signals.aiWordHits.map((h: { word: string }) => h.word);
+    report.ai_phrases_found = signals.aiPhraseHits.map((h: { phrase: string }) => h.phrase);
+
     return new Response(
       JSON.stringify(report),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
