@@ -2,8 +2,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Fall back to the project's public values so the app never fails to mount if
+// the VITE_ env vars are missing at build time (e.g. a host without them set).
+// Both are public (project URL + anon/publishable key) and already ship in the
+// client bundle, so there is no secret to protect here.
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ?? 'https://qbvrhthhlzxrwmdzmyfc.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidnJodGhobHp4cndtZHpteWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NTU1MjgsImV4cCI6MjA5MDEzMTUyOH0.8zw-hBejb3f0yYNAOl1iyrFOS2JCLXSFYUa81vcpveQ';
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
