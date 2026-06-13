@@ -155,36 +155,24 @@ const Dashboard: React.FC = () => {
 
   // Onboarding tour
   useEffect(() => {
-    const TOUR_KEY = 'rb_dashboard_tour_v2_done';
+    const TOUR_KEY = 'rb_dashboard_tour_v3_done';
     if (localStorage.getItem(TOUR_KEY)) return;
     const timer = setTimeout(() => {
       const intro = introJs();
       intro.setOptions({
         steps: [
-          { intro: 'Welcome to RobAssister! 👋 This quick tour shows you around.' },
+          { intro: 'Welcome to RobAssister! 👋 A quick 30-second tour of your dashboard.' },
           {
             element: '[data-intro-id="new-doc-grid"]',
-            intro: '<strong>📝 Essay</strong><br/>For arguments, analysis, and reflective writing. Comes with Introduction, Body Paragraphs, and Conclusion sections already set up.',
-          },
-          {
-            element: '[data-intro-id="new-doc-grid"]',
-            intro: '<strong>🔬 Research Paper</strong><br/>For academic research. Includes Abstract, Introduction, Literature Review, Methodology, Results, Discussion, Conclusion, and References.',
-          },
-          {
-            element: '[data-intro-id="new-doc-grid"]',
-            intro: '<strong>📊 Report</strong><br/>For professional and academic reports. Structured around Executive Summary, Findings, and Recommendations.',
-          },
-          {
-            element: '[data-intro-id="new-doc-grid"]',
-            intro: '<strong>📄 General</strong><br/>A blank canvas. Use this for notes, letters, or anything that does not fit the other types.',
+            intro: '<strong>Start a new document</strong><br/>Pick a type to begin — <strong>Essay</strong>, <strong>Research Paper</strong>, <strong>Report</strong>, or <strong>General</strong>. Each comes pre-structured with the right sections (the General type is a blank canvas).',
           },
           {
             element: '[data-intro-id="import-btn"]',
-            intro: '<strong>Import a File</strong><br/>Import a .txt, .md, or .docx file directly from your device and continue editing here.',
+            intro: '<strong>Import a file</strong><br/>Bring in a .txt, .md, or .docx file from your device and keep editing it here.',
           },
           {
             element: '[data-intro-id="settings-btn"]',
-            intro: '<strong>Settings</strong><br/>Change your theme, font size, autosave interval, and accessibility options here.',
+            intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), font and canvas defaults, autosave, and accessibility — and you can replay this tour anytime from here.',
           },
         ],
         showBullets: false,

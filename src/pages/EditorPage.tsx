@@ -928,7 +928,7 @@ usePageTitle(
   // Intro.js onboarding tour
   useEffect(() => {
     if (loading) return;
-    const TOUR_KEY = 'rb_editor_tour_v3_done';
+    const TOUR_KEY = 'rb_editor_tour_v4_done';
     if (localStorage.getItem(TOUR_KEY)) return;
 
     const timer = setTimeout(() => {
@@ -936,56 +936,59 @@ usePageTitle(
       intro.setOptions({
         steps: [
   {
+    intro: "<strong>Welcome to your workspace 👋</strong><br/>Here's a 60-second tour of the editor and your AI writing tools. You can replay it anytime from Settings.",
+  },
+  {
     element: '[data-intro-id="editor-canvas"]',
-    intro: '<strong>Writing Canvas</strong><br/>Click any section and start typing. Placeholder text disappears automatically when you focus that section.',
+    intro: '<strong>Writing Canvas</strong><br/>Click anywhere and start writing — placeholders disappear as you go. As you type, the <strong>AI Detector</strong> live-highlights AI-sounding words and phrases right here so you can spot them instantly.',
   },
   {
     element: '[data-intro-id="format-toolbar"]',
-    intro: '<strong>Formatting</strong><br/>Bold, italic, underline, headings, lists, and alignment. Each button highlights when your cursor is inside text with that format.',
+    intro: '<strong>Formatting & Fonts</strong><br/>Bold, italic, underline, headings, lists, and alignment — each lights up when your cursor is inside matching text. The font family and size dropdowns let you switch typeface and scale from 12 to 24.',
   },
   {
-    element: '[data-intro-id="format-toolbar"]',
-    intro: '<strong>Font Controls</strong><br/>Use the font family and size dropdowns to switch between Georgia, Arial, Times New Roman and more — and adjust size from 12 to 24.',
+    element: '[data-intro-id="chat-btn"]',
+    intro: '<strong>AI Chat</strong><br/>Ask your assistant anything. It already knows your document type and content — request rewrites, outlines, suggestions, or feedback.',
   },
   {
-    element: '[data-intro-id="ai-tools"]',
-    intro: '<strong>AI Chat</strong><br/>Ask your AI assistant anything. It already knows your document type and content — ask for rewrites, suggestions, outlines, or feedback.',
+    element: '[data-intro-id="humanizer-btn"]',
+    intro: '<strong>Humanizer</strong><br/>Select text, then humanize it at Subtle, Moderate, or Full intensity to make AI-generated writing sound naturally human.',
   },
   {
-    element: '[data-intro-id="ai-tools"]',
-    intro: '<strong>Text Humanizer</strong><br/>Select text, then humanize it. Choose Subtle, Moderate, or Full intensity. Makes AI-generated text sound naturally human and reduces detection scores.',
-  },
-  {
-    element: '[data-intro-id="ai-tools"]',
-    intro: '<strong>Plagiarism Checker</strong><br/>Get an originality score, see exactly which passages are flagged, and get specific fix suggestions for each one.',
+    element: '[data-intro-id="ai-detector-btn"]',
+    intro: "<strong>AI Detector 🛰️</strong><br/>Get an AI-likelihood score and see AI words, phrases, and passages highlighted in your text. <strong>Click any highlight</strong> to see why it was flagged and fix it in place — swap a buzzword or humanize a passage. Filter by category in the panel.",
   },
   {
     element: '[data-intro-id="decoder-btn"]',
-    intro: '<strong>Assignment Decoder</strong><br/>Paste your assignment question. The AI breaks it into a structured outline, gives writing tips per section, and can draft each section for you to approve.',
+    intro: '<strong>Assignment Decoder</strong><br/>Paste your assignment question. The AI breaks it into a structured outline with per-section tips, and can draft each section for you to approve.',
   },
   {
     element: '[data-intro-id="polish-btn"]',
-    intro: '<strong>Writing Polish</strong><br/>Clarity Check scans your whole document for weak sentences, passive voice, and wordy phrases. Smart Rewrite gives 3 alternatives for any selected text.',
+    intro: '<strong>Writing Polish</strong><br/>Clarity Check scans for weak sentences, passive voice, and wordy phrases. Smart Rewrite offers 3 alternatives for any selected text.',
   },
   {
     element: '[data-intro-id="coach-btn"]',
-    intro: '<strong>Writing Coach</strong><br/>When enabled, a live tip appears below the paragraph you are typing in every time you pause. Toggle it on or off with this button.',
+    intro: '<strong>Writing Coach</strong><br/>When on, a live tip appears below the paragraph you are writing whenever you pause. Toggle it on or off here.',
   },
   {
     element: '[data-intro-id="history-btn"]',
-    intro: '<strong>Version History</strong><br/>Every manual save creates a restore point. Open this panel to browse past versions and restore any of them with one click.',
+    intro: '<strong>Version History</strong><br/>Every save creates a restore point. Browse past versions and restore any of them with one click.',
   },
   {
     element: '[data-intro-id="focus-btn"]',
-    intro: '<strong>Focus Mode</strong><br/>Hides all toolbars and panels — just you and the document. Press Esc or click again to return to normal view.',
+    intro: '<strong>Focus Mode</strong><br/>Hides every toolbar and panel — just you and the page. Press Esc or click again to return.',
+  },
+  {
+    element: '[data-intro-id="settings-btn"]',
+    intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), canvas width (A4 or full), line spacing, font defaults, and accessibility — plus a button to replay this tour anytime.',
   },
   {
     element: '[data-intro-id="export-btn"]',
-    intro: '<strong>Export</strong><br/>Download your document as a PDF or DOCX file when it is ready. Your default format can be set in Dashboard Settings.',
+    intro: '<strong>Export</strong><br/>Download your finished document as PDF or DOCX. Your default format is configurable in Settings.',
   },
   {
     element: '[data-intro-id="save-btn"]',
-    intro: '<strong>Save</strong><br/>Click here or press Ctrl+S to save. Every save also creates a Version History snapshot. Autosave runs automatically in the background. You are all set! 🎓',
+    intro: '<strong>Save</strong><br/>Click here or press Ctrl+S — every save also snapshots Version History, and autosave runs in the background. You are all set! 🎓',
   },
 ],
         showBullets: false,
@@ -1285,6 +1288,7 @@ usePageTitle(
             size="icon"
             onClick={() => toggleOrOpen(chatOpen, openChat, () => setChatOpen(false))}
             aria-label="AI Chat"
+            data-intro-id="chat-btn"
             className="scale-click"
           >
             <MessageCircle className="w-4 h-4" />
@@ -1299,6 +1303,7 @@ usePageTitle(
             size="icon"
             onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
             aria-label="Humanizer"
+            data-intro-id="humanizer-btn"
             className="scale-click"
           >
             <Sparkles className="w-4 h-4" />
@@ -1312,13 +1317,14 @@ usePageTitle(
             variant={showPlagiarism ? 'default' : 'ghost'}
             size="icon"
             onClick={() => toggleOrOpen(showPlagiarism, openPlagiarism, () => setShowPlagiarism(false))}
-            aria-label="Plagiarism Check"
+            aria-label="AI Detector"
+            data-intro-id="ai-detector-btn"
             className="scale-click"
           >
             <ShieldCheck className="w-4 h-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Plagiarism Check</TooltipContent>
+        <TooltipContent side="left">AI Detector</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -1520,7 +1526,7 @@ const formatButtons = editor ? (
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" className="scale-click">
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" data-intro-id="settings-btn" className="scale-click">
               <Settings className="w-4 h-4" />
             </Button>
           </TooltipTrigger>

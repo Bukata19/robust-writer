@@ -111,8 +111,10 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
     localStorage.removeItem('rb_editor_tour_done');
     localStorage.removeItem('rb_editor_tour_v2_done');
     localStorage.removeItem('rb_editor_tour_v3_done');
+    localStorage.removeItem('rb_editor_tour_v4_done');
     localStorage.removeItem('rb_dashboard_tour_done');
     localStorage.removeItem('rb_dashboard_tour_v2_done');
+    localStorage.removeItem('rb_dashboard_tour_v3_done');
     onOpenChange(false);
     toast.success('Onboarding tour reset. Visit the dashboard to restart.');
   }, [onOpenChange]);
