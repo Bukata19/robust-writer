@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import {
   ShieldCheck, Loader2, Eye, EyeOff, X,
   ChevronDown, ChevronUp, Lightbulb, Sparkles,
-  CheckCircle2, Wand2, AlertTriangle, BarChart2,
+  CheckCircle2, Wand2, AlertTriangle, BarChart2, Radar, Zap,
 } from 'lucide-react';
+import type { HighlightFilters, HighlightCategory } from '@/lib/aiHighlightCompute';
 
 // ── INTERFACES ─────────────────────────────────────────────────────────────
 interface FlaggedPassage {
@@ -64,7 +65,66 @@ interface PlagiarismPanelProps {
   onToggleHighlights: () => void;
   onClose: () => void;
   onHumanizePassage?: (text: string) => void;
+  // AI highlight controls
+  filters: HighlightFilters;
+  counts: Record<HighlightCategory, number>;
+  onToggleFilter: (cat: HighlightCategory) => void;
+  liveDetect: boolean;
+  onToggleLiveDetect: () => void;
 }
+
+// ── HIGHLIGHT LEGEND + FILTERS ─────────────────────────────────────────────
+const CATEGORY_INFO: { key: HighlightCategory; label: string; dot: string }[] = [
+  { key: 'word', label: 'AI words', dot: 'bg-amber-400' },
+  { key: 'phrase', label: 'AI phrases', dot: 'bg-violet-400' },
+  { key: 'passage', label: 'AI passages', dot: 'bg-red-400' },
+  { key: 'structure', label: 'Structure', dot: 'bg-sky-400' },
+];
+
+const HighlightLegend: React.FC<{
+  filters: HighlightFilters;
+  counts: Record<HighlightCategory, number>;
+  onToggleFilter: (cat: HighlightCategory) => void;
+  liveDetect: boolean;
+  onToggleLiveDetect: () => void;
+}> = ({ filters, counts, onToggleFilter, liveDetect, onToggleLiveDetect }) => (
+  <div className="rounded-xl border border-border bg-card/30 p-3 space-y-2">
+    <div className="flex items-center justify-between">
+      <p className="text-xs font-medium text-foreground">Highlights</p>
+      <button
+        onClick={onToggleLiveDetect}
+        className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+          liveDetect
+            ? 'border-primary/40 text-primary bg-primary/10'
+            : 'border-border text-muted-foreground'
+        }`}
+        title="Highlight AI words & phrases live as you type"
+      >
+        <Zap className="w-3 h-3" /> Live {liveDetect ? 'on' : 'off'}
+      </button>
+    </div>
+    <div className="grid grid-cols-2 gap-1.5">
+      {CATEGORY_INFO.map((c) => (
+        <button
+          key={c.key}
+          onClick={() => onToggleFilter(c.key)}
+          aria-pressed={filters[c.key]}
+          className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 text-[11px] transition-all ${
+            filters[c.key]
+              ? 'border-border bg-muted/40 text-foreground'
+              : 'border-border/40 text-muted-foreground opacity-50'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+            {c.label}
+          </span>
+          <span className="font-mono">{counts[c.key]}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
 // ── SCORE GAUGE ────────────────────────────────────────────────────────────
 const ScoreGauge: React.FC<{ score: number; riskLevel?: string }> = ({ score, riskLevel }) => {
@@ -423,14 +483,15 @@ const SignalBreakdown: React.FC<{ raw: RawSignals; indicators?: SourceIndicators
 const PlagiarismPanel: React.FC<PlagiarismPanelProps> = ({
   report, running, highlightsVisible,
   onRun, onToggleHighlights, onClose, onHumanizePassage,
+  filters, counts, onToggleFilter, liveDetect, onToggleLiveDetect,
 }) => {
   return (
     <>
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary" aria-hidden="true" />
-          <span className="text-sm font-medium text-foreground">Plagiarism Check</span>
+          <Radar className="w-4 h-4 text-primary" aria-hidden="true" />
+          <span className="text-sm font-medium text-foreground">AI Detector</span>
         </div>
         <div className="flex items-center gap-1">
           {report && (
@@ -456,14 +517,26 @@ const PlagiarismPanel: React.FC<PlagiarismPanelProps> = ({
         <Button onClick={onRun} disabled={running} className="w-full group" size="sm">
           {running
             ? <Loader2 className="w-4 h-4 animate-spin mr-1" />
-            : <ShieldCheck className="w-4 h-4 mr-1" />}
-          {running ? 'Analyzing…' : 'Run Plagiarism Check'}
+            : <Radar className="w-4 h-4 mr-1" />}
+          {running ? 'Analyzing…' : 'Run Deep AI Analysis'}
         </Button>
+
+        {/* Highlight legend + filters (live detection works without a full run) */}
+        <HighlightLegend
+          filters={filters}
+          counts={counts}
+          onToggleFilter={onToggleFilter}
+          liveDetect={liveDetect}
+          onToggleLiveDetect={onToggleLiveDetect}
+        />
 
         {report && (
           <div className="space-y-4 animate-fade-in">
             {/* Score */}
             <ScoreGauge score={report.overall_score} riskLevel={report.risk_level} />
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-center -mt-2">
+              Estimated AI-likelihood
+            </p>
             <p className="text-xs text-muted-foreground text-center leading-relaxed">
               {report.summary}
             </p>
