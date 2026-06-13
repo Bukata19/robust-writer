@@ -324,6 +324,22 @@ serve(async (req) => {
       );
     }
 
+    // Per-user rate limit. Fails OPEN if the check itself errors so a limiter
+    // hiccup never blocks legitimate users.
+    const { data: rlAllowed, error: rlError } = await supabase.rpc("check_rate_limit", {
+      p_fn: "humanizer",
+      p_limit: 12,
+      p_window_seconds: 60,
+    });
+    if (rlError) {
+      console.error("rate limit check failed:", rlError.message);
+    } else if (rlAllowed === false) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please slow down and try again shortly." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { text, intensity, docType, targetWordCount } = await req.json();
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
