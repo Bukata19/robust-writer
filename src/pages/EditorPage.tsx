@@ -52,6 +52,7 @@ import {
   Brain,
   BookOpenCheck,
   Wand2,
+  Settings,
 } from 'lucide-react';
 import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
@@ -59,6 +60,7 @@ import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDec
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
 import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
 import PagedCanvas from '@/components/PagedCanvas';
+import SettingsDrawer from '@/components/SettingsDrawer';
 import type { Json } from '@/integrations/supabase/types';
 
 // TipTap
@@ -245,6 +247,7 @@ const EditorPage: React.FC = () => {
 
   // Focus mode
   const [focusMode, setFocusMode] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Humanizer
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
@@ -1460,11 +1463,22 @@ const formatButtons = editor ? (
           <TooltipContent>{focusMode ? 'Exit Focus Mode' : 'Focus Mode'}</TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" className="scale-click">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Settings</TooltipContent>
+        </Tooltip>
+
         <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow" aria-label={saving ? 'Saving document' : 'Save document'}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
       </header>
+
+      <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
       
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>

@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'system';
+// The concrete mode actually applied to the UI once 'system' is resolved.
+export type ResolvedMode = 'dark' | 'light';
 
 export type ColorTheme =
   | 'deep-dark'
@@ -41,13 +43,35 @@ export interface AppSettings {
 }
 
 // ── SYSTEM PREFERENCE DETECTION ────────────────────────────────────────────
-function detectSystemMode(): ThemeMode {
+function detectSystemMode(): ResolvedMode {
   try {
     if (typeof window !== 'undefined') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
   } catch { /* ignore */ }
   return 'dark';
+}
+
+// Resolve a (possibly 'system') theme mode into the concrete mode to apply.
+function resolveMode(mode: ThemeMode): ResolvedMode {
+  return mode === 'system' ? detectSystemMode() : mode;
+}
+
+const DEFAULT_THEME_FOR_MODE: Record<ResolvedMode, ColorTheme> = {
+  dark: 'deep-dark',
+  light: 'ivory-mist',
+};
+
+const DARK_THEMES: ColorTheme[] = ['deep-dark', 'midnight-blue', 'forest-dark', 'crimson-dark'];
+
+export function themeMode(theme: ColorTheme): ResolvedMode {
+  return DARK_THEMES.includes(theme) ? 'dark' : 'light';
+}
+
+// The colorTheme to actually apply: if the chosen theme doesn't match the
+// resolved mode (e.g. OS flipped while in 'system'), fall back to that mode's default.
+function effectiveTheme(colorTheme: ColorTheme, resolved: ResolvedMode): ColorTheme {
+  return themeMode(colorTheme) === resolved ? colorTheme : DEFAULT_THEME_FOR_MODE[resolved];
 }
 
 const systemMode = detectSystemMode();
@@ -72,9 +96,12 @@ const defaultSettings: AppSettings = {
 // ── CONTEXT ────────────────────────────────────────────────────────────────
 interface SettingsContextType {
   settings: AppSettings;
+  /** Concrete mode applied to the UI ('system' resolved to dark/light). */
+  resolvedMode: ResolvedMode;
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
   resetSettings: () => void;
-  toggleThemeMode: () => void;
+  /** Set the theme mode; switching to an explicit mode snaps colorTheme to that mode's default. */
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -362,10 +389,27 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return defaultSettings;
   });
 
-  // Apply CSS variables whenever settings change
+  // Concrete mode applied to the UI; tracks the OS preference while in 'system'.
+  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(() =>
+    resolveMode(settings.themeMode),
+  );
+
+  // Keep resolvedMode in sync with themeMode and live OS changes (system mode).
+  useEffect(() => {
+    setResolvedMode(resolveMode(settings.themeMode));
+    if (settings.themeMode !== 'system') return;
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => setResolvedMode(mql.matches ? 'dark' : 'light');
+      mql.addEventListener('change', handler);
+      return () => mql.removeEventListener('change', handler);
+    } catch { /* ignore */ }
+  }, [settings.themeMode]);
+
+  // Apply CSS variables whenever settings or the resolved mode change.
   useEffect(() => {
     const root = document.documentElement;
-    const vars = themeVarMap[settings.colorTheme];
+    const vars = themeVarMap[effectiveTheme(settings.colorTheme, resolvedMode)];
     if (vars) {
       Object.entries(vars).forEach(([key, value]) => {
         root.style.setProperty(key, value);
@@ -375,7 +419,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     root.style.setProperty('--editor-font-size', fontSizes[settings.fontSize]);
     root.classList.toggle('reduce-motion', settings.reduceMotion);
     root.classList.toggle('high-contrast', settings.highContrast);
-  }, [settings]);
+  }, [settings, resolvedMode]);
 
   // Persist to localStorage
   useEffect(() => {
@@ -395,17 +439,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSettings(defaultSettings);
   }, []);
 
-  // Toggle between dark/light mode and switch to that mode's default theme
-  const toggleThemeMode = useCallback(() => {
-    setSettings(prev => {
-      const newMode: ThemeMode = prev.themeMode === 'dark' ? 'light' : 'dark';
-      const newTheme: ColorTheme = newMode === 'dark' ? 'deep-dark' : 'ivory-mist';
-      return { ...prev, themeMode: newMode, colorTheme: newTheme };
-    });
+  // Set theme mode; for an explicit mode snap colorTheme to that mode's default,
+  // and for 'system' snap to the currently resolved mode's default.
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setSettings(prev => ({
+      ...prev,
+      themeMode: mode,
+      colorTheme: DEFAULT_THEME_FOR_MODE[resolveMode(mode)],
+    }));
   }, []);
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSetting, resetSettings, toggleThemeMode }}>
+    <SettingsContext.Provider
+      value={{ settings, resolvedMode, updateSetting, resetSettings, setThemeMode }}
+    >
       {children}
     </SettingsContext.Provider>
   );
