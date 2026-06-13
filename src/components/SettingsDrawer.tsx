@@ -1,9 +1,34 @@
-import React from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Sun, Moon, Palette, Type, FileText, Timer, Eye, User, LogOut, RotateCcw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Palette,
+  FileText,
+  Timer,
+  Eye,
+  User,
+  LogOut,
+  RotateCcw,
+  Search,
+} from 'lucide-react';
 import {
   useSettings,
   type ColorTheme,
@@ -16,351 +41,457 @@ import {
   type AutosaveInterval,
   type ExportFormat,
   type ChatDefault,
+  type ThemeMode,
 } from '@/contexts/SettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  OptionGroup,
+  SectionHeader,
+  ThemeChip,
+  DARK_CHIPS,
+  LIGHT_CHIPS,
+} from '@/components/settings/parts';
 
 interface SettingsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-// ── SHARED SUB-COMPONENTS (unchanged from original) ────────────────────────
-const OptionGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-2">
-    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
-    {children}
-  </div>
-);
+type SectionId = 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'account';
 
-const OptionButtons: React.FC<{
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: any) => void;
-}> = ({ value, options, onChange }) => (
-  <div className="flex gap-1 flex-wrap">
-    {options.map(opt => (
-      <button
-        key={opt.value}
-        onClick={() => onChange(opt.value)}
-        className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-          value === opt.value
-            ? 'bg-primary text-primary-foreground shadow-md'
-            : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
-        }`}
-      >
-        {opt.label}
-      </button>
-    ))}
-  </div>
-);
-
-const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
-  <div className="flex items-center gap-2 mb-3">
-    <span className="text-primary">{icon}</span>
-    <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-  </div>
-);
-
-// ── THEME CHIP CONFIG ──────────────────────────────────────────────────────
-// Crimson Dark red is used as the active selection ring per spec
-const ACTIVE_RING = '#e05252';
-
-interface ChipConfig {
-  id: ColorTheme;
-  label: string;
-  bg: string;
-  accent: string;
-  surface: string;
+interface SectionMeta {
+  id: SectionId;
+  title: string;
+  icon: React.ReactNode;
 }
 
-const DARK_CHIPS: ChipConfig[] = [
-  { id: 'deep-dark',      label: 'Deep Dark',     bg: '#080a0c', accent: '#00d4b8', surface: '#131b22' },
-  { id: 'midnight-blue',  label: 'Midnight Blue',  bg: '#080e1e', accent: '#4da6ff', surface: '#10182e' },
-  { id: 'forest-dark',    label: 'Forest Dark',    bg: '#070f08', accent: '#3dba6e', surface: '#0e1c10' },
-  { id: 'crimson-dark',   label: 'Crimson Dark',   bg: '#0f0809', accent: '#e05252', surface: '#1e1012' },
+const SECTIONS: SectionMeta[] = [
+  { id: 'appearance', title: 'Appearance', icon: <Palette className="h-4 w-4" /> },
+  { id: 'editor', title: 'Editor', icon: <FileText className="h-4 w-4" /> },
+  { id: 'behaviour', title: 'Behaviour', icon: <Timer className="h-4 w-4" /> },
+  { id: 'accessibility', title: 'Accessibility', icon: <Eye className="h-4 w-4" /> },
+  { id: 'account', title: 'Account', icon: <User className="h-4 w-4" /> },
 ];
 
-const LIGHT_CHIPS: ChipConfig[] = [
-  { id: 'ivory-mist',   label: 'Ivory Mist',   bg: '#f5f1e8', accent: '#1a8c7a', surface: '#ffffff' },
-  { id: 'arctic-blue',  label: 'Arctic Blue',  bg: '#eaf2f8', accent: '#2563b0', surface: '#ffffff' },
-  { id: 'sage-breeze',  label: 'Sage Breeze',  bg: '#eaf3ea', accent: '#2e7d4f', surface: '#ffffff' },
-  { id: 'rose-petal',   label: 'Rose Petal',   bg: '#f8edf0', accent: '#c0385a', surface: '#ffffff' },
-];
+// A single labelled setting. `label` is shown and used for search matching.
+interface Field {
+  label: string;
+  keywords?: string;
+  render: () => React.ReactNode;
+}
 
-const ThemeChip: React.FC<{
-  config: ChipConfig;
-  isActive: boolean;
-  onSelect: () => void;
-}> = ({ config, isActive, onSelect }) => (
-  <button
-    onClick={onSelect}
-    title={config.label}
-    aria-pressed={isActive}
-    className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-200 hover:scale-105 focus:outline-none w-full"
-    style={{
-      background: 'hsl(var(--muted))',
-      border: `1px solid ${isActive ? ACTIVE_RING : 'hsl(var(--border))'}`,
-      boxShadow: isActive ? `0 0 0 2px ${ACTIVE_RING}` : 'none',
-    }}
-  >
-    {/* Colour preview swatch */}
-    <div
-      className="w-full h-5 rounded-md overflow-hidden flex"
-      style={{ border: '1px solid rgba(128,128,128,0.15)' }}
-    >
-      <div style={{ background: config.bg, flex: 2 }} />
-      <div style={{ background: config.accent, flex: 1 }} />
-      <div style={{ background: config.surface, flex: 1 }} />
-    </div>
-    <span className="text-[10px] font-semibold leading-tight text-center text-muted-foreground">
-      {config.label}
-    </span>
-  </button>
-);
-
-// ── MAIN COMPONENT ─────────────────────────────────────────────────────────
 const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) => {
-  const { settings, updateSetting, toggleThemeMode } = useSettings();
+  const { settings, resolvedMode, updateSetting, resetSettings, setThemeMode } = useSettings();
   const { signOut, user } = useAuth();
 
-  const isDark = settings.themeMode === 'dark';
-  const chips = isDark ? DARK_CHIPS : LIGHT_CHIPS;
+  const [query, setQuery] = useState('');
+  const [activeSection, setActiveSection] = useState<SectionId>('appearance');
 
-  const resetTour = () => {
-  localStorage.removeItem('rb_editor_tour_done');
-  localStorage.removeItem('rb_editor_tour_v2_done');
-  localStorage.removeItem('rb_editor_tour_v3_done');
-  localStorage.removeItem('rb_dashboard_tour_done');
-  localStorage.removeItem('rb_dashboard_tour_v2_done');
-  onOpenChange(false);
-  toast.success('Onboarding tour reset. Visit the dashboard to restart.');
-};
-  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>({
+    appearance: null,
+    editor: null,
+    behaviour: null,
+    accessibility: null,
+    account: null,
+  });
+
+  // Reset transient UI state each time the drawer is opened.
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      setActiveSection('appearance');
+    }
+  }, [open]);
+
+  const chips = resolvedMode === 'dark' ? DARK_CHIPS : LIGHT_CHIPS;
+
+  const resetTour = useCallback(() => {
+    localStorage.removeItem('rb_editor_tour_done');
+    localStorage.removeItem('rb_editor_tour_v2_done');
+    localStorage.removeItem('rb_editor_tour_v3_done');
+    localStorage.removeItem('rb_dashboard_tour_done');
+    localStorage.removeItem('rb_dashboard_tour_v2_done');
+    onOpenChange(false);
+    toast.success('Onboarding tour reset. Visit the dashboard to restart.');
+  }, [onOpenChange]);
+
+  const handleReset = () => {
+    resetSettings();
+    toast.success('Settings restored to defaults.');
+  };
+
+  const scrollToSection = useCallback((id: SectionId) => {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  // Highlight the section currently in view.
+  useEffect(() => {
+    if (!open || query) return;
+    const root = scrollRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.getAttribute('data-section') as SectionId);
+      },
+      { root, rootMargin: '0px 0px -60% 0px', threshold: [0, 0.25, 0.5, 1] },
+    );
+    SECTIONS.forEach((s) => {
+      const el = sectionRefs.current[s.id];
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [open, query]);
+
+  // ── FIELD DEFINITIONS PER SECTION ──────────────────────────────────────────
+  const fieldsBySection = useMemo<Record<SectionId, Field[]>>(() => ({
+    appearance: [
+      {
+        label: 'Theme',
+        keywords: 'mode dark light system colour color',
+        render: () => (
+          <OptionGroup label="Theme">
+            <SegmentedControl<ThemeMode>
+              aria-label="Theme mode"
+              value={settings.themeMode}
+              onChange={(v) => setThemeMode(v)}
+              options={[
+                { value: 'light', label: <span className="flex items-center justify-center gap-1"><Sun className="h-3.5 w-3.5" /> Light</span> },
+                { value: 'dark', label: <span className="flex items-center justify-center gap-1"><Moon className="h-3.5 w-3.5" /> Dark</span> },
+                { value: 'system', label: <span className="flex items-center justify-center gap-1"><Monitor className="h-3.5 w-3.5" /> System</span> },
+              ]}
+            />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {chips.map((chip) => (
+                <ThemeChip
+                  key={chip.id}
+                  config={chip}
+                  isActive={settings.colorTheme === chip.id}
+                  onSelect={() => updateSetting('colorTheme', chip.id as ColorTheme)}
+                />
+              ))}
+            </div>
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Font Size',
+        render: () => (
+          <OptionGroup label="Font Size">
+            <SegmentedControl<FontSize>
+              value={settings.fontSize}
+              onChange={(v) => updateSetting('fontSize', v)}
+              options={[
+                { value: 'small', label: 'Small' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'large', label: 'Large' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Card Density',
+        render: () => (
+          <OptionGroup label="Card Density">
+            <SegmentedControl<CardDensity>
+              value={settings.cardDensity}
+              onChange={(v) => updateSetting('cardDensity', v)}
+              options={[
+                { value: 'compact', label: 'Compact' },
+                { value: 'comfortable', label: 'Comfortable' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+    ],
+    editor: [
+      {
+        label: 'Default Document Type',
+        render: () => (
+          <OptionGroup label="Default Document Type">
+            <SegmentedControl<DocType>
+              value={settings.defaultDocType}
+              onChange={(v) => updateSetting('defaultDocType', v)}
+              options={[
+                { value: 'essay', label: 'Essay' },
+                { value: 'research_paper', label: 'Research' },
+                { value: 'report', label: 'Report' },
+                { value: 'general', label: 'General' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Humanizer Intensity',
+        render: () => (
+          <OptionGroup label="Humanizer Intensity">
+            <SegmentedControl<HumanizerIntensity>
+              value={settings.defaultHumanizerIntensity}
+              onChange={(v) => updateSetting('defaultHumanizerIntensity', v)}
+              options={[
+                { value: 'subtle', label: 'Subtle' },
+                { value: 'moderate', label: 'Moderate' },
+                { value: 'full', label: 'Full' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Canvas Width',
+        render: () => (
+          <OptionGroup label="Canvas Width">
+            <SegmentedControl<CanvasWidth>
+              value={settings.canvasWidth}
+              onChange={(v) => updateSetting('canvasWidth', v)}
+              options={[
+                { value: 'a4', label: 'A4' },
+                { value: 'full', label: 'Full Width' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Line Spacing',
+        render: () => (
+          <OptionGroup label="Line Spacing">
+            <SegmentedControl<LineSpacing>
+              value={settings.lineSpacing}
+              onChange={(v) => updateSetting('lineSpacing', v)}
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'relaxed', label: 'Relaxed' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+    ],
+    behaviour: [
+      {
+        label: 'Autosave',
+        keywords: 'save interval',
+        render: () => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-foreground">Autosave</span>
+              <Switch
+                checked={settings.autosaveEnabled}
+                onCheckedChange={(v) => updateSetting('autosaveEnabled', v)}
+              />
+            </div>
+            {settings.autosaveEnabled && (
+              <OptionGroup label="Autosave Interval">
+                <SegmentedControl<string>
+                  value={String(settings.autosaveInterval)}
+                  onChange={(v) => updateSetting('autosaveInterval', Number(v) as AutosaveInterval)}
+                  options={[
+                    { value: '30', label: '30s' },
+                    { value: '60', label: '1 min' },
+                    { value: '120', label: '2 min' },
+                  ]}
+                />
+              </OptionGroup>
+            )}
+          </div>
+        ),
+      },
+      {
+        label: 'Default Export Format',
+        render: () => (
+          <OptionGroup label="Default Export Format">
+            <SegmentedControl<ExportFormat>
+              value={settings.defaultExportFormat}
+              onChange={(v) => updateSetting('defaultExportFormat', v)}
+              options={[
+                { value: 'pdf', label: 'PDF' },
+                { value: 'docx', label: 'DOCX' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Chat Panel Default',
+        render: () => (
+          <OptionGroup label="Chat Panel Default">
+            <SegmentedControl<ChatDefault>
+              value={settings.chatDefaultState}
+              onChange={(v) => updateSetting('chatDefaultState', v)}
+              options={[
+                { value: 'closed', label: 'Closed' },
+                { value: 'open', label: 'Open' },
+              ]}
+            />
+          </OptionGroup>
+        ),
+      },
+    ],
+    accessibility: [
+      {
+        label: 'Reduce Motion',
+        keywords: 'animation',
+        render: () => (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-foreground">Reduce Motion</span>
+            <Switch
+              checked={settings.reduceMotion}
+              onCheckedChange={(v) => updateSetting('reduceMotion', v)}
+            />
+          </div>
+        ),
+      },
+      {
+        label: 'High Contrast',
+        render: () => (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-foreground">High Contrast</span>
+            <Switch
+              checked={settings.highContrast}
+              onCheckedChange={(v) => updateSetting('highContrast', v)}
+            />
+          </div>
+        ),
+      },
+    ],
+    account: [
+      {
+        label: 'Account',
+        keywords: 'email sign out logout onboarding tour reset',
+        render: () => (
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1 text-xs text-muted-foreground">Signed in as</p>
+              <p className="truncate text-sm text-foreground">{user?.email}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={resetTour} className="w-full">
+              <RotateCcw className="mr-2 h-3 w-3" /> Reset Onboarding Tour
+            </Button>
+            <Button variant="destructive" size="sm" onClick={signOut} className="w-full">
+              <LogOut className="mr-2 h-3 w-3" /> Sign Out
+            </Button>
+          </div>
+        ),
+      },
+    ],
+  }), [settings, resolvedMode, chips, updateSetting, setThemeMode, user, resetTour, signOut]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const isSearching = normalizedQuery.length > 0;
+
+  const matches = (field: Field) =>
+    !isSearching ||
+    field.label.toLowerCase().includes(normalizedQuery) ||
+    (field.keywords?.toLowerCase().includes(normalizedQuery) ?? false);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[340px] sm:w-[400px] overflow-y-auto scrollbar-dark p-0">
-        <SheetHeader className="p-5 pb-3 border-b border-border">
-          <SheetTitle className="text-foreground font-display">Settings</SheetTitle>
-        </SheetHeader>
+      <SheetContent
+        side="right"
+        aria-describedby={undefined}
+        className="flex w-[340px] flex-col p-0 sm:w-[420px]"
+      >
+        {/* ── STICKY HEADER ── */}
+        <div className="shrink-0 border-b border-border p-4">
+          <SheetTitle className="mb-3 font-display text-lg font-semibold text-foreground">
+            Settings
+          </SheetTitle>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search settings…"
+                className="h-9 pl-8"
+                aria-label="Search settings"
+              />
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset to defaults?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This restores all appearance, editor, behaviour and accessibility settings to
+                    their defaults. Your documents are not affected.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
 
-        <div className="p-5 space-y-6">
+          {/* ── SECTION RAIL ── */}
+          {!isSearching && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => scrollToSection(s.id)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    activeSection === s.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {s.icon}
+                  {s.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-          {/* ── APPEARANCE ── */}
-          <div>
-            <SectionHeader icon={<Palette className="w-4 h-4" />} title="Appearance" />
-            <div className="space-y-4">
+        {/* ── SCROLLABLE BODY ── */}
+        <div ref={scrollRef} className="scrollbar-dark flex-1 overflow-y-auto p-4">
+          {(() => {
+            const visibleSections = SECTIONS.map((s) => ({
+              ...s,
+              fields: fieldsBySection[s.id].filter(matches),
+            })).filter((s) => s.fields.length > 0);
 
-              {/* Sun / Moon mode toggle */}
-              <OptionGroup label="Mode">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleThemeMode}
-                    aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-ring w-full justify-center"
-                    style={{
-                      background: 'hsl(var(--secondary))',
-                      border: '1px solid hsl(var(--border))',
-                      color: 'hsl(var(--foreground))',
-                    }}
-                  >
-                    {isDark ? (
-                      <>
-                        <Moon className="w-3.5 h-3.5 text-primary" />
-                        Dark Mode — click for Light
-                      </>
-                    ) : (
-                      <>
-                        <Sun className="w-3.5 h-3.5 text-primary" />
-                        Light Mode — click for Dark
-                      </>
-                    )}
-                  </button>
-                </div>
-              </OptionGroup>
+            if (visibleSections.length === 0) {
+              return (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No settings match “{query}”.
+                </p>
+              );
+            }
 
-              {/* Theme chips — 2 per row */}
-              <OptionGroup label="Colour Theme">
-                <div className="grid grid-cols-2 gap-2">
-                  {chips.map(chip => (
-                    <ThemeChip
-                      key={chip.id}
-                      config={chip}
-                      isActive={settings.colorTheme === chip.id}
-                      onSelect={() => updateSetting('colorTheme', chip.id)}
-                    />
+            return visibleSections.map((s, idx) => (
+              <div
+                key={s.id}
+                data-section={s.id}
+                ref={(el) => (sectionRefs.current[s.id] = el)}
+                className={idx > 0 ? 'mt-6' : ''}
+              >
+                {idx > 0 && <Separator className="mb-6" />}
+                <SectionHeader icon={s.icon} title={s.title} />
+                <div className="space-y-4">
+                  {s.fields.map((f) => (
+                    <React.Fragment key={f.label}>{f.render()}</React.Fragment>
                   ))}
                 </div>
-              </OptionGroup>
-
-              <OptionGroup label="Font Size">
-                <OptionButtons
-                  value={settings.fontSize}
-                  options={[
-                    { value: 'small', label: 'Small' },
-                    { value: 'medium', label: 'Medium' },
-                    { value: 'large', label: 'Large' },
-                  ]}
-                  onChange={(v: FontSize) => updateSetting('fontSize', v)}
-                />
-              </OptionGroup>
-
-              <OptionGroup label="Card Density">
-                <OptionButtons
-                  value={settings.cardDensity}
-                  options={[
-                    { value: 'compact', label: 'Compact' },
-                    { value: 'comfortable', label: 'Comfortable' },
-                  ]}
-                  onChange={(v: CardDensity) => updateSetting('cardDensity', v)}
-                />
-              </OptionGroup>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* ── EDITOR DEFAULTS ── */}
-          <div>
-            <SectionHeader icon={<FileText className="w-4 h-4" />} title="Editor Defaults" />
-            <div className="space-y-4">
-              <OptionGroup label="Default Document Type">
-                <OptionButtons
-                  value={settings.defaultDocType}
-                  options={[
-                    { value: 'essay', label: 'Essay' },
-                    { value: 'research_paper', label: 'Research' },
-                    { value: 'report', label: 'Report' },
-                    { value: 'general', label: 'General' },
-                  ]}
-                  onChange={(v: DocType) => updateSetting('defaultDocType', v)}
-                />
-              </OptionGroup>
-              <OptionGroup label="Humanizer Intensity">
-                <OptionButtons
-                  value={settings.defaultHumanizerIntensity}
-                  options={[
-                    { value: 'subtle', label: 'Subtle' },
-                    { value: 'moderate', label: 'Moderate' },
-                    { value: 'full', label: 'Full' },
-                  ]}
-                  onChange={(v: HumanizerIntensity) => updateSetting('defaultHumanizerIntensity', v)}
-                />
-              </OptionGroup>
-              <OptionGroup label="Canvas Width">
-                <OptionButtons
-                  value={settings.canvasWidth}
-                  options={[
-                    { value: 'a4', label: 'A4' },
-                    { value: 'full', label: 'Full Width' },
-                  ]}
-                  onChange={(v: CanvasWidth) => updateSetting('canvasWidth', v)}
-                />
-              </OptionGroup>
-              <OptionGroup label="Line Spacing">
-                <OptionButtons
-                  value={settings.lineSpacing}
-                  options={[
-                    { value: 'normal', label: 'Normal' },
-                    { value: 'relaxed', label: 'Relaxed' },
-                  ]}
-                  onChange={(v: LineSpacing) => updateSetting('lineSpacing', v)}
-                />
-              </OptionGroup>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* ── BEHAVIOUR ── */}
-          <div>
-            <SectionHeader icon={<Timer className="w-4 h-4" />} title="Behaviour" />
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Autosave</span>
-                <Switch
-                  checked={settings.autosaveEnabled}
-                  onCheckedChange={(v) => updateSetting('autosaveEnabled', v)}
-                />
               </div>
-              {settings.autosaveEnabled && (
-                <OptionGroup label="Autosave Interval">
-                  <OptionButtons
-                    value={String(settings.autosaveInterval)}
-                    options={[
-                      { value: '30', label: '30s' },
-                      { value: '60', label: '1 min' },
-                      { value: '120', label: '2 min' },
-                    ]}
-                    onChange={(v: string) => updateSetting('autosaveInterval', Number(v) as AutosaveInterval)}
-                  />
-                </OptionGroup>
-              )}
-              <OptionGroup label="Default Export Format">
-                <OptionButtons
-                  value={settings.defaultExportFormat}
-                  options={[
-                    { value: 'pdf', label: 'PDF' },
-                    { value: 'docx', label: 'DOCX' },
-                  ]}
-                  onChange={(v: ExportFormat) => updateSetting('defaultExportFormat', v)}
-                />
-              </OptionGroup>
-              <OptionGroup label="Chat Panel Default">
-                <OptionButtons
-                  value={settings.chatDefaultState}
-                  options={[
-                    { value: 'closed', label: 'Closed' },
-                    { value: 'open', label: 'Open' },
-                  ]}
-                  onChange={(v: ChatDefault) => updateSetting('chatDefaultState', v)}
-                />
-              </OptionGroup>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* ── ACCESSIBILITY ── */}
-          <div>
-            <SectionHeader icon={<Eye className="w-4 h-4" />} title="Accessibility" />
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Reduce Motion</span>
-                <Switch
-                  checked={settings.reduceMotion}
-                  onCheckedChange={(v) => updateSetting('reduceMotion', v)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">High Contrast</span>
-                <Switch
-                  checked={settings.highContrast}
-                  onCheckedChange={(v) => updateSetting('highContrast', v)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* ── ACCOUNT ── */}
-          <div>
-            <SectionHeader icon={<User className="w-4 h-4" />} title="Account" />
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Signed in as</p>
-                <p className="text-sm text-foreground truncate">{user?.email}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={resetTour} className="w-full">
-                <RotateCcw className="w-3 h-3 mr-2" /> Reset Onboarding Tour
-              </Button>
-              <Button variant="destructive" size="sm" onClick={signOut} className="w-full">
-                <LogOut className="w-3 h-3 mr-2" /> Sign Out
-              </Button>
-            </div>
-          </div>
-
+            ));
+          })()}
         </div>
       </SheetContent>
     </Sheet>
@@ -368,4 +499,3 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
 };
 
 export default SettingsDrawer;
-                    
