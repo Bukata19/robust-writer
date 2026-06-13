@@ -5,6 +5,10 @@ import { toast } from 'sonner';
 
 const REMEMBER_KEY = 'rb_remember_me';
 
+// Set while the user deliberately signs out, so the SIGNED_OUT handler doesn't
+// misreport an intentional logout as an expired session.
+let isManualSignOut = false;
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -12,6 +16,8 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   setLoading(false);
 
   if (event === 'SIGNED_OUT') {
-    // Session expired or user signed out from another tab
-    toast.error('Your session has expired. Please sign in again.');
+    // Only surface an "expired" message for involuntary sign-outs (token expiry
+    // or sign-out from another tab) — not for a deliberate logout.
+    if (!isManualSignOut) {
+      toast.error('Your session has expired. Please sign in again.');
+    }
+    isManualSignOut = false;
   }
 
   if (event === 'TOKEN_REFRESHED') {
@@ -72,12 +82,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    isManualSignOut = true;
     localStorage.removeItem(REMEMBER_KEY);
     await supabase.auth.signOut();
   };
 
+  // Sends a password-reset email; the link lands the user on /reset-password.
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error: error as Error | null };
+  };
+
+  // Updates the password for the currently authenticated (incl. recovery) session.
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error as Error | null };
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ session, user, loading, signUp, signIn, signOut, resetPassword, updatePassword }}
+    >
       {children}
     </AuthContext.Provider>
   );
