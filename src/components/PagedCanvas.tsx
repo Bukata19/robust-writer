@@ -73,8 +73,11 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
     return () => observer.disconnect();
   }, [recalcPages, padX, padY]);
 
-  // Dividers and a full last page only make sense in the desktop "paged" view.
-  const showPages = !isMobile && pageCount > 1;
+  // Show page-break markers whenever the document spans more than one A4 length,
+  // on mobile and desktop alike, so the canvas always reads as intentionally
+  // paged. Only the desktop view pads out to a full final page; on mobile the
+  // sheet hugs its content to avoid a large trailing blank space.
+  const showPages = pageCount > 1;
   const minHeight = isMobile ? undefined : pageCount * PAGE_HEIGHT;
 
   return (
