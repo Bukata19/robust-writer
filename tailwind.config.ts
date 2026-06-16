@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         display: ['Space Grotesk', 'JetBrains Mono', 'monospace'],
+        logo: ['Orbitron', 'Space Grotesk', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },

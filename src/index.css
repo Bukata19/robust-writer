@@ -58,6 +58,7 @@
     --sidebar-ring: 180 100% 25%;
 
     --font-display: 'Space Grotesk', 'JetBrains Mono', monospace;
+    --font-logo: 'Orbitron', 'Space Grotesk', sans-serif;
     --font-body: 'Inter', sans-serif;
     --editor-font-size: 14px;
 
@@ -450,4 +451,52 @@
 }
 .ai-hl:hover {
   filter: brightness(1.15);
+}
+
+/* ── Logo (RobAssister mark + wordmark) ─────────────────────────── */
+@keyframes logo-mark-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes logo-letter-in {
+  from { opacity: 0; transform: translateY(0.2em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.logo-root {
+  transition: transform 0.25s ease-out;
+}
+
+.logo-mark {
+  animation: logo-mark-in 0.4s ease-out both;
+  transition: filter 0.25s ease-out;
+}
+
+.logo-letter {
+  display: inline-block;
+  animation: logo-letter-in 0.32s ease-out both;
+}
+
+/* Hover lift + subtle gradient shift — desktop pointers only */
+@media (hover: hover) {
+  .logo-root:hover {
+    transform: translateY(-1px);
+  }
+  .logo-root:hover .logo-mark {
+    filter: brightness(1.08) saturate(1.1);
+  }
+}
+
+/* Honor the OS-level reduced-motion preference: render final state instantly.
+   (The app's .reduce-motion class already covers the in-app toggle.) */
+@media (prefers-reduced-motion: reduce) {
+  .logo-root,
+  .logo-mark,
+  .logo-letter {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
