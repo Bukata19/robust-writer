@@ -115,6 +115,7 @@ interface DocumentData {
   doc_type: DocType;
   plagiarism_score: number | null;
   plagiarism_data: Json | null;
+  updated_at: string;
 }
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
@@ -305,6 +306,15 @@ const EditorPage: React.FC = () => {
 
   const docTypeRef = useRef<DocType>('general');
 
+  // Autosave bookkeeping: skip no-op saves (so identical version snapshots don't
+  // pile up), detect concurrent edits via updated_at, and let the autosave
+  // interval call the latest save fn without being torn down on every keystroke.
+  const lastSavedContentRef = useRef<string | null>(null);
+  const lastSavedTitleRef = useRef<string>('');
+  const lastUpdatedAtRef = useRef<string | null>(null);
+  const conflictWarnedRef = useRef(false);
+  const saveDocumentRef = useRef<((opts?: { manual?: boolean }) => void) | null>(null);
+
   // TipTap editor
   const editor = useEditor({
     extensions: [
@@ -478,7 +488,7 @@ usePageTitle(
   const fetchDocument = async () => {
     const { data, error } = await supabase
       .from('documents')
-      .select('id, title, content, doc_type, plagiarism_score, plagiarism_data')
+      .select('id, title, content, doc_type, plagiarism_score, plagiarism_data, updated_at')
       .eq('id', id!)
       .single();
 
@@ -490,6 +500,7 @@ usePageTitle(
 
     setDoc(data);
     setTitle(data.title);
+    lastUpdatedAtRef.current = data.updated_at;
     setLoading(false);
   };
 
@@ -509,20 +520,32 @@ usePageTitle(
       editor.commands.setContent(templates[doc.doc_type]);
     }
     setWordCount(editor.storage.characterCount.words());
+    // Baseline the just-loaded content so the first autosave doesn't snapshot
+    // an unchanged document.
+    lastSavedContentRef.current = JSON.stringify(editor.getJSON());
+    lastSavedTitleRef.current = doc.title;
+    conflictWarnedRef.current = false;
   }, [editor, doc]);
 
-  const saveDocument = useCallback(async () => {
+  const saveDocument = useCallback(async ({ manual = false }: { manual?: boolean } = {}) => {
     if (!id || !editor || !user) return;
-    setSaving(true);
+
     const content = editor.getJSON();
-    const { error } = await supabase
-      .from('documents')
-      .update({ title, content: content as unknown as Json })
-      .eq('id', id);
-    if (error) {
-      toast.error('Failed to save');
-    } else {
-      // Snapshot version
+    const contentStr = JSON.stringify(content);
+
+    // Skip no-op saves so the autosave timer doesn't pile up identical version
+    // snapshots on an idle-but-open document.
+    if (contentStr === lastSavedContentRef.current && title === lastSavedTitleRef.current) {
+      if (manual) toast('Already up to date');
+      return;
+    }
+
+    // Records a successful write: advance bookkeeping and snapshot a version.
+    const finalizeSave = async (newUpdatedAt: string) => {
+      lastUpdatedAtRef.current = newUpdatedAt;
+      lastSavedContentRef.current = contentStr;
+      lastSavedTitleRef.current = title;
+      conflictWarnedRef.current = false;
       await supabase.from('document_versions').insert({
         document_id: id,
         user_id: user.id,
@@ -530,17 +553,82 @@ usePageTitle(
         content: content as unknown as Json,
       });
       localStorage.setItem(`rb_wc_${id}`, String(editor.storage.characterCount.words()));
-      toast.success('Document saved!');
+    };
+
+    setSaving(true);
+
+    // Optimistic concurrency: only overwrite if the row still matches the
+    // version we last loaded/saved, so a copy open in another tab or device
+    // isn't silently clobbered.
+    const { data, error } = await supabase
+      .from('documents')
+      .update({ title, content: content as unknown as Json })
+      .eq('id', id)
+      .eq('updated_at', lastUpdatedAtRef.current ?? '')
+      .select('updated_at')
+      .maybeSingle();
+
+    if (error) {
+      toast.error('Failed to save');
+      setSaving(false);
+      return;
     }
+
+    if (!data) {
+      // No row matched our updated_at → the document changed elsewhere since we
+      // loaded it.
+      if (manual) {
+        const overwrite = window.confirm(
+          'This document was changed in another tab or device. Overwrite it with your current version?'
+        );
+        if (!overwrite) {
+          toast('Save canceled — reload to get the latest version.');
+          setSaving(false);
+          return;
+        }
+        const { data: forced, error: forceErr } = await supabase
+          .from('documents')
+          .update({ title, content: content as unknown as Json })
+          .eq('id', id)
+          .select('updated_at')
+          .maybeSingle();
+        if (forceErr || !forced) {
+          toast.error('Failed to save');
+          setSaving(false);
+          return;
+        }
+        await finalizeSave(forced.updated_at);
+        toast.success('Document saved!');
+        setSaving(false);
+        return;
+      }
+      // Autosave must never silently clobber: warn once, then leave the text in
+      // the editor untouched until the user saves manually or reloads.
+      if (!conflictWarnedRef.current) {
+        conflictWarnedRef.current = true;
+        toast.error('This document changed elsewhere. Autosave paused — use Save to overwrite, or reload.');
+      }
+      setSaving(false);
+      return;
+    }
+
+    await finalizeSave(data.updated_at);
+    if (manual) toast.success('Document saved!');
     setSaving(false);
   }, [id, title, user, editor]);
+
+  // Keep the latest save fn in a ref so the autosave interval can call it
+  // without being recreated (and reset) every time the title changes.
+  useEffect(() => {
+    saveDocumentRef.current = saveDocument;
+  }, [saveDocument]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        saveDocument();
+        saveDocumentRef.current?.({ manual: true });
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
@@ -552,18 +640,19 @@ usePageTitle(
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [saveDocument, humanizerIntensity, focusMode]);
+  }, [humanizerIntensity, focusMode]);
 
-  // Autosave
+  // Autosave — calls the latest save fn via ref so editing the title doesn't
+  // restart the countdown.
   useEffect(() => {
     if (!settings.autosaveEnabled) return;
     const interval = setInterval(() => {
       if (editor && id) {
-        saveDocument();
+        saveDocumentRef.current?.({ manual: false });
       }
     }, settings.autosaveInterval * 1000);
     return () => clearInterval(interval);
-  }, [saveDocument, id, settings.autosaveEnabled, settings.autosaveInterval, editor]);
+  }, [id, settings.autosaveEnabled, settings.autosaveInterval, editor]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -777,7 +866,20 @@ usePageTitle(
         body: { text, documentId: id },
       });
 
-      if (error) throw error;
+      if (error) {
+        // supabase-js wraps non-2xx responses in a FunctionsHttpError whose
+        // .message is generic; pull the function's own friendly message out of
+        // the response body when it's there.
+        let message = error.message;
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            const body = await ctx.clone().json();
+            if (body?.error) message = body.error;
+          } catch { /* fall back to the generic message */ }
+        }
+        throw new Error(message);
+      }
       if (data?.error) throw new Error(data.error);
 
       setPlagiarismReport(data);
@@ -1217,9 +1319,15 @@ usePageTitle(
           liveDetect={liveDetect}
           onToggleLiveDetect={() => setLiveDetect(v => !v)}
          onHumanizePassage={(passage) => {
-  navigator.clipboard.writeText(passage).catch(() => {});
   setHumanizerOpen(true);
-  toast.success('Passage copied — select it in the editor then click Humanize');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(passage).then(
+      () => toast.success('Passage copied — select it in the editor then click Humanize'),
+      () => toast('Open the Humanizer, then select this passage in the editor to humanize it'),
+    );
+  } else {
+    toast('Open the Humanizer, then select this passage in the editor to humanize it');
+  }
 }}
 />
       )}
@@ -1533,7 +1641,7 @@ const formatButtons = editor ? (
           <TooltipContent>Settings</TooltipContent>
         </Tooltip>
 
-        <Button onClick={saveDocument} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow" aria-label={saving ? 'Saving document' : 'Save document'}>
+        <Button onClick={() => saveDocument({ manual: true })} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow" aria-label={saving ? 'Saving document' : 'Save document'}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>

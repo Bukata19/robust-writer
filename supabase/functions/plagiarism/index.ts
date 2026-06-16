@@ -573,12 +573,21 @@ CONCERN TYPES:
 
     if (!toolCall?.function?.arguments) {
       return new Response(
-        JSON.stringify({ error: "Failed to parse plagiarism analysis" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "We couldn't analyze this text right now. Please try again in a moment." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const report = JSON.parse(toolCall.function.arguments);
+    let report;
+    try {
+      report = JSON.parse(toolCall.function.arguments);
+    } catch (parseErr) {
+      console.error("plagiarism: malformed tool arguments:", parseErr);
+      return new Response(
+        JSON.stringify({ error: "We couldn't analyze this text right now. Please try again in a moment." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     report.overall_score = Math.max(0, Math.min(100, Math.round(report.overall_score)));
 
     // Attach raw signals for UI display
