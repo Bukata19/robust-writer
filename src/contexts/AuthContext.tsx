@@ -57,11 +57,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  // If rememberMe is false, sign out when the browser tab closes
+  // If rememberMe is false, sign out when the browser tab closes. This is
+  // necessarily best-effort: the page is unloading, so the request can't be
+  // awaited. Mark it as intentional so any SIGNED_OUT that does fire isn't
+  // misreported as an expired session.
   useEffect(() => {
     const handleUnload = () => {
       if (localStorage.getItem(REMEMBER_KEY) === 'false') {
-        supabase.auth.signOut();
+        isManualSignOut = true;
+        void supabase.auth.signOut();
       }
     };
     window.addEventListener('beforeunload', handleUnload);
