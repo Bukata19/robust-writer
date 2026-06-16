@@ -13,8 +13,8 @@ import {
   mapAuthError,
 } from '@/lib/passwordValidation';
 import { toast } from 'sonner';
+import { Logo } from '@/components/Logo';
 import {
-  Terminal,
   FileText,
   Bot,
   Eye,
@@ -167,14 +167,7 @@ const AuthPage: React.FC = () => {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Terminal className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">
-              RobAssister
-            </h1>
-          </div>
+          <Logo size="lg" className="mb-4" />
           <p className="text-muted-foreground text-sm">
             AI-powered assignment editor
           </p>

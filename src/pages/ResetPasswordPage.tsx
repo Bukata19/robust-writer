@@ -10,7 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import PasswordRequirements from '@/components/PasswordRequirements';
 import { passwordMeetsAll, mapAuthError } from '@/lib/passwordValidation';
 import { toast } from 'sonner';
-import { Terminal, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Logo } from '@/components/Logo';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 /**
  * Landing page for the password-reset email link. supabase-js parses the
@@ -92,14 +93,7 @@ const ResetPasswordPage: React.FC = () => {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Terminal className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-display font-bold text-foreground tracking-tight">
-              RobAssister
-            </h1>
-          </div>
+          <Logo size="lg" className="mb-4" />
         </div>
 
         <div className="bg-card border border-border rounded-xl p-6 shadow-[var(--shadow-card)]">

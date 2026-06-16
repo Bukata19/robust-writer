@@ -11,8 +11,9 @@ import { toast } from 'sonner';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import InstallPrompt from '@/components/InstallPrompt';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
+import { Logo } from '@/components/Logo';
 import {
-  Plus, FileText, BookOpen, File, Terminal,
+  Plus, FileText, BookOpen, File,
   Trash2, Clock, ShieldCheck, Settings, Bot,
   Search, Calendar, ArrowUpDown, SortAsc,
   ChevronRight, Pencil, Check, X,
@@ -284,14 +285,7 @@ const Dashboard: React.FC = () => {
       {/* ── HEADER ── */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-md">
-              <Terminal className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-foreground text-lg tracking-tight">
-              RobAssister
-            </span>
-          </div>
+          <Logo size="sm" />
           <div className="flex items-center gap-1">
             <Button
               variant="ghost" size="icon"
