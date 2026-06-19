@@ -808,11 +808,11 @@ usePageTitle(
     }
   };
 
-  const getSelectedText = (): string => {
+  const getSelectedText = useCallback((): string => {
     if (!editor) return '';
     const { from, to } = editor.state.selection;
     return editor.state.doc.textBetween(from, to, ' ');
-  };
+  }, [editor]);
 
   const handleHumanize = useCallback(async () => {
     const selectedText = getSelectedText();
@@ -844,7 +844,7 @@ usePageTitle(
     } finally {
       setHumanizing(false);
     }
-  }, [editor, wordCountMode, presetWordCount, customWordCount, humanizerIntensity, doc]);
+  }, [getSelectedText, wordCountMode, presetWordCount, customWordCount, humanizerIntensity, doc]);
 
   const acceptHumanized = () => {
     if (!humanizerResult || !editor) return;
@@ -1375,7 +1375,7 @@ usePageTitle(
               // content is stored as TipTap JSON object; fall back to HTML string
               try {
                 const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-                if (parsed && (parsed as any).type === 'doc') {
+                if (parsed && parsed.type === 'doc') {
                   editor.commands.setContent(parsed);
                 } else {
                   editor.commands.setContent(content as string);
