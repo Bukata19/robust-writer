@@ -419,6 +419,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     root.style.setProperty('--editor-font-size', fontSizes[settings.fontSize]);
     root.classList.toggle('reduce-motion', settings.reduceMotion);
     root.classList.toggle('high-contrast', settings.highContrast);
+    root.classList.toggle('dark', resolvedMode === 'dark');
   }, [settings, resolvedMode]);
 
   // Persist to localStorage
