@@ -23,7 +23,7 @@ const SectionTip: React.FC<Props> = ({ activeSection, outline }) => {
       <div className="fixed left-2 right-2 z-40 bottom-[110px] safe-area-bottom rounded-lg border border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg p-2 flex items-start gap-2 animate-fade-in">
         <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
         <p className="flex-1 text-xs italic text-muted-foreground">{section.guidanceTip}</p>
-        <button onClick={dismiss} className="text-muted-foreground hover:text-foreground">
+        <button aria-label="Dismiss tip" onClick={dismiss} className="text-muted-foreground hover:text-foreground">
           <X className="w-3 h-3" />
         </button>
       </div>
@@ -38,7 +38,7 @@ const SectionTip: React.FC<Props> = ({ activeSection, outline }) => {
           <p className="text-xs font-medium text-foreground mb-1">{section.heading}</p>
           <p className="text-xs italic text-muted-foreground">{section.guidanceTip}</p>
         </div>
-        <button onClick={dismiss} className="text-muted-foreground hover:text-foreground">
+        <button aria-label="Dismiss tip" onClick={dismiss} className="text-muted-foreground hover:text-foreground">
           <X className="w-3 h-3" />
         </button>
       </div>

@@ -436,28 +436,35 @@ OUTPUT RULES:
     [generateSection],
   );
 
-  // Track active section based on cursor position
+  // Track active section based on cursor position.
+  // Throttled via requestAnimationFrame so rapid keystrokes coalesce into a
+  // single document traversal per animation frame.
   useEffect(() => {
     if (!editor || step !== 'outline_ready') return;
+    let rafId: number | null = null;
     const update = () => {
-      try {
-        const { $anchor } = editor.state.selection;
-        let current: string | null = null;
-        for (let d = $anchor.depth; d >= 0; d--) {
-          const before = $anchor.before(d);
-          const doc = editor.state.doc;
-          let lastHeading: string | null = null;
-          doc.descendants((node, pos) => {
-            if (pos > before) return false;
-            if (node.type.name === 'heading' && (node.attrs as any)?.level === 2) {
-              lastHeading = node.textContent;
-            }
-            return true;
-          });
-          if (lastHeading) { current = lastHeading; break; }
-        }
-        setActiveSection(current);
-      } catch { /* ignore */ }
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        try {
+          const { $anchor } = editor.state.selection;
+          let current: string | null = null;
+          for (let d = $anchor.depth; d >= 0; d--) {
+            const before = $anchor.before(d);
+            const doc = editor.state.doc;
+            let lastHeading: string | null = null;
+            doc.descendants((node, pos) => {
+              if (pos > before) return false;
+              if (node.type.name === 'heading' && (node.attrs as any)?.level === 2) {
+                lastHeading = node.textContent;
+              }
+              return true;
+            });
+            if (lastHeading) { current = lastHeading; break; }
+          }
+          setActiveSection(current);
+        } catch { /* ignore */ }
+      });
     };
     editor.on('selectionUpdate', update);
     editor.on('update', update);
@@ -465,6 +472,7 @@ OUTPUT RULES:
     return () => {
       editor.off('selectionUpdate', update);
       editor.off('update', update);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [editor, step]);
 

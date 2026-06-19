@@ -557,6 +557,26 @@ usePageTitle(
 
     setSaving(true);
 
+    // If we haven't loaded a timestamp yet the document is brand-new in this
+    // session — skip optimistic-concurrency and do an unconditional first save.
+    if (lastUpdatedAtRef.current === null) {
+      const { data: fresh, error: freshErr } = await supabase
+        .from('documents')
+        .update({ title, content: content as unknown as Json })
+        .eq('id', id)
+        .select('updated_at')
+        .maybeSingle();
+      if (freshErr || !fresh) {
+        toast.error('Failed to save');
+        setSaving(false);
+        return;
+      }
+      await finalizeSave(fresh.updated_at);
+      if (manual) toast.success('Document saved!');
+      setSaving(false);
+      return;
+    }
+
     // Optimistic concurrency: only overwrite if the row still matches the
     // version we last loaded/saved, so a copy open in another tab or device
     // isn't silently clobbered.
@@ -564,7 +584,7 @@ usePageTitle(
       .from('documents')
       .update({ title, content: content as unknown as Json })
       .eq('id', id)
-      .eq('updated_at', lastUpdatedAtRef.current ?? '')
+      .eq('updated_at', lastUpdatedAtRef.current)
       .select('updated_at')
       .maybeSingle();
 
@@ -640,7 +660,7 @@ usePageTitle(
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [humanizerIntensity, focusMode]);
+  }, [handleHumanize, focusMode]);
 
   // Autosave — calls the latest save fn via ref so editing the title doesn't
   // restart the countdown.
@@ -691,7 +711,7 @@ usePageTitle(
       await html2pdf().set(opt).from(wrapper).save();
       toast.success('PDF exported successfully!');
     } catch (err) {
-      console.error('PDF export error:', err);
+      if (import.meta.env.DEV) console.error('PDF export error:', err);
       toast.error('Failed to export PDF');
     } finally {
       setExporting(false);
@@ -781,7 +801,7 @@ usePageTitle(
       saveAs(buffer, `${title || 'document'}.docx`);
       toast.success('DOCX exported successfully!');
     } catch (err) {
-      console.error('DOCX export error:', err);
+      if (import.meta.env.DEV) console.error('DOCX export error:', err);
       toast.error('Failed to export DOCX');
     } finally {
       setExporting(false);
@@ -794,7 +814,7 @@ usePageTitle(
     return editor.state.doc.textBetween(from, to, ' ');
   };
 
-  const handleHumanize = async () => {
+  const handleHumanize = useCallback(async () => {
     const selectedText = getSelectedText();
     if (!selectedText) {
       toast.error('Select text in the editor first');
@@ -824,7 +844,7 @@ usePageTitle(
     } finally {
       setHumanizing(false);
     }
-  };
+  }, [editor, wordCountMode, presetWordCount, customWordCount, humanizerIntensity, doc]);
 
   const acceptHumanized = () => {
     if (!humanizerResult || !editor) return;
@@ -1178,7 +1198,7 @@ usePageTitle(
             {chatMessages.map((m, i) => (
               <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'} animate-fade-in`}>
                 <div className={`inline-block max-w-[90%] rounded-xl px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                  {m.role === 'assistant' ? <ReactMarkdown>{m.content}</ReactMarkdown> : m.content}
+                  {m.role === 'assistant' ? <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>{m.content}</ReactMarkdown> : m.content}
                 </div>
               </div>
             ))}
@@ -1347,16 +1367,21 @@ usePageTitle(
           documentId={id}
           onRestore={(content, restoredTitle) => {
             if (editor) {
-              // content could be JSON or HTML string
+              if (content == null) {
+                // Nothing to restore — leave the editor unchanged
+                toast.error('This version has no content to restore.');
+                return;
+              }
+              // content is stored as TipTap JSON object; fall back to HTML string
               try {
                 const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-                if (parsed && parsed.type === 'doc') {
+                if (parsed && (parsed as any).type === 'doc') {
                   editor.commands.setContent(parsed);
                 } else {
-                  editor.commands.setContent(content);
+                  editor.commands.setContent(content as string);
                 }
               } catch {
-                editor.commands.setContent(content);
+                editor.commands.setContent(content as string);
               }
               setTitle(restoredTitle);
               setWordCount(editor.storage.characterCount.words());

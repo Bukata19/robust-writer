@@ -549,12 +549,14 @@ const Dashboard: React.FC = () => {
                           className="flex-1 min-w-0 bg-background border border-primary/40 rounded-md px-2 py-1 text-sm text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                         <button
+                          aria-label="Confirm rename"
                           onMouseDown={(e) => { e.preventDefault(); submitRename(doc.id); }}
                           className="p-1 text-primary hover:text-primary/80"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          aria-label="Cancel rename"
                           onMouseDown={(e) => { e.preventDefault(); cancelRename(); }}
                           className="p-1 text-muted-foreground hover:text-foreground"
                         >
