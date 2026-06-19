@@ -52,19 +52,24 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ documentId, o
 
   const fetchVersions = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('document_versions')
-      .select('id, title, content, created_at')
-      .eq('document_id', documentId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from('document_versions')
+        .select('id, title, content, created_at')
+        .eq('document_id', documentId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (error) {
+      if (error) {
+        toast.error('Failed to load version history');
+      } else {
+        setVersions((data as unknown as Version[]) || []);
+      }
+    } catch {
       toast.error('Failed to load version history');
-    } else {
-      setVersions((data as unknown as Version[]) || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRestore = (version: Version) => {
@@ -82,7 +87,7 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ documentId, o
           <History className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-foreground">Version History</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+        <Button variant="ghost" size="icon" aria-label="Close version history" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
       </div>

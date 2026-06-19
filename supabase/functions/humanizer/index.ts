@@ -315,7 +315,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
+    const token = authHeader.slice(7).trim();
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData?.user) {
       return new Response(
@@ -357,7 +357,12 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI service is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const level = intensity && intensityCores[intensity] ? intensity : "moderate";
     const dt = docType && personaMap[docType] ? docType : "general";

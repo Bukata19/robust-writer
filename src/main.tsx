@@ -13,10 +13,9 @@ if (import.meta.env.DEV) {
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((reg) => {
-        console.log('SW registered, scope:', reg.scope);
         reg.update();
       })
-      .catch((err) => console.error('SW registration failed:', err));
+      .catch(() => {});
   });
 }
 

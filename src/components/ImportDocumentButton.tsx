@@ -258,7 +258,7 @@ const ImportDocumentButton: React.FC<ImportDocumentButtonProps> = ({ onImported 
       onImported?.();
       navigate(`/editor/${data.id}`);
     } catch (err) {
-      console.error('Import error:', err);
+      if (import.meta.env.DEV) console.error('Import error:', err);
       toast.error('Failed to read the file. Please check it is not corrupted.');
     } finally {
       setImporting(false);

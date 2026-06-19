@@ -5,10 +5,6 @@ import { toast } from 'sonner';
 
 const REMEMBER_KEY = 'rb_remember_me';
 
-// Set while the user deliberately signs out, so the SIGNED_OUT handler doesn't
-// misreport an intentional logout as an expired session.
-let isManualSignOut = false;
-
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -26,35 +22,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // Scoped to this component instance — avoids module-level mutable state.
+  const isManualSignOutRef = React.useRef(false);
 
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-  setSession(session);
-  setUser(session?.user ?? null);
-  setLoading(false);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
 
-  if (event === 'SIGNED_OUT') {
-    // Only surface an "expired" message for involuntary sign-outs (token expiry
-    // or sign-out from another tab) — not for a deliberate logout.
-    if (!isManualSignOut) {
-      toast.error('Your session has expired. Please sign in again.');
-    }
-    isManualSignOut = false;
-  }
-
-  if (event === 'TOKEN_REFRESHED') {
-    // Token silently refreshed — no action needed but good to know it's working
-    console.log('Session refreshed successfully');
-  }
-});
+      if (event === 'SIGNED_OUT') {
+        // Only surface an "expired" message for involuntary sign-outs (token
+        // expiry or sign-out from another tab) — not for a deliberate logout.
+        if (!isManualSignOutRef.current) {
+          toast.error('Your session has expired. Please sign in again.');
+        }
+        isManualSignOutRef.current = false;
+      }
+    });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // If rememberMe is false, sign out when the browser tab closes. This is
@@ -64,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleUnload = () => {
       if (localStorage.getItem(REMEMBER_KEY) === 'false') {
-        isManualSignOut = true;
+        isManualSignOutRef.current = true;
         void supabase.auth.signOut();
       }
     };
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    isManualSignOut = true;
+    isManualSignOutRef.current = true;
     localStorage.removeItem(REMEMBER_KEY);
     await supabase.auth.signOut();
   };

@@ -56,13 +56,22 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
   // Recompute on any reflow of the content: typing, width/focus toggles,
   // line-spacing or font-size changes. A ResizeObserver catches them all —
   // including reflows that don't mutate the DOM (the old MutationObserver bug).
+  // Throttle via requestAnimationFrame so that rapid keystrokes (which all
+  // trigger ResizeObserver) coalesce into a single layout read per frame.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
 
     recalcPages();
 
-    const observer = new ResizeObserver(() => recalcPages());
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        recalcPages();
+      });
+    });
     observer.observe(content);
 
     // Fonts change line metrics — re-measure once they're ready.
@@ -70,7 +79,10 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
       document.fonts.ready.then(recalcPages).catch(() => {});
     }
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [recalcPages, padX, padY]);
 
   // Show page-break markers whenever the document spans more than one A4 length,
