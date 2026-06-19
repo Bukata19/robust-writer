@@ -643,6 +643,44 @@ usePageTitle(
     saveDocumentRef.current = saveDocument;
   }, [saveDocument]);
 
+  const getSelectedText = useCallback((): string => {
+    if (!editor) return '';
+    const { from, to } = editor.state.selection;
+    return editor.state.doc.textBetween(from, to, ' ');
+  }, [editor]);
+
+  const handleHumanize = useCallback(async () => {
+    const selectedText = getSelectedText();
+    if (!selectedText) {
+      toast.error('Select text in the editor first');
+      return;
+    }
+    if (selectedText.length > 25000) {
+      toast.error('Selected text exceeds 25,000 character limit');
+      return;
+    }
+
+    setHumanizing(true);
+    setHumanizerResult(null);
+    setHumanizerOpen(true);
+
+    try {
+      const twc = wordCountMode === 'preset' ? presetWordCount : wordCountMode === 'custom' ? (parseInt(customWordCount) || null) : null;
+      const { data, error } = await supabase.functions.invoke('humanizer', {
+        body: { text: selectedText, intensity: humanizerIntensity, docType: doc?.doc_type || 'general', targetWordCount: twc },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setHumanizerResult({ original: selectedText, humanized: data.humanizedText });
+    } catch (err: any) {
+      toast.error(err.message || 'Humanizer failed');
+    } finally {
+      setHumanizing(false);
+    }
+  }, [getSelectedText, wordCountMode, presetWordCount, customWordCount, humanizerIntensity, doc]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -807,44 +845,6 @@ usePageTitle(
       setExporting(false);
     }
   };
-
-  const getSelectedText = useCallback((): string => {
-    if (!editor) return '';
-    const { from, to } = editor.state.selection;
-    return editor.state.doc.textBetween(from, to, ' ');
-  }, [editor]);
-
-  const handleHumanize = useCallback(async () => {
-    const selectedText = getSelectedText();
-    if (!selectedText) {
-      toast.error('Select text in the editor first');
-      return;
-    }
-    if (selectedText.length > 25000) {
-      toast.error('Selected text exceeds 25,000 character limit');
-      return;
-    }
-
-    setHumanizing(true);
-    setHumanizerResult(null);
-    setHumanizerOpen(true);
-
-    try {
-      const twc = wordCountMode === 'preset' ? presetWordCount : wordCountMode === 'custom' ? (parseInt(customWordCount) || null) : null;
-      const { data, error } = await supabase.functions.invoke('humanizer', {
-        body: { text: selectedText, intensity: humanizerIntensity, docType: doc?.doc_type || 'general', targetWordCount: twc },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      setHumanizerResult({ original: selectedText, humanized: data.humanizedText });
-    } catch (err: any) {
-      toast.error(err.message || 'Humanizer failed');
-    } finally {
-      setHumanizing(false);
-    }
-  }, [getSelectedText, wordCountMode, presetWordCount, customWordCount, humanizerIntensity, doc]);
 
   const acceptHumanized = () => {
     if (!humanizerResult || !editor) return;
