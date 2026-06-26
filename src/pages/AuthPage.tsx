@@ -184,7 +184,7 @@ const AuthPage: React.FC = () => {
         </div>
 
         {/* Auth Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-[var(--shadow-card)]">
+        <div className="surface-card p-6">
           {/* Success: account created */}
           {mode === 'signup' && signupDone ? (
             <div className="text-center space-y-4 py-2">
@@ -254,7 +254,7 @@ const AuthPage: React.FC = () => {
               <div className="flex mb-6 bg-secondary rounded-lg p-1">
                 <button
                   onClick={() => switchMode('login')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`focus-ring flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                     mode === 'login'
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
@@ -264,7 +264,7 @@ const AuthPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => switchMode('signup')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`focus-ring flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                     mode === 'signup'
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'

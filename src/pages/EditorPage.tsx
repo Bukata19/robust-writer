@@ -1511,7 +1511,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setFontFamily(e.target.value).run();
       }}
-      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
+      className="h-10 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[130px]"
     >
       {FONT_FAMILY_OPTIONS.map(opt => (
         <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
@@ -1527,7 +1527,7 @@ const fontControls = editor ? (
         if (!editor) return;
         editor.chain().focus().setMark('textStyle', { fontSize: e.target.value }).run();
       }}
-      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
+      className="h-10 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[72px]"
     >
       {FONT_SIZE_OPTIONS.map(sz => (
         <option key={sz} value={sz}>{sz.replace('px', '')}</option>
@@ -1538,7 +1538,7 @@ const fontControls = editor ? (
       title="Line spacing"
       value={String(lineHeight)}
       onChange={(e) => setLineSpacingOverride(parseFloat(e.target.value))}
-      className="h-9 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[88px]"
+      className="h-10 bg-background border border-input rounded-md text-xs text-foreground px-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-colors w-[88px]"
     >
       <option value="1.5">1.5 ×</option>
       <option value="1.8">1.8 ×</option>
@@ -1551,7 +1551,10 @@ const fontControls = editor ? (
 // Icon buttons only — no selects here
 const formatButtons = editor ? (
   <>
-    <div className={isMobile ? 'w-px h-6 bg-border mx-0.5' : 'w-px h-6 bg-border my-1'} />
+    {/* Vertical separator between the font dropdowns and the format icons —
+        always a horizontal-layout context now (top bar on desktop, bottom bar
+        on mobile), so the gap is horizontal. */}
+    <div className="w-px h-6 bg-border mx-1 shrink-0" />
     <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" icon={<Bold className="w-4 h-4" />} active={editor.isActive('bold')} />
     <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" icon={<Italic className="w-4 h-4" />} active={editor.isActive('italic')} />
     <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" icon={<Underline className="w-4 h-4" />} active={editor.isActive('underline')} />
@@ -1577,16 +1580,23 @@ const formatButtons = editor ? (
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled document"
           aria-label="Document title"
-          className="min-w-0 max-w-[260px] bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
+          className="shrink-0 max-w-[160px] lg:max-w-[220px] bg-transparent text-foreground font-display font-semibold text-lg focus:outline-none truncate placeholder:text-muted-foreground/50 placeholder:italic placeholder:font-normal"
         />
 
-        {!isMobile && !focusMode && (
-          <div className="flex items-center gap-2 shrink-0">
+        {/* Desktop: single consolidated format cluster — font dropdowns + format
+            buttons live here in the one top bar (no separate left strip). Scrolls
+            gracefully if the bar gets tight. */}
+        {!isMobile && !focusMode ? (
+          <div
+            data-intro-id="format-toolbar"
+            className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-dark px-1"
+          >
             {fontControls}
+            {formatButtons}
           </div>
+        ) : (
+          <div className="flex-1" />
         )}
-
-        <div className="flex-1" />
 
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
 
@@ -1676,22 +1686,12 @@ const formatButtons = editor ? (
       
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
-       {/* Desktop: Left formatting toolbar — icon buttons only */}
-{!isMobile && !focusMode && (
-  <div
-    data-intro-id="format-toolbar"
-    className="w-12 border-r border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1 shrink-0 overflow-y-auto scrollbar-dark"
-  >
-    {formatButtons}
-  </div>
-)}
-
         {/* Editor Canvas */}
-        <div data-editor-scroll className="relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-[#c8c8c8] dark:bg-[#09090b]">
+        <div data-editor-scroll className="relative flex-1 overflow-auto flex justify-center py-10 sm:py-14 lg:py-20 px-6 sm:px-12 lg:px-16 scrollbar-dark transition-colors duration-500 bg-editor-desk">
           <SectionTip activeSection={decoder.activeSection} outline={decoder.outline} />
             {loading ? (
   <div className="relative w-full max-w-[816px]">
-    <div className="bg-white dark:bg-[#1c2030] shadow-[0_2px_24px_rgba(0,0,0,0.18)] rounded-sm px-16 py-20">
+    <div className="bg-editor-page shadow-page rounded-sm px-16 py-20">
       <div className="h-7 bg-muted rounded-md animate-pulse mb-10 w-1/2" />
       <div className="space-y-4">
         {Array.from({ length: 12 }, (_, i) => (
@@ -1753,7 +1753,7 @@ const formatButtons = editor ? (
         {/* Desktop: Right AI tab bar + inline sidebar */}
         {!isMobile && !focusMode && (
           <>
-            <div data-intro-id="ai-tools" className="w-10 border-l border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-2 shrink-0">
+            <div data-intro-id="ai-tools" className="w-12 border-l border-border bg-card/50 toolbar-glow flex flex-col items-center py-3 gap-1.5 shrink-0">
               {aiToolButtons}
             </div>
 
@@ -1787,10 +1787,15 @@ const formatButtons = editor ? (
           <div data-intro-id="ai-tools" className="flex items-center justify-center gap-1 px-2 py-1.5 border-b border-border/50">
             {aiToolButtons}
           </div>
-          {/* Row 2: Formatting buttons */}
-          <div data-intro-id="format-toolbar" className="flex items-center gap-0.5 px-1.5 py-1.5 overflow-x-auto scrollbar-dark">
-            {fontControls}
+          {/* Row 2: Font dropdowns and format buttons — grouped separately so
+              they breathe; the row scrolls horizontally rather than squishing. */}
+          <div data-intro-id="format-toolbar" className="flex items-center gap-2 px-2 py-2 overflow-x-auto scrollbar-dark">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {fontControls}
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
               {formatButtons}
+            </div>
           </div>
         </div>
       )}

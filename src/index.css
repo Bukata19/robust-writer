@@ -66,6 +66,14 @@
     --shadow-elevated: 0 8px 32px -8px hsla(180, 100%, 25%, 0.15);
     --shadow-a4: 0 2px 20px -2px hsla(0, 0%, 0%, 0.8);
     --shadow-glow: 0 0 20px -4px hsla(180, 100%, 25%, 0.3);
+    /* Page (paper-on-desk) shadow — softer than card; flips for light mode below. */
+    --shadow-page: 0 2px 16px -2px hsla(0, 0%, 0%, 0.55);
+
+    /* Editor surfaces — deep-dark fallback before JS sets the per-theme values.
+       Authoritative per-theme values live in SettingsContext's themeVarMap. */
+    --editor-desk: 210 11% 5%;
+    --editor-page: 210 13% 13%;
+    --editor-page-foreground: 210 16% 90%;
 
     --gradient-teal: linear-gradient(135deg, hsl(180, 100%, 25%), hsl(180, 100%, 35%));
     --gradient-danger: linear-gradient(135deg, hsl(0, 100%, 45%), hsl(0, 100%, 55%));
@@ -104,6 +112,41 @@
     --card-foreground: 0 0% 100%;
     --muted-foreground: 210 11% 70%;
     --border: 210 11% 30%;
+  }
+
+  /* Light themes use softer, cooler shadows so cards and the page read as
+     paper on a surface rather than glowing holes. (.dark keeps the deep
+     values defined in :root above.) */
+  html:not(.dark) {
+    --shadow-card: 0 1px 2px hsl(220 20% 20% / 0.04), 0 6px 16px -6px hsl(220 20% 20% / 0.12);
+    --shadow-page: 0 1px 3px hsl(220 20% 20% / 0.08), 0 12px 28px -10px hsl(220 20% 20% / 0.18);
+  }
+}
+
+@layer components {
+  /* ── ONE card treatment, app-wide ──────────────────────────────────────
+     Single border, radius and (theme-adaptive) shadow. Use everywhere a
+     surface/card is needed so all screens read as one product. */
+  .surface-card {
+    @apply bg-card border border-border rounded-xl;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ── ONE type hierarchy, app-wide ──────────────────────────────────── */
+  .t-page-title {
+    @apply text-2xl sm:text-3xl font-display font-bold tracking-tight;
+  }
+  .t-section {
+    @apply text-base font-display font-semibold text-foreground;
+  }
+  .t-card-title {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  /* ── Consistent keyboard focus ring for raw <button>/<input> elements ──
+     (shadcn <Button>/<Input> already include this.) */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }
 

@@ -13,9 +13,9 @@ import InstallPrompt from '@/components/InstallPrompt';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
 import { Logo } from '@/components/Logo';
 import {
-  Plus, FileText, BookOpen, File,
+  FileText, BookOpen, ClipboardList, PenLine,
   Trash2, Clock, ShieldCheck, Settings, Bot,
-  Search, Calendar, ArrowUpDown, SortAsc,
+  Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
 } from 'lucide-react';
 
@@ -53,13 +53,13 @@ const docTypeConfig: Record<DocType, {
   report: {
     label: 'Report',
     description: 'Findings & recommendations',
-    icon: <File className="w-4 h-4" />,
+    icon: <ClipboardList className="w-4 h-4" />,
     color: 'text-muted-foreground',
   },
   general: {
     label: 'General',
     description: 'Blank canvas',
-    icon: <File className="w-4 h-4" />,
+    icon: <PenLine className="w-4 h-4" />,
     color: 'text-muted-foreground',
   },
 };
@@ -303,7 +303,7 @@ const Dashboard: React.FC = () => {
 
         {/* ── HERO ── */}
         <div className="mb-6 text-center">
-          <h1 className="text-2xl sm:text-3xl font-display font-bold gradient-hero mb-1">
+          <h1 className="t-page-title gradient-hero mb-1">
             Your Assignment Dashboard
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -315,7 +315,7 @@ const Dashboard: React.FC = () => {
         {mostRecent && !loading && (
           <div
             onClick={() => navigate(`/editor/${mostRecent.id}`)}
-            className="mb-6 flex items-center justify-between gap-4 bg-card border border-primary/30 rounded-xl p-4 cursor-pointer hover:border-primary/60 transition-all group shadow-sm"
+            className="surface-card border-primary/30 mb-6 flex items-center justify-between gap-4 p-4 cursor-pointer hover:border-primary/60 transition-all group"
           >
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-medium text-primary uppercase tracking-widest mb-1">
@@ -345,12 +345,12 @@ const Dashboard: React.FC = () => {
 
         {/* ── NEW DOCUMENT ── */}
         <div className="mb-6">
-          <h2 className="text-base font-display font-semibold text-foreground mb-3">
+          <h2 className="t-section mb-3">
             New Document
           </h2>
           <div
             data-intro-id="new-doc-grid"
-            className="grid grid-cols-2 md:grid-cols-4 gap-2.5"
+            className="grid grid-cols-2 md:grid-cols-4 gap-3"
           >
             {(['essay', 'research_paper', 'report', 'general'] as DocType[]).map((type) => {
               const config = docTypeConfig[type];
@@ -358,17 +358,19 @@ const Dashboard: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => createDocument(type)}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-all group card-hover-glow btn-glow text-center"
+                  className="group surface-card card-hover-glow btn-glow focus-ring flex items-center gap-3 p-4 text-left transition-all hover:border-primary/50"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Plus className="w-4 h-4 text-primary" />
+                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-primary group-hover:bg-primary/15 transition-colors shrink-0">
+                    {config.icon}
                   </div>
-                  <span className="text-xs font-semibold text-foreground leading-tight">
-                    {config.label}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight hidden sm:block">
-                    {config.description}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="block t-card-title leading-tight">
+                      {config.label}
+                    </span>
+                    <span className="block text-xs text-muted-foreground leading-tight truncate">
+                      {config.description}
+                    </span>
+                  </div>
                 </button>
               );
             })}
@@ -382,7 +384,7 @@ const Dashboard: React.FC = () => {
         {/* ── DOCUMENTS SECTION ── */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-display font-semibold text-foreground">
+            <h2 className="t-section">
               Your Documents
               {documents.length > 0 && (
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -402,7 +404,7 @@ const Dashboard: React.FC = () => {
                   key={key}
                   onClick={() => setSortBy(key)}
                   title={`Sort by ${label}`}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                  className={`focus-ring flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
                     sortBy === key
                       ? 'bg-primary/20 text-primary border border-primary/30'
                       : 'text-muted-foreground hover:text-foreground border border-transparent hover:border-border'
@@ -432,7 +434,7 @@ const Dashboard: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
-                  className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  className={`focus-ring px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     filterType === type
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
@@ -481,7 +483,7 @@ const Dashboard: React.FC = () => {
                   <div
                     key={doc.id}
                     onClick={() => !isRenaming && navigate(`/editor/${doc.id}`)}
-                    className={`bg-card border border-border rounded-xl ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in transition-all`}
+                    className={`surface-card ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in transition-all`}
                   >
                     {/* Top row: type + actions */}
                     <div className="flex items-center justify-between mb-2">
