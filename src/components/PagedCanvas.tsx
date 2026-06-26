@@ -94,7 +94,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
 
   return (
     <div
-      className={`relative ${maxWidth} w-full rounded-sm bg-white dark:bg-[#1c2030] shadow-[0_2px_16px_rgba(0,0,0,0.18)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.5)] border border-black/[0.06] dark:border-white/[0.04]`}
+      className={`relative ${maxWidth} w-full rounded-sm bg-editor-page shadow-page border border-border`}
       style={{ minHeight }}
       onClick={onClick}
       {...rest}
@@ -103,10 +103,10 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
       {showPages && Array.from({ length: pageCount - 1 }, (_, i) => (
         <div
           key={`divider-${i}`}
-          className="pointer-events-none absolute left-0 right-0 z-0 select-none border-t border-dashed border-black/10 dark:border-white/10"
+          className="pointer-events-none absolute left-0 right-0 z-0 select-none border-t border-dashed border-border"
           style={{ top: (i + 1) * PAGE_HEIGHT }}
         >
-          <span className="absolute right-3 -top-2.5 rounded bg-white px-1.5 text-[10px] font-mono text-gray-400 dark:bg-[#1c2030] dark:text-gray-500">
+          <span className="absolute right-3 -top-2.5 rounded bg-editor-page px-1.5 text-[10px] font-mono text-muted-foreground">
             Page {i + 2}
           </span>
         </div>
@@ -116,7 +116,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
           caller-supplied `style` can never override them. */}
       <div
         ref={contentRef}
-        className={`relative z-10 text-[#1a1a1a] dark:text-[#e8edf5] ${className ?? ''}`}
+        className={`relative z-10 text-editor-page-foreground ${className ?? ''}`}
         style={{
           ...style,
           paddingLeft: padX,

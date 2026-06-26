@@ -67,6 +67,11 @@ export default {
           foreground: "hsl(var(--danger-foreground))",
         },
         "surface-elevated": "hsl(var(--surface-elevated))",
+        // Editor surfaces — the grey "desk", the white "page", and page text.
+        // Defined per-theme in SettingsContext so all 8 themes adapt.
+        "editor-desk": "hsl(var(--editor-desk))",
+        "editor-page": "hsl(var(--editor-page))",
+        "editor-page-foreground": "hsl(var(--editor-page-foreground))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -82,6 +87,11 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        // Theme-adaptive surfaces (token values flip under .dark — see index.css)
+        card: "var(--shadow-card)",
+        page: "var(--shadow-page)",
       },
       keyframes: {
         "accordion-down": {
