@@ -4,7 +4,7 @@ All notable changes to RobAssister.
 
 This entry covers **2026-06-07 → 2026-06-26**.
 
-## [Unreleased] — 2026-06-07 → 2026-06-26
+## [1.4.0] — 2026-06-26
 
 ### Added
 - **AI Detector** — replaced the old plagiarism panel with an AI-source detection engine that highlights AI-favoured words, formulaic phrases, model-flagged passages and structural signals directly in the editor, with category filters and click-to-act fixes.
