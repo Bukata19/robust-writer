@@ -1,62 +1,127 @@
-# RobAssister
+<div align="center">
 
-AI-powered writing assistant built for students. Decode assignments, write with real-time coaching, humanize your text, and check originality — all in one place.
+# ✍️ RobAssister
 
-[![Live App](https://img.shields.io/badge/Open%20App-robobuddy--writer.lovable.app-00d4b8?style=flat-square)](https://robobuddy-writer.lovable.app)
+**AI writing assistant built for students.**
+Decode assignments · coach your writing · humanize text · check originality — all in one place.
 
----
+[![Open App](https://img.shields.io/badge/▶_Open_App-robobuddy--writer.lovable.app-00d4b8?style=for-the-badge)](https://robobuddy-writer.lovable.app)
 
-## What it does
+![React](https://img.shields.io/badge/React_18-20232a?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646cff?style=flat-square&logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-06b6d4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3fcf8e?style=flat-square&logo=supabase&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-d97757?style=flat-square&logo=anthropic&logoColor=white)
 
-**Assignment Decoder** — Paste your assignment question and get a structured outline tailored to it. The AI breaks down what the question is actually asking, assigns word counts per section, and can draft each section one at a time. You preview and approve before anything goes into your document.
-
-**Writing Coach** — Watches as you write and drops a short, specific tip below the paragraph you're in every time you pause. Not a chatbot, not a popup — just a quiet nudge when you need it.
-
-**Text Humanizer** — Select any text and humanize it at three intensity levels (Subtle, Moderate, Full). Built to reduce AI detection scores on tools like ZeroGPT, with sentence-level reconstruction and anti-pattern enforcement baked into the prompt system.
-
-**Plagiarism Checker** — Pre-analysis calculates burstiness, AI signature word density, transition density, and coherence uniformity before the AI even sees your text. Returns an originality score, per-passage confidence ratings, a signal breakdown, and a paragraph-level risk map.
-
-**Writing Polish** — Clarity Check scans the whole document for weak sentences, passive voice, and wordy phrases. Smart Rewrite gives you three alternative versions of any selected text.
-
-**Rich-Text Editor** — TipTap-based, multi-page canvas with pre-structured templates (Essay, Research Paper, Report, General), smart placeholders, font controls, version history, focus mode, and PDF/DOCX export.
+</div>
 
 ---
 
-## Stack
+## ✨ Features
 
-React 18 · TypeScript · Vite · TipTap · Tailwind CSS · shadcn/ui · Supabase (Auth + PostgreSQL + Edge Functions) · Anthropic Claude (via AI gateway)
+<table>
+<tr>
+<td width="50%">
+
+**🧩 Assignment Decoder**
+Paste your question → structured outline, per-section word counts, draft-and-approve flow.
+
+</td>
+<td width="50%">
+
+**💬 Writing Coach**
+A quiet, specific tip below your paragraph each time you pause. No popups, no chatbot.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**🫥 Text Humanizer**
+Three intensity levels with sentence-level reconstruction to lower AI-detection scores.
+
+</td>
+<td width="50%">
+
+**🔍 Plagiarism Checker**
+Burstiness, AI-signature density & coherence analysis → originality score + risk map.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**🪄 Writing Polish**
+Clarity Check flags weak/passive/wordy lines. Smart Rewrite offers three alternatives.
+
+</td>
+<td width="50%">
+
+**📝 Rich-Text Editor**
+TipTap multi-page canvas, templates, version history, focus mode, PDF/DOCX export.
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Running locally
+## 🚀 Quick start
 
 ```bash
 git clone https://github.com/Bukata19/robust-writer.git
 cd robust-writer
 npm install
+npm run dev
 ```
 
-Create a `.env` file:
+<details>
+<summary><b>⚙️ Environment setup</b></summary>
+
+<br>
+
+**1. Local app config** — create a `.env` file in the project root:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
-Add your AI key to Supabase Edge Function secrets:
-
-```
-ANTHROPIC_API_KEY=your-key
-```
+**2. Edge Function secret** — the AI key lives in Supabase (not `.env`), set it once with the CLI:
 
 ```bash
-npm run dev
+supabase secrets set LOVABLE_API_KEY=your-key
 ```
+
+</details>
+
+<details>
+<summary><b>📜 Scripts</b></summary>
+
+<br>
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run lint` | Lint the codebase |
+| `npm test` | Run the test suite |
+
+</details>
 
 ---
 
-## Built by
+## 🛠️ Stack
 
-**Sashi** — a student building tools for students.
+React 18 · TypeScript · Vite · TipTap · Tailwind CSS · shadcn/ui · Supabase (Auth · PostgreSQL · Edge Functions) · Anthropic Claude
 
-> *Write smarter. Feel smarter.*
+---
+
+<div align="center">
+
+Built by **Sashi** — a student making tools for students.
+
+*Write smarter. Feel smarter.*
+
+</div>
