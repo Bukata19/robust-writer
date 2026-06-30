@@ -12,11 +12,21 @@ import SettingsDrawer from '@/components/SettingsDrawer';
 import InstallPrompt from '@/components/InstallPrompt';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
 import { Logo } from '@/components/Logo';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import {
   FileText, BookOpen, ClipboardList, PenLine,
   Trash2, Clock, ShieldCheck, Settings, Bot,
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
+  LogOut, Sparkles, FileStack, AlarmClock, Plus,
 } from 'lucide-react';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
@@ -279,14 +289,41 @@ const Dashboard: React.FC = () => {
   const isCompact = settings.cardDensity === 'compact';
   const mostRecent = documents[0] ?? null;
 
+  // ── Derived view data (presentation only) ──
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const rawName = user?.email?.split('@')[0] ?? 'there';
+  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  const initial = displayName.charAt(0).toUpperCase();
+
+  // Stats glance — reads only existing state. `dueDateTick` keeps due-soon fresh.
+  void dueDateTick;
+  const dueSoonCount = documents.filter((d) => {
+    const date = getDueDate(d.id);
+    if (!date) return false;
+    const days = Math.ceil(
+      (new Date(date).setHours(23, 59, 59, 999) - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    return days <= 7;
+  }).length;
+  const cleanCount = documents.filter(
+    (d) => d.plagiarism_score !== null && d.plagiarism_score > 0 && d.plagiarism_score <= 15
+  ).length;
+
+  const statChips = [
+    { icon: <FileStack className="w-3.5 h-3.5" />, value: documents.length, label: 'Documents' },
+    { icon: <AlarmClock className="w-3.5 h-3.5" />, value: dueSoonCount, label: 'Due soon' },
+    { icon: <ShieldCheck className="w-3.5 h-3.5" />, value: cleanCount, label: 'Clean' },
+  ];
+
   return (
     <div className="min-h-screen bg-background page-enter">
 
       {/* ── HEADER ── */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="glass-panel border-b border-border sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost" size="icon"
               onClick={() => setSettingsOpen(true)}
@@ -295,37 +332,93 @@ const Dashboard: React.FC = () => {
             >
               <Settings className="w-4 h-4" />
             </Button>
+
+            {/* Account menu — gives a sign-out path that was previously missing */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="Account menu"
+                className="focus-ring rounded-full transition-transform hover:scale-105 active:scale-95"
+              >
+                <Avatar className="w-8 h-8 border border-primary/40">
+                  <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">{displayName}</span>
+                  <span className="text-xs font-normal text-muted-foreground truncate">
+                    {user?.email}
+                  </span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="cursor-pointer">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
 
-        {/* ── HERO ── */}
-        <div className="mb-6 text-center">
-          <h1 className="t-page-title gradient-hero mb-1">
-            Your Assignment Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Create, edit, and polish your documents with AI
-          </p>
+        {/* ── GREETING + STATS ── */}
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              {greeting}
+            </p>
+            <h1 className="t-page-title">
+              <span className="gradient-hero">{displayName}</span>
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {statChips.map(({ icon, value, label }) => (
+              <div
+                key={label}
+                className="surface-card flex flex-1 sm:flex-initial flex-col items-center justify-center gap-0.5 px-4 py-2.5 min-w-[78px]"
+              >
+                <span className="flex items-center gap-1 text-primary">
+                  {icon}
+                  <span className="text-lg font-display font-bold leading-none">{value}</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ── CONTINUE WRITING ── */}
         {mostRecent && !loading && (
-          <div
+          <button
             onClick={() => navigate(`/editor/${mostRecent.id}`)}
-            className="surface-card border-primary/30 mb-6 flex items-center justify-between gap-4 p-4 cursor-pointer hover:border-primary/60 transition-all group"
+            className="focus-ring relative overflow-hidden w-full text-left mb-7 flex items-center justify-between gap-4 rounded-xl p-4 sm:p-5 cursor-pointer transition-all group border border-primary/30 hover:border-primary/60 bg-gradient-to-r from-primary/10 via-primary/[0.04] to-transparent hover:shadow-glow"
           >
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium text-primary uppercase tracking-widest mb-1">
-                Continue Writing
+            <div className="min-w-0 flex-1 relative z-10">
+              <p className="text-[10px] font-semibold text-primary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <PenLine className="w-3 h-3" />
+                Continue writing
               </p>
-              <p className="font-semibold text-foreground truncate text-sm">
+              <p className="font-semibold text-foreground truncate text-base">
                 {mostRecent.title}
               </p>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className="text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  {docTypeConfig[mostRecent.doc_type].icon}
                   {docTypeConfig[mostRecent.doc_type].label}
                 </span>
                 {getWordCount(mostRecent.id) !== null && (
@@ -339,15 +432,18 @@ const Dashboard: React.FC = () => {
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
-          </div>
+            <span className="relative z-10 shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+            </span>
+          </button>
         )}
 
         {/* ── NEW DOCUMENT ── */}
-        <div className="mb-6">
-          <h2 className="t-section mb-3">
-            New Document
-          </h2>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Plus className="w-4 h-4 text-primary" />
+            <h2 className="t-section">New document</h2>
+          </div>
           <div
             data-intro-id="new-doc-grid"
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
@@ -358,12 +454,12 @@ const Dashboard: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => createDocument(type)}
-                  className="group surface-card card-hover-glow btn-glow focus-ring flex items-center gap-3 p-4 text-left transition-all hover:border-primary/50"
+                  className="group surface-card card-hover-glow focus-ring flex flex-col items-start gap-3 p-4 text-left transition-all hover:border-primary/50"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-primary group-hover:bg-primary/15 transition-colors shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary group-hover:from-primary group-hover:to-primary group-hover:text-primary-foreground transition-all shrink-0 group-hover:scale-105">
                     {config.icon}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 w-full">
                     <span className="block t-card-title leading-tight">
                       {config.label}
                     </span>
@@ -376,7 +472,7 @@ const Dashboard: React.FC = () => {
             })}
           </div>
 
-          <div data-intro-id="import-btn" className="mt-2.5">
+          <div data-intro-id="import-btn" className="mt-3">
             <ImportDocumentButton onImported={fetchDocuments} />
           </div>
         </div>
@@ -384,17 +480,20 @@ const Dashboard: React.FC = () => {
         {/* ── DOCUMENTS SECTION ── */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="t-section">
-              Your Documents
-              {documents.length > 0 && (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  ({documents.length})
-                </span>
-              )}
-            </h2>
+            <div className="flex items-center gap-2">
+              <FileStack className="w-4 h-4 text-primary" />
+              <h2 className="t-section">
+                Your documents
+                {documents.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {documents.length}
+                  </span>
+                )}
+              </h2>
+            </div>
 
-            {/* Sort buttons */}
-            <div className="flex items-center gap-1">
+            {/* Sort segmented control */}
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/60 border border-border">
               {([
                 { key: 'recent', icon: <Clock className="w-3 h-3" />, label: 'Recent' },
                 { key: 'alpha', icon: <SortAsc className="w-3 h-3" />, label: 'A–Z' },
@@ -404,10 +503,11 @@ const Dashboard: React.FC = () => {
                   key={key}
                   onClick={() => setSortBy(key)}
                   title={`Sort by ${label}`}
-                  className={`focus-ring flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                  aria-pressed={sortBy === key}
+                  className={`focus-ring flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
                     sortBy === key
-                      ? 'bg-primary/20 text-primary border border-primary/30'
-                      : 'text-muted-foreground hover:text-foreground border border-transparent hover:border-border'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {icon}
@@ -418,23 +518,23 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Search + filter — sticky on mobile */}
-          <div className="flex gap-2 mb-4 flex-wrap sticky top-14 z-[5] bg-background py-2 -mx-4 px-4 sm:static sm:bg-transparent sm:py-0 sm:mx-0 sm:px-0">
-            <div className="relative flex-1 min-w-[160px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <div className="flex gap-2 mb-4 flex-wrap sticky top-14 z-[5] bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 sm:static sm:bg-transparent sm:backdrop-blur-none sm:py-0 sm:mx-0 sm:px-0">
+            <div className="relative flex-1 min-w-[160px] focus-glow rounded-lg">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search documents..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-shadow"
               />
             </div>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {(['all', 'essay', 'research_paper', 'report', 'general'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
-                  className={`focus-ring px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  className={`focus-ring px-3 py-2 text-xs font-medium rounded-lg transition-all ${
                     filterType === type
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
@@ -483,22 +583,23 @@ const Dashboard: React.FC = () => {
                   <div
                     key={doc.id}
                     onClick={() => !isRenaming && navigate(`/editor/${doc.id}`)}
-                    className={`surface-card ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in transition-all`}
+                    className={`surface-card ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in transition-all hover:border-primary/40`}
                   >
                     {/* Top row: type + actions */}
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/70 pl-1.5 pr-2.5 py-1">
                         <span className={config.color}>{config.icon}</span>
                         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                           {config.label}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      </span>
+                      {/* Always visible on touch; reveal on hover for pointer devices */}
+                      <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
                         {/* Rename button */}
                         <button
                           onClick={(e) => startRename(doc, e)}
                           aria-label="Rename document"
-                          className="p-1 hover:text-primary rounded transition-colors"
+                          className="focus-ring p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -506,7 +607,7 @@ const Dashboard: React.FC = () => {
                         <label
                           htmlFor={`due-${doc.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="relative p-1 hover:text-primary rounded transition-colors cursor-pointer"
+                          className="relative p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
                           aria-label="Set due date"
                           title="Set due date"
                         >
@@ -526,7 +627,7 @@ const Dashboard: React.FC = () => {
                         <button
                           onClick={(e) => deleteDocument(doc.id, e)}
                           aria-label="Delete document"
-                          className="p-1 hover:text-destructive rounded transition-colors"
+                          className="focus-ring p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
