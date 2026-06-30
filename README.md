@@ -81,17 +81,17 @@ npm run dev
 
 <br>
 
-Create a `.env` file:
+**1. Local app config** — create a `.env` file in the project root:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
-Add your AI key to Supabase Edge Function secrets:
+**2. Edge Function secret** — the AI key lives in Supabase (not `.env`), set it once with the CLI:
 
-```env
-ANTHROPIC_API_KEY=your-key
+```bash
+supabase secrets set LOVABLE_API_KEY=your-key
 ```
 
 </details>
