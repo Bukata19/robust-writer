@@ -53,8 +53,8 @@ interface PlagiarismReport {
   summary: string;
   flagged_passages: FlaggedPassage[];
   originality_strengths?: string[];
-  source_indicators?: SourceIndicators;
-  raw_signals?: RawSignals;
+  source_indicators?: SourceIndicators | Record<string, unknown>;
+  raw_signals?: RawSignals | Record<string, unknown>;
 }
 
 interface PlagiarismPanelProps {
