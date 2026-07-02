@@ -28,7 +28,22 @@ import {
   LogOut,
   RotateCcw,
   Search,
+  Sparkles,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  ACADEMIC_LEVELS,
+  WRITING_TONES,
+  FIELDS_OF_STUDY,
+} from '@/components/onboarding/OnboardingModal';
+import { CUSTOM_INSTRUCTIONS_MAX } from '@/contexts/AuthContext';
 import {
   useSettings,
   type ColorTheme,
@@ -58,7 +73,7 @@ interface SettingsDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SectionId = 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'account';
+type SectionId = 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'profile' | 'account';
 
 interface SectionMeta {
   id: SectionId;
@@ -71,6 +86,7 @@ const SECTIONS: SectionMeta[] = [
   { id: 'editor', title: 'Editor', icon: <FileText className="h-4 w-4" /> },
   { id: 'behaviour', title: 'Behaviour', icon: <Timer className="h-4 w-4" /> },
   { id: 'accessibility', title: 'Accessibility', icon: <Eye className="h-4 w-4" /> },
+  { id: 'profile', title: 'Profile & Personalization', icon: <Sparkles className="h-4 w-4" /> },
   { id: 'account', title: 'Account', icon: <User className="h-4 w-4" /> },
 ];
 
@@ -83,10 +99,16 @@ interface Field {
 
 const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) => {
   const { settings, resolvedMode, updateSetting, resetSettings, setThemeMode } = useSettings();
-  const { signOut, user } = useAuth();
+  const { signOut, user, profile, updateProfile } = useAuth();
 
   const [query, setQuery] = useState('');
   const [activeSection, setActiveSection] = useState<SectionId>('appearance');
+
+  // Text drafts for profile fields — committed on blur so typing isn't
+  // clobbered when the profile refreshes after each save.
+  const [draftName, setDraftName] = useState('');
+  const [draftCustom, setDraftCustom] = useState('');
+  const [draftFieldOther, setDraftFieldOther] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>({
@@ -94,6 +116,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
     editor: null,
     behaviour: null,
     accessibility: null,
+    profile: null,
     account: null,
   });
 
@@ -102,8 +125,26 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
     if (open) {
       setQuery('');
       setActiveSection('appearance');
+      setDraftName(profile?.display_name ?? '');
+      setDraftCustom(profile?.custom_instructions ?? '');
+      const saved = profile?.field_of_study ?? '';
+      setDraftFieldOther(saved && !FIELDS_OF_STUDY.includes(saved) ? saved : '');
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const savedField = profile?.field_of_study ?? '';
+  const fieldSelectValue = savedField
+    ? (FIELDS_OF_STUDY.includes(savedField) ? savedField : 'Other')
+    : undefined;
+
+  const commitProfile = useCallback(
+    async (fields: Parameters<typeof updateProfile>[0]) => {
+      const { error } = await updateProfile(fields);
+      if (error) toast.error('Could not save profile.');
+      else toast.success('Profile updated.');
+    },
+    [updateProfile],
+  );
 
   const chips = resolvedMode === 'dark' ? DARK_CHIPS : LIGHT_CHIPS;
 
@@ -364,6 +405,136 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
         ),
       },
     ],
+    profile: [
+      {
+        label: 'Display Name',
+        keywords: 'profile name greeting',
+        render: () => (
+          <OptionGroup label="Display Name">
+            <Input
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onBlur={() => {
+                const next = draftName.trim() || null;
+                if (next !== (profile?.display_name ?? null)) {
+                  void commitProfile({ display_name: next });
+                }
+              }}
+              placeholder="How should we greet you?"
+              aria-label="Display name"
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Academic Level',
+        keywords: 'profile school undergraduate postgraduate study personalization',
+        render: () => (
+          <OptionGroup label="Academic Level">
+            <SegmentedControl<string>
+              aria-label="Academic level"
+              value={profile?.academic_level ?? ''}
+              onChange={(v) => void commitProfile({ academic_level: v })}
+              options={ACADEMIC_LEVELS.map((l) => ({ value: l.value, label: l.label }))}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Writing Tone',
+        keywords: 'profile formal casual balanced voice ai personalization',
+        render: () => (
+          <OptionGroup label="Writing Tone">
+            <SegmentedControl<string>
+              aria-label="Writing tone"
+              value={profile?.writing_tone ?? ''}
+              onChange={(v) => void commitProfile({ writing_tone: v })}
+              options={WRITING_TONES.map((t) => ({ value: t.value, label: t.label }))}
+            />
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Field of Study',
+        keywords: 'profile subject discipline major personalization',
+        render: () => (
+          <OptionGroup label="Field of Study">
+            <div className="space-y-2">
+              <Select
+                value={fieldSelectValue}
+                onValueChange={(v) => {
+                  if (v === 'Other') {
+                    void commitProfile({ field_of_study: draftFieldOther.trim() || 'Other' });
+                  } else {
+                    setDraftFieldOther('');
+                    void commitProfile({ field_of_study: v });
+                  }
+                }}
+              >
+                <SelectTrigger aria-label="Field of study">
+                  <SelectValue placeholder="Select your field…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FIELDS_OF_STUDY.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldSelectValue === 'Other' && (
+                <Input
+                  value={draftFieldOther}
+                  onChange={(e) => setDraftFieldOther(e.target.value)}
+                  onBlur={() => {
+                    const next = draftFieldOther.trim() || 'Other';
+                    if (next !== savedField) void commitProfile({ field_of_study: next });
+                  }}
+                  placeholder="Tell us your field"
+                  aria-label="Field of study (other)"
+                />
+              )}
+            </div>
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Custom AI Instructions',
+        keywords: 'profile preferences chat prompt spelling personalization',
+        render: () => (
+          <OptionGroup label="Custom AI Instructions">
+            <div className="space-y-1.5">
+              <Textarea
+                value={draftCustom}
+                onChange={(e) => setDraftCustom(e.target.value.slice(0, CUSTOM_INSTRUCTIONS_MAX))}
+                onBlur={() => {
+                  const next = draftCustom.trim() || null;
+                  if (next !== (profile?.custom_instructions ?? null)) {
+                    void commitProfile({ custom_instructions: next });
+                  }
+                }}
+                maxLength={CUSTOM_INSTRUCTIONS_MAX}
+                rows={4}
+                placeholder={'e.g. "Always use British spelling" or "Prefer concise explanations"'}
+                className="resize-none"
+                aria-label="Custom AI instructions"
+              />
+              <p
+                className={`text-right text-[11px] tabular-nums ${
+                  draftCustom.length >= CUSTOM_INSTRUCTIONS_MAX
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
+                }`}
+                aria-live="polite"
+              >
+                {draftCustom.length}/{CUSTOM_INSTRUCTIONS_MAX}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Applies to the chat assistant only.
+              </p>
+            </div>
+          </OptionGroup>
+        ),
+      },
+    ],
     account: [
       {
         label: 'Account',
@@ -384,7 +555,8 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
         ),
       },
     ],
-  }), [settings, resolvedMode, chips, updateSetting, setThemeMode, user, resetTour, signOut]);
+  }), [settings, resolvedMode, chips, updateSetting, setThemeMode, user, resetTour, signOut,
+       profile, commitProfile, draftName, draftCustom, draftFieldOther, savedField, fieldSelectValue]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const isSearching = normalizedQuery.length > 0;

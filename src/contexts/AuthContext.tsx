@@ -1,14 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 const REMEMBER_KEY = 'rb_remember_me';
+
+export type Profile = Tables<'profiles'>;
+
+/** Max length for custom AI instructions, enforced in the app layer. */
+export const CUSTOM_INSTRUCTIONS_MAX = 600;
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  profile: Profile | null;
+  refreshProfile: () => Promise<void>;
+  updateProfile: (fields: TablesUpdate<'profiles'>) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -22,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
   // Scoped to this component instance — avoids module-level mutable state.
   const isManualSignOutRef = React.useRef(false);
 
@@ -71,6 +81,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
+  // Load the user's profile once per login; create a blank row on first login
+  // so onboarding_completed=false drives the onboarding flow for new AND
+  // existing users who predate the profiles table.
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+
+    const load = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (cancelled) return;
+
+      if (data) {
+        setProfile(data);
+        return;
+      }
+
+      // No row yet — create a blank one. On a duplicate-key race (two tabs),
+      // fall through to a re-fetch so both tabs converge on the same row.
+      const { data: created } = await supabase
+        .from('profiles')
+        .insert({ user_id: user.id })
+        .select('*')
+        .single();
+      if (cancelled) return;
+
+      if (created) {
+        setProfile(created);
+      } else {
+        const { data: refetched } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!cancelled) setProfile(refetched ?? null);
+      }
+    };
+
+    void load();
+    return () => { cancelled = true; };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (data) setProfile(data);
+  };
+
+  const updateProfile = async (fields: TablesUpdate<'profiles'>) => {
+    if (!user) return { error: new Error('Not signed in') };
+    // Defensive app-layer cap regardless of caller.
+    const sanitized = { ...fields };
+    if (typeof sanitized.custom_instructions === 'string') {
+      sanitized.custom_instructions = sanitized.custom_instructions.slice(0, CUSTOM_INSTRUCTIONS_MAX);
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(sanitized)
+      .eq('user_id', user.id)
+      .select('*')
+      .single();
+    if (!error && data) setProfile(data);
+    return { error: error as Error | null };
+  };
+
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password });
     return { error: error as Error | null };
@@ -106,7 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ session, user, loading, signUp, signIn, signOut, resetPassword, updatePassword }}
+      value={{ session, user, loading, profile, refreshProfile, updateProfile, signUp, signIn, signOut, resetPassword, updatePassword }}
     >
       {children}
     </AuthContext.Provider>

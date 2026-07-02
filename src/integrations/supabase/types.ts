@@ -85,6 +85,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          academic_level: string | null
+          created_at: string
+          custom_instructions: string | null
+          display_name: string | null
+          field_of_study: string | null
+          onboarding_completed: boolean
+          updated_at: string
+          user_id: string
+          writing_tone: string | null
+        }
+        Insert: {
+          academic_level?: string | null
+          created_at?: string
+          custom_instructions?: string | null
+          display_name?: string | null
+          field_of_study?: string | null
+          onboarding_completed?: boolean
+          updated_at?: string
+          user_id: string
+          writing_tone?: string | null
+        }
+        Update: {
+          academic_level?: string | null
+          created_at?: string
+          custom_instructions?: string | null
+          display_name?: string | null
+          field_of_study?: string | null
+          onboarding_completed?: boolean
+          updated_at?: string
+          user_id?: string
+          writing_tone?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
