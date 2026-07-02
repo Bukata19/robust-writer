@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import InstallPrompt from '@/components/InstallPrompt';
+import OnboardingModal from '@/components/onboarding/OnboardingModal';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
 import { Logo } from '@/components/Logo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -134,9 +135,31 @@ const Dashboard: React.FC = () => {
     'Manage your documents on RobAssister — create essays, research papers, reports and more with AI assistance.'
   );
 
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+
+  // Onboarding: auto-show once per session while incomplete; a dismissible
+  // banner offers the way back in afterwards.
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => sessionStorage.getItem('rb_onboarding_banner_dismissed') === 'true'
+  );
+
+  useEffect(() => {
+    if (!profile || profile.onboarding_completed) return;
+    if (sessionStorage.getItem('rb_onboarding_autoshown') === 'true') return;
+    sessionStorage.setItem('rb_onboarding_autoshown', 'true');
+    setOnboardingOpen(true);
+  }, [profile]);
+
+  const dismissBanner = () => {
+    sessionStorage.setItem('rb_onboarding_banner_dismissed', 'true');
+    setBannerDismissed(true);
+  };
+
+  const showOnboardingBanner =
+    !!profile && !profile.onboarding_completed && !onboardingOpen && !bannerDismissed;
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,7 +316,8 @@ const Dashboard: React.FC = () => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const rawName = user?.email?.split('@')[0] ?? 'there';
-  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  const emailName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  const displayName = profile?.display_name?.trim() || emailName;
   const initial = displayName.charAt(0).toUpperCase();
 
   // Stats glance — reads only existing state. `dueDateTick` keeps due-soon fresh.
@@ -371,6 +395,34 @@ const Dashboard: React.FC = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+
+        {/* ── ONBOARDING RETRIGGER BANNER ── */}
+        {showOnboardingBanner && (
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
+            <p className="min-w-0 truncate text-xs sm:text-sm text-foreground">
+              <Sparkles className="mr-1.5 inline-block h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              Finish setting up your profile to personalize your AI chat.
+            </p>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                size="sm"
+                onClick={() => setOnboardingOpen(true)}
+                className="h-7 px-2.5 text-xs"
+              >
+                Finish setup
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={dismissBanner}
+                aria-label="Dismiss profile setup banner"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* ── GREETING + STATS ── */}
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -712,6 +764,7 @@ const Dashboard: React.FC = () => {
       </main>
 
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
       <InstallPrompt />
     </div>
   );

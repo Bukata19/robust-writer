@@ -956,6 +956,9 @@ usePageTitle(
           messages: newMessages,
           documentContent,
           plagiarismData: doc?.plagiarism_data,
+          // Chat assistant only: opts into profile personalization server-side.
+          // Decoder / coach / polish call the same function without this flag.
+          personalize: true,
         }),
       });
 
