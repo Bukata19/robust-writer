@@ -1330,7 +1330,7 @@ usePageTitle(
       {/* AI Detector Sidebar */}
       {showPlagiarism && (
         <PlagiarismPanel
-          report={plagiarismReport}
+          report={plagiarismReport as any}
           running={plagiarismRunning}
           highlightsVisible={plagiarismHighlightsVisible}
           onRun={runPlagiarismCheck}
