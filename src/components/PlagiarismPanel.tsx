@@ -49,7 +49,7 @@ interface RawSignals {
 
 interface PlagiarismReport {
   overall_score: number;
-  risk_level: 'clean' | 'low_risk' | 'moderate' | 'high_risk';
+  risk_level?: 'clean' | 'low_risk' | 'moderate' | 'high_risk';
   summary: string;
   flagged_passages: FlaggedPassage[];
   originality_strengths?: string[];
