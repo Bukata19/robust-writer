@@ -270,7 +270,7 @@ const EditorPage: React.FC = () => {
   const [plagiarismRunning, setPlagiarismRunning] = useState(false);
   const [plagiarismReport, setPlagiarismReport] = useState<{
   overall_score: number;
-  risk_level?: string;
+  risk_level?: 'clean' | 'low_risk' | 'moderate' | 'high_risk';
   summary: string;
   flagged_passages: Array<{
     excerpt: string;
@@ -1330,7 +1330,7 @@ usePageTitle(
       {/* AI Detector Sidebar */}
       {showPlagiarism && (
         <PlagiarismPanel
-          report={plagiarismReport}
+          report={plagiarismReport as any}
           running={plagiarismRunning}
           highlightsVisible={plagiarismHighlightsVisible}
           onRun={runPlagiarismCheck}
