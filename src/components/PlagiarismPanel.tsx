@@ -13,7 +13,7 @@ interface FlaggedPassage {
   concern_type: string;
   reason: string;
   severity: string;
-  confidence: number;
+  confidence?: number;
   suggestion?: string;
 }
 
