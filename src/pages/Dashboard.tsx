@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import InstallPrompt from '@/components/InstallPrompt';
 import OnboardingModal from '@/components/onboarding/OnboardingModal';
+import OfflineBadge from '@/components/OfflineBadge';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
 import { Logo } from '@/components/Logo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -348,6 +349,7 @@ const Dashboard: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" />
           <div className="flex items-center gap-1.5">
+            <OfflineBadge />
             <Button
               variant="ghost" size="icon"
               onClick={() => setSettingsOpen(true)}

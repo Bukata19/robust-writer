@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import OfflineBadge from '@/components/OfflineBadge';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import PolishPanel from '@/components/PolishPanel';
@@ -1602,6 +1603,8 @@ const formatButtons = editor ? (
         )}
 
         <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
+
+        <OfflineBadge />
 
         <Tooltip>
           <TooltipTrigger asChild>
