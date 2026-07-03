@@ -9,6 +9,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import OfflineBadge from '@/components/OfflineBadge';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { cacheDocument, getCachedDocument, getLastCachedDocument, type CachedDoc } from '@/lib/offlineDocCache';
+import { saveLocalDraft, getLocalDraft, clearLocalDraft, hasNewerDraft } from '@/lib/localDraft';
 import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import PolishPanel from '@/components/PolishPanel';
@@ -237,10 +240,17 @@ const EditorPage: React.FC = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
   const isMobile = useIsMobile();
+  const online = useOnlineStatus();
   const [doc, setDoc] = useState<DocumentData | null>(null);
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Offline read-only state + the last-opened doc offered when booting offline
+  // on a route we have no cache for.
+  const [readOnlyOffline, setReadOnlyOffline] = useState(false);
+  const [offlineLastDoc, setOfflineLastDoc] = useState<CachedDoc | null>(null);
+  // A newer local backup than the last server save, awaiting user decision.
+  const [draftPrompt, setDraftPrompt] = useState<{ backedUpAt: number } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [lineSpacingOverride, setLineSpacingOverride] = useState<number | null>(null);
@@ -315,6 +325,9 @@ const EditorPage: React.FC = () => {
   const lastUpdatedAtRef = useRef<string | null>(null);
   const conflictWarnedRef = useRef(false);
   const saveDocumentRef = useRef<((opts?: { manual?: boolean }) => void) | null>(null);
+  // Local-draft bookkeeping (read inside the stable onUpdate closure).
+  const readOnlyOfflineRef = useRef(false);
+  const initialContentLoadedRef = useRef(false);
 
   // TipTap editor
   const editor = useEditor({
@@ -368,6 +381,13 @@ const EditorPage: React.FC = () => {
   setWordCount(ed.storage.characterCount.words());
   setCoachSuggestion(null);
   setCoachLoading(false);
+  // Local backup safety net: mirror genuine user edits to localStorage so
+  // in-progress writing survives a crash / connection drop. Never during the
+  // initial content load or while viewing a read-only offline copy.
+  if (!initialContentLoadedRef.current || readOnlyOfflineRef.current) return;
+  const json = ed.getJSON();
+  if (JSON.stringify(json) === lastSavedContentRef.current) return;
+  if (id) saveLocalDraft(id, json, Date.now());
 },
   });
 
@@ -487,29 +507,79 @@ usePageTitle(
   }, [id]);
 
   const fetchDocument = async () => {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('id, title, content, doc_type, plagiarism_score, plagiarism_data, updated_at')
-      .eq('id', id!)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, title, content, doc_type, plagiarism_score, plagiarism_data, updated_at')
+        .eq('id', id!)
+        .single();
 
-    if (error || !data) {
+      if (error || !data) throw error ?? new Error('not found');
+
+      // Online load succeeded — leave read-only offline mode and cache a copy
+      // for offline reading/export later.
+      setReadOnlyOffline(false);
+      setOfflineLastDoc(null);
+      editor?.setEditable(true);
+      cacheDocument({
+        id: data.id,
+        title: data.title,
+        content: data.content,
+        doc_type: data.doc_type,
+      });
+
+      // Safety net: if a local backup is newer than the server's copy, offer to
+      // restore it instead of silently overwriting either way.
+      const serverMs = Date.parse(data.updated_at);
+      if (!Number.isNaN(serverMs) && hasNewerDraft(id!, serverMs)) {
+        const draft = getLocalDraft(id!);
+        if (draft) setDraftPrompt({ backedUpAt: draft.backedUpAt });
+      }
+
+      setDoc(data);
+      setTitle(data.title);
+      lastUpdatedAtRef.current = data.updated_at;
+      setLoading(false);
+    } catch (err) {
+      // Offline fallback: read from the local cache, in read-only mode.
+      if (!navigator.onLine) {
+        const cached = getCachedDocument(id!);
+        if (cached) {
+          setDoc({
+            id: cached.id,
+            title: cached.title,
+            content: cached.content as Json,
+            doc_type: cached.doc_type as DocType,
+            plagiarism_score: null,
+            plagiarism_data: null,
+            updated_at: '',
+          });
+          setTitle(cached.title);
+          setReadOnlyOffline(true);
+          setLoading(false);
+          return;
+        }
+        // No cache for this route, but we have a last-opened doc to offer.
+        const last = getLastCachedDocument();
+        if (last) {
+          setOfflineLastDoc(last);
+          setLoading(false);
+          return;
+        }
+      }
       toast.error('Document not found');
       navigate('/dashboard');
-      return;
     }
-
-    setDoc(data);
-    setTitle(data.title);
-    lastUpdatedAtRef.current = data.updated_at;
-    setLoading(false);
   };
 
   // Load content into editor once both editor and doc are ready
   useEffect(() => {
     if (!editor || !doc) return;
     docTypeRef.current = doc.doc_type;
-    
+    readOnlyOfflineRef.current = readOnlyOffline;
+    // Suppress draft backups while we programmatically load the initial content.
+    initialContentLoadedRef.current = false;
+
     if (doc.content) {
       // Try as TipTap JSON first, fall back to HTML string
       if (typeof doc.content === 'object' && (doc.content as any).type === 'doc') {
@@ -521,12 +591,16 @@ usePageTitle(
       editor.commands.setContent(templates[doc.doc_type]);
     }
     setWordCount(editor.storage.characterCount.words());
+    // Offline copies are read-only; online copies are editable.
+    editor.setEditable(!readOnlyOffline);
     // Baseline the just-loaded content so the first autosave doesn't snapshot
     // an unchanged document.
     lastSavedContentRef.current = JSON.stringify(editor.getJSON());
     lastSavedTitleRef.current = doc.title;
     conflictWarnedRef.current = false;
-  }, [editor, doc]);
+    // Baseline is set — genuine edits from here on may be backed up.
+    initialContentLoadedRef.current = true;
+  }, [editor, doc, readOnlyOffline]);
 
   const saveDocument = useCallback(async ({ manual = false }: { manual?: boolean } = {}) => {
     if (!id || !editor || !user) return;
@@ -554,6 +628,10 @@ usePageTitle(
         content: content as unknown as Json,
       });
       localStorage.setItem(`rb_wc_${id}`, String(editor.storage.characterCount.words()));
+      // Server now has the latest — the local backup is no longer needed.
+      clearLocalDraft(id);
+      // Also refresh the offline read cache with the just-saved content.
+      cacheDocument({ id, title, content, doc_type: docTypeRef.current });
     };
 
     setSaving(true);
@@ -1426,6 +1504,8 @@ usePageTitle(
             onClick={() => toggleOrOpen(chatOpen, openChat, () => setChatOpen(false))}
             aria-label="AI Chat"
             data-intro-id="chat-btn"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
             className="scale-click"
           >
             <MessageCircle className="w-4 h-4" />
@@ -1441,6 +1521,8 @@ usePageTitle(
             onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
             aria-label="Humanizer"
             data-intro-id="humanizer-btn"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
             className="scale-click"
           >
             <Sparkles className="w-4 h-4" />
@@ -1456,6 +1538,8 @@ usePageTitle(
             onClick={() => toggleOrOpen(showPlagiarism, openPlagiarism, () => setShowPlagiarism(false))}
             aria-label="AI Detector"
             data-intro-id="ai-detector-btn"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
             className="scale-click"
           >
             <ShieldCheck className="w-4 h-4" />
@@ -1471,6 +1555,8 @@ usePageTitle(
             onClick={() => toggleOrOpen(showPolish, openPolish, () => setShowPolish(false))}
             aria-label="Writing Polish"
             data-intro-id="polish-btn"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
             className="scale-click"
           >
             <Wand2 className="w-4 h-4" />
@@ -1486,6 +1572,8 @@ usePageTitle(
             size="icon"
             onClick={() => toggleOrOpen(showDecoder, openDecoder, () => setShowDecoder(false))}
             aria-label="Assignment Decoder"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
             className="scale-click"
           >
             <BookOpenCheck className="w-4 h-4" />
@@ -1688,8 +1776,77 @@ const formatButtons = editor ? (
         </Button>
       </header>
 
+      {/* ── OFFLINE READ-ONLY NOTICE ── */}
+      {readOnlyOffline && (
+        <div className="shrink-0 border-b border-border bg-muted px-4 py-2 text-center text-xs text-muted-foreground">
+          Viewing offline copy — reconnect to edit.
+        </div>
+      )}
+
+      {/* ── OFFLINE LAST-DOCUMENT OFFER ── */}
+      {offlineLastDoc && (
+        <div className="shrink-0 border-b border-border bg-muted px-4 py-2 flex items-center justify-center gap-3 text-xs text-muted-foreground">
+          <span className="truncate">
+            You're offline. Open your last document “{offlineLastDoc.title}”?
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2.5 text-xs shrink-0"
+            onClick={() => {
+              const last = offlineLastDoc;
+              setOfflineLastDoc(null);
+              setReadOnlyOffline(true);
+              setDoc({
+                id: last.id,
+                title: last.title,
+                content: last.content as Json,
+                doc_type: last.doc_type as DocType,
+                plagiarism_score: null,
+                plagiarism_data: null,
+                updated_at: '',
+              });
+              setTitle(last.title);
+            }}
+          >
+            Open
+          </Button>
+        </div>
+      )}
+
+      {/* ── UNSAVED LOCAL CHANGES (restore prompt) ── */}
+      {draftPrompt && (
+        <div className="shrink-0 border-b border-border bg-muted px-4 py-2 flex items-center justify-center gap-3 text-xs text-foreground">
+          <span className="truncate">We found unsaved changes on this device — restore them?</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => {
+                const draft = id ? getLocalDraft(id) : null;
+                if (draft && editor) editor.commands.setContent(draft.content as never);
+                setDraftPrompt(null);
+              }}
+            >
+              Restore
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => {
+                if (id) clearLocalDraft(id);
+                setDraftPrompt(null);
+              }}
+            >
+              Discard
+            </Button>
+          </div>
+        </div>
+      )}
+
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
-      
+
       {/* Main content area */}
       <div className={`flex flex-1 overflow-hidden ${focusMode ? 'pt-14' : ''}`}>
         {/* Editor Canvas */}

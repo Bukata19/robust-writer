@@ -12,6 +12,7 @@ import SettingsDrawer from '@/components/SettingsDrawer';
 import InstallPrompt from '@/components/InstallPrompt';
 import OnboardingModal from '@/components/onboarding/OnboardingModal';
 import OfflineBadge from '@/components/OfflineBadge';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import ImportDocumentButton from '@/components/ImportDocumentButton';
 import { Logo } from '@/components/Logo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -139,6 +140,7 @@ const Dashboard: React.FC = () => {
   const { user, signOut, profile } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const online = useOnlineStatus();
 
   // Onboarding: auto-show once per session while incomplete; a dismissible
   // banner offers the way back in afterwards.
@@ -508,7 +510,9 @@ const Dashboard: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => createDocument(type)}
-                  className="group surface-card card-hover-glow focus-ring flex flex-col items-start gap-3 p-4 text-left transition-all hover:border-primary/50"
+                  disabled={!online}
+                  title={!online ? 'Needs internet' : undefined}
+                  className="group surface-card card-hover-glow focus-ring flex flex-col items-start gap-3 p-4 text-left transition-all hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border"
                 >
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary group-hover:from-primary group-hover:to-primary group-hover:text-primary-foreground transition-all shrink-0 group-hover:scale-105">
                     {config.icon}
@@ -527,7 +531,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div data-intro-id="import-btn" className="mt-3">
-            <ImportDocumentButton onImported={fetchDocuments} />
+            <ImportDocumentButton onImported={fetchDocuments} disabled={!online} />
           </div>
         </div>
 

@@ -10,6 +10,8 @@ type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
 interface ImportDocumentButtonProps {
   onImported?: () => void;
+  /** Disable importing (e.g. while offline — importing creates a server doc). */
+  disabled?: boolean;
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -206,7 +208,7 @@ async function parseDocxToTipTap(buffer: ArrayBuffer): Promise<{ doc: any; title
 }
 
 // ── COMPONENT ──────────────────────────────────────────────────────────────
-const ImportDocumentButton: React.FC<ImportDocumentButtonProps> = ({ onImported }) => {
+const ImportDocumentButton: React.FC<ImportDocumentButtonProps> = ({ onImported, disabled }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -277,7 +279,8 @@ const ImportDocumentButton: React.FC<ImportDocumentButtonProps> = ({ onImported 
       />
       <button
         onClick={() => fileInputRef.current?.click()}
-        disabled={importing}
+        disabled={importing || disabled}
+        title={disabled ? 'Needs internet' : undefined}
         className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl
           bg-card border border-border border-dashed
           text-sm font-medium text-muted-foreground
