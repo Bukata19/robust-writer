@@ -51,3 +51,20 @@ export function hasNewerDraft(id: string, lastSavedAt: number): boolean {
   const draft = getLocalDraft(id);
   return !!draft && draft.backedUpAt > lastSavedAt;
 }
+
+/**
+ * Remove every local draft. Call on sign-out so in-progress writing isn't left
+ * behind on a shared machine for the next user. Leaves unrelated keys intact.
+ */
+export function clearAllLocalDrafts(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}

@@ -4,6 +4,7 @@ import {
   getLocalDraft,
   clearLocalDraft,
   hasNewerDraft,
+  clearAllLocalDrafts,
 } from './localDraft';
 
 describe('localDraft', () => {
@@ -42,5 +43,15 @@ describe('localDraft', () => {
     localStorage.setItem('rb_draft_bad', '{oops');
     expect(getLocalDraft('bad')).toBeNull();
     expect(hasNewerDraft('bad', 0)).toBe(false);
+  });
+
+  it('clearAllLocalDrafts removes every draft but leaves other keys', () => {
+    saveLocalDraft('d1', { a: 1 }, 1);
+    saveLocalDraft('d2', { b: 2 }, 2);
+    localStorage.setItem('rb_offline_last_id', 'd1'); // unrelated key
+    clearAllLocalDrafts();
+    expect(getLocalDraft('d1')).toBeNull();
+    expect(getLocalDraft('d2')).toBeNull();
+    expect(localStorage.getItem('rb_offline_last_id')).toBe('d1');
   });
 });

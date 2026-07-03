@@ -60,3 +60,21 @@ export function getLastCachedDocument(): CachedDoc | null {
   if (!id) return null;
   return getCachedDocument(id);
 }
+
+/**
+ * Remove every cached document + the last-opened pointer. Call on sign-out so
+ * a shared/library machine never leaves one user's document readable to the
+ * next. Leaves unrelated app keys intact.
+ */
+export function clearOfflineDocs(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith(DOC_PREFIX) || k === LAST_ID_KEY)) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}

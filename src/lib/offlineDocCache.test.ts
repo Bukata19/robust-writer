@@ -3,6 +3,7 @@ import {
   cacheDocument,
   getCachedDocument,
   getLastCachedDocument,
+  clearOfflineDocs,
 } from './offlineDocCache';
 
 const docA = { id: 'a1', title: 'Alpha', content: { type: 'doc' }, doc_type: 'essay' };
@@ -39,5 +40,16 @@ describe('offlineDocCache', () => {
   it('survives corrupted JSON without throwing', () => {
     localStorage.setItem('rb_offline_doc_x', '{not json');
     expect(getCachedDocument('x')).toBeNull();
+  });
+
+  it('clearOfflineDocs removes all cached docs + last-id but leaves other keys', () => {
+    cacheDocument(docA);
+    cacheDocument(docB);
+    localStorage.setItem('rb_wc_a1', '123'); // unrelated app key
+    clearOfflineDocs();
+    expect(getCachedDocument('a1')).toBeNull();
+    expect(getCachedDocument('b2')).toBeNull();
+    expect(getLastCachedDocument()).toBeNull();
+    expect(localStorage.getItem('rb_wc_a1')).toBe('123');
   });
 });

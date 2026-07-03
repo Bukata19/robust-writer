@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
+import { clearOfflineDocs } from '@/lib/offlineDocCache';
+import { clearAllLocalDrafts } from '@/lib/localDraft';
 import { toast } from 'sonner';
 
 const REMEMBER_KEY = 'rb_remember_me';
@@ -172,6 +174,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     isManualSignOutRef.current = true;
     localStorage.removeItem(REMEMBER_KEY);
+    // Offline caches hold full document text + drafts. Purge them on sign-out
+    // so a shared/library machine never leaves one user's writing readable to
+    // the next person who signs in.
+    clearOfflineDocs();
+    clearAllLocalDrafts();
     await supabase.auth.signOut();
   };
 
