@@ -43,9 +43,11 @@ export function cacheDocument(doc: CacheInput): void {
 /** Retrieve a cached document by id, or null if absent/corrupt. */
 export function getCachedDocument(id: string): CachedDoc | null {
   if (!id) return null;
-  const raw = localStorage.getItem(DOC_PREFIX + id);
-  if (!raw) return null;
   try {
+    // The read itself can throw (storage disabled / privacy mode), so it
+    // lives inside the same defensive path as the parse.
+    const raw = localStorage.getItem(DOC_PREFIX + id);
+    if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedDoc;
     if (!parsed || parsed.id !== id) return null;
     return parsed;
@@ -56,9 +58,13 @@ export function getCachedDocument(id: string): CachedDoc | null {
 
 /** Retrieve the most recently cached document, or null. */
 export function getLastCachedDocument(): CachedDoc | null {
-  const id = localStorage.getItem(LAST_ID_KEY);
-  if (!id) return null;
-  return getCachedDocument(id);
+  try {
+    const id = localStorage.getItem(LAST_ID_KEY);
+    if (!id) return null;
+    return getCachedDocument(id);
+  } catch {
+    return null;
+  }
 }
 
 /**

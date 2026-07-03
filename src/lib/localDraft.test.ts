@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   saveLocalDraft,
   getLocalDraft,
@@ -53,5 +53,45 @@ describe('localDraft', () => {
     expect(getLocalDraft('d1')).toBeNull();
     expect(getLocalDraft('d2')).toBeNull();
     expect(localStorage.getItem('rb_offline_last_id')).toBe('d1');
+  });
+
+  describe('storage access failures', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('returns null / false when localStorage.getItem itself throws', () => {
+      saveLocalDraft('d5', { a: 1 }, 100);
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('storage denied');
+      });
+      expect(getLocalDraft('d5')).toBeNull();
+      expect(hasNewerDraft('d5', 0)).toBe(false);
+    });
+  });
+
+  describe('revision-based comparison (clock-skew safe)', () => {
+    it('stores the server revision the draft was based on', () => {
+      saveLocalDraft('r1', { a: 1 }, 100, '2026-07-03T10:00:00Z');
+      expect(getLocalDraft('r1')!.baseRevision).toBe('2026-07-03T10:00:00Z');
+    });
+
+    it('is newer when the base revision matches the current server revision, regardless of clocks', () => {
+      // Client clock far BEHIND server clock: time compare would say "older",
+      // but the server has not changed since the backup → unsaved edits exist.
+      saveLocalDraft('r2', { a: 1 }, 100, 'rev-A');
+      expect(hasNewerDraft('r2', 999_999, 'rev-A')).toBe(true);
+    });
+
+    it('is not newer when the server has moved past the draft base revision', () => {
+      // Client clock far AHEAD: time compare would say "newer", but the server
+      // was saved after this backup → the draft is stale.
+      saveLocalDraft('r3', { a: 1 }, 999_999, 'rev-A');
+      expect(hasNewerDraft('r3', 100, 'rev-B')).toBe(false);
+    });
+
+    it('falls back to time comparison for legacy drafts without a revision', () => {
+      saveLocalDraft('r4', { a: 1 }, 2000);
+      expect(hasNewerDraft('r4', 1000, 'rev-A')).toBe(true);
+      expect(hasNewerDraft('r4', 3000, 'rev-A')).toBe(false);
+    });
   });
 });

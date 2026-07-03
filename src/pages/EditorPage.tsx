@@ -387,7 +387,9 @@ const EditorPage: React.FC = () => {
   if (!initialContentLoadedRef.current || readOnlyOfflineRef.current) return;
   const json = ed.getJSON();
   if (JSON.stringify(json) === lastSavedContentRef.current) return;
-  if (id) saveLocalDraft(id, json, Date.now());
+  // Record the server revision this edit is based on so the restore check can
+  // compare revisions instead of client-vs-server clocks (clock-skew safe).
+  if (id) saveLocalDraft(id, json, Date.now(), lastUpdatedAtRef.current ?? undefined);
 },
   });
 
@@ -528,10 +530,13 @@ usePageTitle(
         doc_type: data.doc_type,
       });
 
-      // Safety net: if a local backup is newer than the server's copy, offer to
-      // restore it instead of silently overwriting either way.
+      // Safety net: if a local backup holds edits the server hasn't seen,
+      // offer to restore it instead of silently overwriting either way.
+      // Primary check is revision-based (draft.baseRevision vs the server's
+      // current updated_at) so client/server clock skew can't hide a draft;
+      // the timestamp is only a fallback for legacy drafts.
       const serverMs = Date.parse(data.updated_at);
-      if (!Number.isNaN(serverMs) && hasNewerDraft(id!, serverMs)) {
+      if (!Number.isNaN(serverMs) && hasNewerDraft(id!, serverMs, data.updated_at)) {
         const draft = getLocalDraft(id!);
         if (draft) setDraftPrompt({ backedUpAt: draft.backedUpAt });
       }

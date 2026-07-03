@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   cacheDocument,
   getCachedDocument,
@@ -40,6 +40,19 @@ describe('offlineDocCache', () => {
   it('survives corrupted JSON without throwing', () => {
     localStorage.setItem('rb_offline_doc_x', '{not json');
     expect(getCachedDocument('x')).toBeNull();
+  });
+
+  describe('storage access failures', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('returns null when localStorage.getItem itself throws', () => {
+      cacheDocument(docA);
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('storage denied');
+      });
+      expect(getCachedDocument('a1')).toBeNull();
+      expect(getLastCachedDocument()).toBeNull();
+    });
   });
 
   it('clearOfflineDocs removes all cached docs + last-id but leaves other keys', () => {
