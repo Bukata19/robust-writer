@@ -16,19 +16,27 @@
 do $do$
 begin
   if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
-    execute 'create extension if not exists pg_cron';
+    -- Best-effort: the extension being listed does not guarantee create
+    -- extension or cron.schedule will succeed (privilege / allow-list
+    -- restrictions). Any failure here must not abort the migration — it
+    -- just means retention falls back to the write-path prune.
+    begin
+      execute 'create extension if not exists pg_cron';
 
-    -- Replace any previous schedule with this name so re-running the
-    -- migration can't stack duplicate jobs.
-    perform cron.unschedule(jobid)
-      from cron.job
-     where jobname = 'detection-cache-prune';
+      -- Replace any previous schedule with this name so re-running the
+      -- migration can't stack duplicate jobs.
+      perform cron.unschedule(jobid)
+        from cron.job
+       where jobname = 'detection-cache-prune';
 
-    perform cron.schedule(
-      'detection-cache-prune',
-      '17 3 * * *',  -- daily, 03:17 UTC
-      $job$ delete from public.detection_cache where created_at < now() - interval '30 days' $job$
-    );
+      perform cron.schedule(
+        'detection-cache-prune',
+        '17 3 * * *',  -- daily, 03:17 UTC
+        $job$ delete from public.detection_cache where created_at < now() - interval '30 days' $job$
+      );
+    exception when others then
+      raise notice 'pg_cron setup failed (%) — detection_cache retention falls back to the write-path prune', sqlerrm;
+    end;
   else
     raise notice 'pg_cron unavailable — detection_cache retention falls back to the write-path prune';
   end if;
