@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  SCORER_VERSION,
+  normalizeText,
+  computeDeterministicScore,
+  deriveRiskLevel,
+  hashText,
+} from "./scoring.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -327,8 +334,11 @@ async function callModel(
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        // Lower temperature than humanizer — detection needs precision not creativity
-        temperature: 0.2,
+        // Temperature 0: the model only writes the qualitative explanation now
+        // (the score is computed in code), so we want maximum stability. The
+        // gateway has no reliable seed support, so we don't send one — full
+        // response determinism is guaranteed by the detection_cache instead.
+        temperature: 0,
         top_p: 0.9,
         tools,
         tool_choice: toolChoice,
@@ -400,6 +410,30 @@ serve(async (req) => {
       );
     }
 
+    // One canonical string for the cache hash, the signal computation, and the
+    // prompt — whitespace/line-ending/unicode variants of the same essay must
+    // neither score differently nor collide on a cache key.
+    const normalizedText = normalizeText(text);
+    const textHash = await hashText(normalizedText);
+
+    // Cache: identical text (same user, same scorer version) returns the
+    // stored report byte-identically — no signal pass, no model call. Runs
+    // AFTER the rate-limit check and input validation above, so it does not
+    // weaken either.
+    const { data: cached } = await supabase
+      .from("detection_cache")
+      .select("result")
+      .eq("user_id", userData.user.id)
+      .eq("text_hash", textHash)
+      .eq("scorer_version", SCORER_VERSION)
+      .maybeSingle();
+    if (cached?.result) {
+      return new Response(
+        JSON.stringify(cached.result),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -408,53 +442,38 @@ serve(async (req) => {
       );
     }
 
-    // Run pre-analysis
-    const signals = analyzeTextSignals(text);
+    // Run pre-analysis on the canonical text
+    const signals = analyzeTextSignals(normalizedText);
     const signalSummary = buildSignalSummary(signals);
 
-    const systemPrompt = `You are an advanced academic integrity and AI-content detection engine. Your job is to give the most accurate, calibrated originality analysis possible — the same quality used by Copyleaks, GPTZero, and Originality.ai.
+    // The number is decided HERE, in code — a pure function of the measured
+    // signals. The model never chooses or adjusts it.
+    const overallScore = computeDeterministicScore(signals);
+    const riskLevel = deriveRiskLevel(overallScore);
+
+    const systemPrompt = `You are the EXPLANATION engine of an academic AI-content detector. The overall score has ALREADY been computed deterministically from measured linguistic signals — you do not score, adjust, or second-guess it. Your job is to explain it and point at concrete evidence in the text.
+
+THE COMPUTED RESULT (fixed, not yours to change):
+- Overall score: ${overallScore}/100
+- Risk band: ${riskLevel.replace("_", " ").toUpperCase()} (0–15 clean, 16–40 low risk, 41–70 moderate, 71–100 high risk)
 
 You have been given TWO inputs:
-1. Pre-computed linguistic signals (burstiness, AI signature word density, transition density, coherence uniformity, paragraph-level risks)
-2. The raw text to analyze
+1. The pre-computed linguistic signals that produced that score (burstiness, AI signature word density, transition density, coherence uniformity, paragraph-level risks)
+2. The text itself
 
-Use the pre-computed signals as ground-truth data to anchor your scoring. Do NOT ignore them. Your subjective reading should complement — not contradict — the measured signals.
+Write your summary, flagged passages, strengths, and indicators so they are CONSISTENT with the computed score and band above — explain what drove the number using the measured signals as ground truth. This is a heuristic signals-based estimate, not proof of misconduct; keep the summary factual about what was measured, never accusatory.
 
 You MUST respond using the "plagiarism_report" tool.
 
 ═══════════════════════════════════════════════════════
-DETECTION FRAMEWORK — ANALYZE ACROSS ALL SEVEN LAYERS:
+WHAT TO LOOK FOR WHEN EXPLAINING AND FLAGGING PASSAGES:
 ═══════════════════════════════════════════════════════
 
-1. AI-GENERATION SIGNALS (weighted 35% of score)
-   a) PERPLEXITY — Are word choices predictable? LLMs pick the most statistically probable next token.
-      Signals: "delve," "tapestry," "leverage," "robust," "nuanced," "paramount," "multifaceted,"
-      "seamlessly," "foster," "facilitate," "streamline," "empower," "harness," "innovative,"
-      "transformative," "cutting-edge," "pivotal," "underscore," "synergy," "holistic"
-   b) BURSTINESS — LLMs produce unnaturally uniform sentence lengths.
-   c) TRANSITION DENSITY — LLMs over-use explicit connectors.
-   d) STRUCTURAL PATTERNS — triadic lists, "not only X but also Y," balanced hedging.
-   e) AI PREAMBLE PHRASES
-
-2. WRITING STYLE CONSISTENCY (weighted 20%)
-3. VOCABULARY NATURALNESS (weighted 15%)
-4. SPECIFICITY & PERSONAL VOICE (weighted 10%)
-5. FORMULAIC STRUCTURE (weighted 10%)
-6. UNCITED FACTUAL CLAIMS (weighted 5%)
-7. COHERENCE UNIFORMITY (weighted 5%)
-
-═══════════════════════════════
-SCORING GUIDELINES:
-0–15   CLEAN     — Strong originality, natural voice, high burstiness
-16–40  LOW RISK  — Mostly original, minor concerns
-41–70  MODERATE  — Multiple AI/plagiarism signals
-71–100 HIGH RISK — Strong AI-generation indicators
-
-CALIBRATION RULES:
-- If signatureWordDensity >= 8 AND burstinessScore >= 70: overall_score >= 65
-- If signatureWordDensity >= 4 AND transitionDensity >= 12: overall_score >= 45
-- If burstinessScore <= 25 AND signatureWordDensity <= 2: overall_score <= 25
-- Academic writing naturally contains some common phrases — penalize PATTERNS not isolated terms
+a) PERPLEXITY — predictable LLM word choices: "delve," "tapestry," "leverage," "robust," "nuanced," "paramount," "multifaceted," "seamlessly," "foster," "facilitate," "streamline," "empower," "harness," "innovative," "transformative," "cutting-edge," "pivotal," "underscore," "synergy," "holistic"
+b) BURSTINESS — unnaturally uniform sentence lengths.
+c) TRANSITION DENSITY — over-use of explicit connectors.
+d) STRUCTURAL PATTERNS — triadic lists, "not only X but also Y," balanced hedging.
+e) AI PREAMBLE PHRASES, style inconsistency, formulaic structure, uncited factual claims, coherence uniformity.
 
 CONFIDENCE SCORING (per flagged passage):
 - 90–100: Multiple strong signals converge — high certainty
@@ -468,7 +487,7 @@ CONCERN TYPES:
 • "low_burstiness" • "high_transition_density" • "formulaic_structure"
 • "style_inconsistency" • "common_phrasing" • "uncited_claim" • "coherence_uniformity"`;
 
-    const userMessage = `${signalSummary}\n\n=== TEXT TO ANALYZE ===\n\n${text}`;
+    const userMessage = `${signalSummary}\n\n=== TEXT TO ANALYZE ===\n\n${normalizedText}`;
 
     const tools = [
       {
@@ -479,15 +498,6 @@ CONCERN TYPES:
           parameters: {
             type: "object",
             properties: {
-              overall_score: {
-                type: "number",
-                description: "Overall plagiarism/AI risk score 0–100, calibrated against pre-computed signals",
-              },
-              risk_level: {
-                type: "string",
-                enum: ["clean", "low_risk", "moderate", "high_risk"],
-                description: "Categorical risk level matching score ranges",
-              },
               summary: {
                 type: "string",
                 description: "2–3 sentence assessment citing specific signals detected",
@@ -534,7 +544,7 @@ CONCERN TYPES:
                 },
               },
             },
-            required: ["overall_score", "risk_level", "summary", "originality_strengths", "source_indicators", "flagged_passages"],
+            required: ["summary", "originality_strengths", "source_indicators", "flagged_passages"],
             additionalProperties: false,
           },
         },
@@ -593,7 +603,10 @@ CONCERN TYPES:
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    report.overall_score = Math.max(0, Math.min(100, Math.round(report.overall_score)));
+    // The score and band come from code — overwrite anything the model may
+    // have volunteered so the number is always the deterministic one.
+    report.overall_score = overallScore;
+    report.risk_level = riskLevel;
 
     // Attach raw signals for UI display
     report.raw_signals = {
@@ -612,6 +625,29 @@ CONCERN TYPES:
     // highlight every occurrence (independent of the model's quoting).
     report.ai_words_found = signals.aiWordHits.map((h: { word: string }) => h.word);
     report.ai_phrases_found = signals.aiPhraseHits.map((h: { phrase: string }) => h.phrase);
+
+    // Cache the FULL assembled report (the exact payload the client renders
+    // and writes plagiarism_score from), then prune this user's stale rows.
+    // Both are best-effort: a cache hiccup must never fail the scan.
+    try {
+      await supabase.from("detection_cache").upsert(
+        {
+          user_id: userData.user.id,
+          text_hash: textHash,
+          scorer_version: SCORER_VERSION,
+          result: report,
+        },
+        { onConflict: "user_id,text_hash", ignoreDuplicates: true }
+      );
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      await supabase
+        .from("detection_cache")
+        .delete()
+        .eq("user_id", userData.user.id)
+        .lt("created_at", cutoff);
+    } catch (cacheErr) {
+      console.error("detection_cache write failed:", cacheErr);
+    }
 
     return new Response(
       JSON.stringify(report),
