@@ -136,6 +136,7 @@ const ScoreGauge: React.FC<{ score: number; riskLevel?: string }> = ({ score, ri
   const getGradientId = () => {
     if (score <= 15) return 'gauge-teal';
     if (score <= 40) return 'gauge-yellow';
+    if (score <= 70) return 'gauge-orange';
     return 'gauge-red';
   };
 
@@ -166,6 +167,13 @@ const ScoreGauge: React.FC<{ score: number; riskLevel?: string }> = ({ score, ri
           <linearGradient id="gauge-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(45, 100%, 50%)" />
             <stop offset="100%" stopColor="hsl(30, 100%, 50%)" />
+          </linearGradient>
+          {/* Distinct orange for the 41–70 "Moderate" band so the gauge color
+              matches its label instead of jumping straight to red. Literal hsl
+              stops follow this component's existing gauge-gradient convention. */}
+          <linearGradient id="gauge-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(25, 100%, 50%)" />
+            <stop offset="100%" stopColor="hsl(15, 95%, 45%)" />
           </linearGradient>
           <linearGradient id="gauge-red" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(0, 100%, 50%)" />
