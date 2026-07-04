@@ -190,11 +190,21 @@ const Dashboard: React.FC = () => {
     }
   }, [renamingId]);
 
-  // Onboarding tour
+  // Onboarding tour — sequenced strictly AFTER the personalization modal so
+  // the two overlays can never stack. It waits until onboarding is resolved
+  // (completed or skipped — Skip also sets onboarding_completed) and the
+  // modal is closed. Esc-closing the modal leaves onboarding unresolved,
+  // which keeps the tour suppressed until it is finished or skipped.
+  // tourStartedRef blocks a second intro.js instance if the effect re-fires
+  // after the tour has started but before its done-key is written.
+  const tourStartedRef = useRef(false);
   useEffect(() => {
     const TOUR_KEY = 'rb_dashboard_tour_v3_done';
     if (localStorage.getItem(TOUR_KEY)) return;
+    if (tourStartedRef.current) return;
+    if (!profile?.onboarding_completed || onboardingOpen) return;
     const timer = setTimeout(() => {
+      tourStartedRef.current = true;
       const intro = introJs();
       intro.setOptions({
         steps: [
@@ -224,7 +234,9 @@ const Dashboard: React.FC = () => {
       intro.start();
     }, 600);
     return () => clearTimeout(timer);
-  }, []);
+    // Primitive dep (not the profile object) so profile-reference churn from
+    // unrelated updateProfile calls can't re-fire this effect.
+  }, [profile?.onboarding_completed, onboardingOpen]);
 
   const fetchDocuments = async () => {
     const { data, error } = await supabase
