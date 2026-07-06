@@ -18,6 +18,10 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   profile: Profile | null;
+  /** True once the profile load has settled (success, no-row-created, or
+      terminal failure). Lets consumers distinguish "still loading" from
+      "failed — profile is null for this session". */
+  profileResolved: boolean;
   refreshProfile: () => Promise<void>;
   updateProfile: (fields: TablesUpdate<'profiles'>) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -34,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileResolved, setProfileResolved] = useState(false);
   // Scoped to this component instance — avoids module-level mutable state.
   const isManualSignOutRef = React.useRef(false);
 
@@ -89,20 +94,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) {
       setProfile(null);
+      setProfileResolved(false);
       return;
     }
     let cancelled = false;
+    setProfileResolved(false);
+
+    // Fetch with retry: transient errors (network blip, cold PWA start) used
+    // to be swallowed silently, leaving profile null for the whole session
+    // and suppressing every onboarding surface. Retry twice with backoff,
+    // then settle — consumers can see the load resolved via profileResolved.
+    const fetchProfile = async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (cancelled || !error) return { data, error: null };
+        if (attempt === 2) {
+          console.error('profile load failed:', error.message);
+          return { data: null, error };
+        }
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1) * 2));
+        if (cancelled) return { data: null, error };
+      }
+      return { data: null, error: null };
+    };
 
     const load = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const { data, error } = await fetchProfile();
       if (cancelled) return;
 
       if (data) {
         setProfile(data);
+        setProfileResolved(true);
+        return;
+      }
+      if (error) {
+        // Terminal failure — settle with a null profile rather than looking
+        // permanently "still loading".
+        setProfile(null);
+        setProfileResolved(true);
         return;
       }
 
@@ -125,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
         if (!cancelled) setProfile(refetched ?? null);
       }
+      if (!cancelled) setProfileResolved(true);
     };
 
     void load();
@@ -198,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ session, user, loading, profile, refreshProfile, updateProfile, signUp, signIn, signOut, resetPassword, updatePassword }}
+      value={{ session, user, loading, profile, profileResolved, refreshProfile, updateProfile, signUp, signIn, signOut, resetPassword, updatePassword }}
     >
       {children}
     </AuthContext.Provider>

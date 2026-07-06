@@ -4,8 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
-import introJs from 'intro.js';
-import 'intro.js/introjs.css';
+import { useIntroTour, DASHBOARD_TOUR_KEY } from '@/hooks/useIntroTour';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SettingsDrawer from '@/components/SettingsDrawer';
@@ -137,7 +136,7 @@ const Dashboard: React.FC = () => {
     'Manage your documents on RobAssister — create essays, research papers, reports and more with AI assistance.'
   );
 
-  const { user, signOut, profile } = useAuth();
+  const { user, signOut, profile, profileResolved } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const online = useOnlineStatus();
@@ -195,48 +194,32 @@ const Dashboard: React.FC = () => {
   // (completed or skipped — Skip also sets onboarding_completed) and the
   // modal is closed. Esc-closing the modal leaves onboarding unresolved,
   // which keeps the tour suppressed until it is finished or skipped.
-  // tourStartedRef blocks a second intro.js instance if the effect re-fires
-  // after the tour has started but before its done-key is written.
-  const tourStartedRef = useRef(false);
-  useEffect(() => {
-    const TOUR_KEY = 'rb_dashboard_tour_v3_done';
-    if (localStorage.getItem(TOUR_KEY)) return;
-    if (tourStartedRef.current) return;
-    if (!profile?.onboarding_completed || onboardingOpen) return;
-    const timer = setTimeout(() => {
-      tourStartedRef.current = true;
-      const intro = introJs();
-      intro.setOptions({
-        steps: [
-          { intro: 'Welcome to RobAssister! 👋 A quick 30-second tour of your dashboard.' },
-          {
-            element: '[data-intro-id="new-doc-grid"]',
-            intro: '<strong>Start a new document</strong><br/>Pick a type to begin — <strong>Essay</strong>, <strong>Research Paper</strong>, <strong>Report</strong>, or <strong>General</strong>. Each comes pre-structured with the right sections (the General type is a blank canvas).',
-          },
-          {
-            element: '[data-intro-id="import-btn"]',
-            intro: '<strong>Import a file</strong><br/>Bring in a .txt, .md, or .docx file from your device and keep editing it here.',
-          },
-          {
-            element: '[data-intro-id="settings-btn"]',
-            intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), font and canvas defaults, autosave, and accessibility — and you can replay this tour anytime from here.',
-          },
-        ],
-        showBullets: false,
-        showProgress: true,
-        exitOnOverlayClick: true,
-        nextLabel: 'Next →',
-        prevLabel: '← Back',
-        doneLabel: 'Start Writing',
-      });
-      intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
-      intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
-      intro.start();
-    }, 600);
-    return () => clearTimeout(timer);
-    // Primitive dep (not the profile object) so profile-reference churn from
-    // unrelated updateProfile calls can't re-fire this effect.
-  }, [profile?.onboarding_completed, onboardingOpen]);
+  // If the profile load settles WITHOUT a profile (fetch failed after
+  // retries), fall back to the pre-gate behavior and allow the tour — a
+  // broken profiles fetch must not erase every onboarding surface.
+  useIntroTour({
+    storageKey: DASHBOARD_TOUR_KEY,
+    enabled:
+      profileResolved &&
+      !onboardingOpen &&
+      (profile ? !!profile.onboarding_completed : true),
+    doneLabel: 'Start Writing',
+    steps: [
+      { intro: 'Welcome to RobAssister! 👋 A quick 30-second tour of your dashboard.' },
+      {
+        element: '[data-intro-id="new-doc-grid"]',
+        intro: '<strong>Start a new document</strong><br/>Pick a type to begin — <strong>Essay</strong>, <strong>Research Paper</strong>, <strong>Report</strong>, or <strong>General</strong>. Each comes pre-structured with the right sections (the General type is a blank canvas).',
+      },
+      {
+        element: '[data-intro-id="import-btn"]',
+        intro: '<strong>Import a file</strong><br/>Bring in a .txt, .md, or .docx file from your device and keep editing it here.',
+      },
+      {
+        element: '[data-intro-id="settings-btn"]',
+        intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), font and canvas defaults, autosave, and accessibility — and you can replay this tour anytime from here.',
+      },
+    ],
+  });
 
   const fetchDocuments = async () => {
     const { data, error } = await supabase

@@ -44,6 +44,7 @@ import {
   FIELDS_OF_STUDY,
 } from '@/components/onboarding/OnboardingModal';
 import { CUSTOM_INSTRUCTIONS_MAX } from '@/contexts/AuthContext';
+import { DASHBOARD_TOUR_KEY, EDITOR_TOUR_KEY } from '@/hooks/useIntroTour';
 import {
   useSettings,
   type ColorTheme,
@@ -149,13 +150,16 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
   const chips = resolvedMode === 'dark' ? DARK_CHIPS : LIGHT_CHIPS;
 
   const resetTour = useCallback(() => {
+    // Live keys come from the shared registry so a tour version bump can
+    // never silently strand this button on an old key. The literals below
+    // are frozen historical versions kept only to sweep stale entries.
+    localStorage.removeItem(EDITOR_TOUR_KEY);
+    localStorage.removeItem(DASHBOARD_TOUR_KEY);
     localStorage.removeItem('rb_editor_tour_done');
     localStorage.removeItem('rb_editor_tour_v2_done');
     localStorage.removeItem('rb_editor_tour_v3_done');
-    localStorage.removeItem('rb_editor_tour_v4_done');
     localStorage.removeItem('rb_dashboard_tour_done');
     localStorage.removeItem('rb_dashboard_tour_v2_done');
-    localStorage.removeItem('rb_dashboard_tour_v3_done');
     onOpenChange(false);
     toast.success('Onboarding tour reset. Visit the dashboard to restart.');
   }, [onOpenChange]);
