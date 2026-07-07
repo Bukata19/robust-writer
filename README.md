@@ -3,7 +3,7 @@
 # ✍️ RobAssister
 
 **AI writing assistant built for students.**
-Decode assignments · coach your writing · humanize text · check originality — all in one place.
+Decode assignments · be coached on your writing · humanize text · detect AI — all in one place.
 
 [![Open App](https://img.shields.io/badge/▶_Open_App-robobuddy--writer.lovable.app-00d4b8?style=for-the-badge)](https://robobuddy-writer.lovable.app)
 
