@@ -23,8 +23,7 @@ import {
 } from '@/components/ui/drawer';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useIsMobile } from '@/hooks/use-mobile';
-import introJs from 'intro.js';
-import 'intro.js/introjs.css';
+import { useIntroTour, EDITOR_TOUR_KEY } from '@/hooks/useIntroTour';
 import {
   ArrowLeft,
   Save,
@@ -1134,16 +1133,14 @@ usePageTitle(
     }
   }, [chatMessages]);
 
-  // Intro.js onboarding tour
-  useEffect(() => {
-    if (loading) return;
-    const TOUR_KEY = 'rb_editor_tour_v4_done';
-    if (localStorage.getItem(TOUR_KEY)) return;
-
-    const timer = setTimeout(() => {
-      const intro = introJs();
-      intro.setOptions({
-        steps: [
+  // Intro.js onboarding tour — shared launcher carries the once-guard,
+  // done-key persistence, and unmount teardown.
+  useIntroTour({
+    storageKey: EDITOR_TOUR_KEY,
+    enabled: !loading,
+    delayMs: 800,
+    doneLabel: "Let's Write! ✓",
+    steps: [
   {
     intro: "<strong>Welcome to your workspace 👋</strong><br/>Here's a 60-second tour of the editor and your AI writing tools. You can replay it anytime from Settings.",
   },
@@ -1200,20 +1197,7 @@ usePageTitle(
     intro: '<strong>Save</strong><br/>Click here or press Ctrl+S — every save also snapshots Version History, and autosave runs in the background. You are all set! 🎓',
   },
 ],
-        showBullets: false,
-        showProgress: true,
-        exitOnOverlayClick: true,
-        nextLabel: 'Next →',
-        prevLabel: '← Back',
-        doneLabel: "Let's Write! ✓",
-      });
-      intro.oncomplete(() => localStorage.setItem(TOUR_KEY, 'true'));
-      intro.onexit(() => localStorage.setItem(TOUR_KEY, 'true'));
-      intro.start();
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, [loading, isMobile]);
+  });
 
   if (loading) {
     return (
