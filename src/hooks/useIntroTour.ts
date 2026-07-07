@@ -72,8 +72,9 @@ export function useIntroTour({
       const markDone = () => {
         if (!tornDown) localStorage.setItem(storageKey, 'true');
       };
-      intro.oncomplete(markDone);
-      intro.onexit(markDone);
+      // intro.js v8 camelCase API (oncomplete/onexit are deprecated aliases).
+      intro.onComplete(markDone);
+      intro.onExit(markDone);
       intro.start();
     }, delayMs);
 

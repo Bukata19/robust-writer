@@ -123,42 +123,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const load = async () => {
-      const { data, error } = await fetchProfile();
-      if (cancelled) return;
+      // profileResolved is settled in `finally` so no path — including an
+      // unexpected throw from the insert/refetch below — can leave consumers
+      // stuck in a permanent "still loading" state.
+      try {
+        const { data, error } = await fetchProfile();
+        if (cancelled) return;
 
-      if (data) {
-        setProfile(data);
-        setProfileResolved(true);
-        return;
-      }
-      if (error) {
-        // Terminal failure — settle with a null profile rather than looking
-        // permanently "still loading".
-        setProfile(null);
-        setProfileResolved(true);
-        return;
-      }
+        if (data) {
+          setProfile(data);
+          return;
+        }
+        if (error) {
+          // Terminal failure — settle with a null profile rather than looking
+          // permanently "still loading".
+          setProfile(null);
+          return;
+        }
 
-      // No row yet — create a blank one. On a duplicate-key race (two tabs),
-      // fall through to a re-fetch so both tabs converge on the same row.
-      const { data: created } = await supabase
-        .from('profiles')
-        .insert({ user_id: user.id })
-        .select('*')
-        .single();
-      if (cancelled) return;
-
-      if (created) {
-        setProfile(created);
-      } else {
-        const { data: refetched } = await supabase
+        // No row yet — create a blank one. On a duplicate-key race (two tabs),
+        // fall through to a re-fetch so both tabs converge on the same row.
+        const { data: created } = await supabase
           .from('profiles')
+          .insert({ user_id: user.id })
           .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!cancelled) setProfile(refetched ?? null);
+          .single();
+        if (cancelled) return;
+
+        if (created) {
+          setProfile(created);
+        } else {
+          const { data: refetched } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (!cancelled) setProfile(refetched ?? null);
+        }
+      } catch (err) {
+        console.error('profile load failed unexpectedly:', err);
+        if (!cancelled) setProfile(null);
+      } finally {
+        // A cancelled run must not stamp state owned by the newer effect run.
+        if (!cancelled) setProfileResolved(true);
       }
-      if (!cancelled) setProfileResolved(true);
     };
 
     void load();
