@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
 import { clearOfflineDocs } from '@/lib/offlineDocCache';
 import { clearAllLocalDrafts } from '@/lib/localDraft';
+import { DASHBOARD_TOUR_KEY, EDITOR_TOUR_KEY } from '@/hooks/useIntroTour';
 import { toast } from 'sonner';
 
 const REMEMBER_KEY = 'rb_remember_me';
@@ -221,6 +222,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // the next person who signs in.
     clearOfflineDocs();
     clearAllLocalDrafts();
+    // Onboarding/tour state is also per-user: sweep it so the next account on
+    // this browser gets its own onboarding modal and tours instead of
+    // inheriting the previous user's "already seen" flags.
+    localStorage.removeItem(DASHBOARD_TOUR_KEY);
+    localStorage.removeItem(EDITOR_TOUR_KEY);
+    sessionStorage.removeItem('rb_onboarding_autoshown');
+    sessionStorage.removeItem('rb_onboarding_banner_dismissed');
     await supabase.auth.signOut();
   };
 
