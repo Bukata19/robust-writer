@@ -29,13 +29,16 @@ describe('whatsNew seen-state', () => {
   });
 
   it('survives storage access failures without throwing', () => {
-    const orig = Storage.prototype.getItem;
+    const origGet = Storage.prototype.getItem;
+    const origSet = Storage.prototype.setItem;
     Storage.prototype.getItem = () => { throw new Error('denied'); };
+    Storage.prototype.setItem = () => { throw new Error('denied'); };
     try {
       expect(hasUnseenUpdate()).toBe(true); // fail open: show the dot
-      expect(() => markUpdatesSeen()).not.toThrow();
+      expect(() => markUpdatesSeen()).not.toThrow(); // write-catch exercised
     } finally {
-      Storage.prototype.getItem = orig;
+      Storage.prototype.getItem = origGet;
+      Storage.prototype.setItem = origSet;
     }
   });
 });

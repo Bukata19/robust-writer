@@ -106,7 +106,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
   const { signOut, user, profile, updateProfile } = useAuth();
 
   const [query, setQuery] = useState('');
-  const [activeSection, setActiveSection] = useState<SectionId>('appearance');
+  const [activeSection, setActiveSection] = useState<SectionId>(SECTIONS[0].id);
 
   // Text drafts for profile fields — committed on blur so typing isn't
   // clobbered when the profile refreshes after each save.
