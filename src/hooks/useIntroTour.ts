@@ -82,6 +82,10 @@ export function useIntroTour({
       clearTimeout(timer);
       // Tear down a live tour so its overlay can't outlive this page.
       // tornDown suppresses the done-key write for this programmatic exit.
+      // Reset the once-guard so a torn-down (unfinished) tour can re-arm when
+      // enabled flips true again in the same mount (e.g. tab switch back);
+      // after a COMPLETED tour the done-key gates re-entry instead.
+      startedRef.current = false;
       tornDown = true;
       intro?.exit(true);
     };

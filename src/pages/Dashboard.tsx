@@ -29,9 +29,16 @@ import {
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
+  Home, FolderOpen,
 } from 'lucide-react';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
+
+// Static tab chrome config — module scope so it isn't reallocated per render.
+const TABS = [
+  { id: 'home' as const, label: 'Home', icon: Home },
+  { id: 'library' as const, label: 'Library', icon: FolderOpen },
+];
 type SortMode = 'recent' | 'alpha' | 'risk';
 
 interface Document {
@@ -163,6 +170,11 @@ const Dashboard: React.FC = () => {
   const showOnboardingBanner =
     !!profile && !profile.onboarding_completed && !onboardingOpen && !bannerDismissed;
 
+  // Tab view-state only — no routes, no URLs. Home = create/continue,
+  // Library = browse/manage. One shared component tree; the inactive tab's
+  // content is conditionally unrendered (state lives here, so it survives).
+  const [activeTab, setActiveTab] = useState<'home' | 'library'>('home');
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -199,9 +211,14 @@ const Dashboard: React.FC = () => {
   // broken profiles fetch must not erase every onboarding surface.
   useIntroTour({
     storageKey: DASHBOARD_TOUR_KEY,
+    // activeTab gate: the tour's new-doc-grid / import-btn targets are only
+    // mounted on the Home tab. Switching to Library mid-tour tears the tour
+    // down cleanly (hook cleanup) without writing the done-key, and it
+    // re-offers when the user returns to Home.
     enabled:
       profileResolved &&
       !onboardingOpen &&
+      activeTab === 'home' &&
       (profile ? !!profile.onboarding_completed : true),
     doneLabel: 'Start Writing',
     steps: [
@@ -393,7 +410,35 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+      {/* ── DESKTOP TAB NAV — same activeTab state as the mobile bottom bar;
+             only the chrome differs by breakpoint. Segmented-control styling
+             matches the app's existing sort control. ── */}
+      <nav
+        aria-label="Dashboard sections"
+        className="hidden sm:block sticky top-14 z-10 glass-panel border-b border-border"
+      >
+        <div className="max-w-6xl mx-auto px-4 py-2">
+          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/60 border border-border">
+            {TABS.map(({ id, label, icon: TabIcon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                aria-current={activeTab === id ? 'page' : undefined}
+                className={`focus-ring flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  activeTab === id
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <TabIcon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-6xl mx-auto px-4 pt-6 sm:pt-8 pb-24 sm:pb-8">
 
         {/* ── ONBOARDING RETRIGGER BANNER ── */}
         {showOnboardingBanner && (
@@ -423,34 +468,19 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ── GREETING + STATS ── */}
-        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              {greeting}
-            </p>
-            <h1 className="t-page-title">
-              <span className="gradient-hero">{displayName}</span>
-            </h1>
-          </div>
+        {/* ══ HOME TAB — create & continue ══ */}
+        {activeTab === 'home' && (
+        <div className="animate-fade-in">
 
-          <div className="flex items-center gap-2.5">
-            {statChips.map(({ icon, value, label }) => (
-              <div
-                key={label}
-                className="surface-card flex flex-1 sm:flex-initial flex-col items-center justify-center gap-0.5 px-4 py-2.5 min-w-[78px]"
-              >
-                <span className="flex items-center gap-1 text-primary">
-                  {icon}
-                  <span className="text-lg font-display font-bold leading-none">{value}</span>
-                </span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
+        {/* ── GREETING ── */}
+        <div className="mb-7">
+          <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            {greeting}
+          </p>
+          <h1 className="t-page-title">
+            <span className="gradient-hero">{displayName}</span>
+          </h1>
         </div>
 
         {/* ── CONTINUE WRITING ── */}
@@ -528,6 +558,39 @@ const Dashboard: React.FC = () => {
           <div data-intro-id="import-btn" className="mt-3">
             <ImportDocumentButton onImported={fetchDocuments} disabled={!online} />
           </div>
+
+          {/* Library discovery nudge */}
+          <button
+            onClick={() => setActiveTab('library')}
+            className="focus-ring mt-3 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            Your documents live in <span className="font-medium">Library</span> →
+          </button>
+        </div>
+
+        </div>
+        )}
+
+        {/* ══ LIBRARY TAB — browse & manage ══ */}
+        {activeTab === 'library' && (
+        <div className="animate-fade-in">
+
+        {/* ── STATS GLANCE ── */}
+        <div className="mb-5 flex items-center gap-2.5">
+          {statChips.map(({ icon, value, label }) => (
+            <div
+              key={label}
+              className="surface-card flex flex-1 sm:flex-initial flex-col items-center justify-center gap-0.5 px-4 py-2.5 min-w-[78px]"
+            >
+              <span className="flex items-center gap-1 text-primary">
+                {icon}
+                <span className="text-lg font-display font-bold leading-none">{value}</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* ── DOCUMENTS SECTION ── */}
@@ -762,7 +825,38 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+
+        </div>
+        )}
       </main>
+
+      {/* ── MOBILE BOTTOM TAB BAR — same activeTab state as the desktop nav.
+             glass-panel matches the header so the chrome reads as one system;
+             safe-area padding clears iOS home indicators. ── */}
+      <nav
+        aria-label="Dashboard sections"
+        className="sm:hidden fixed bottom-0 inset-x-0 z-20 glass-panel border-t border-border safe-area-bottom"
+      >
+        <div className="flex h-14">
+          {TABS.map(({ id, label, icon: TabIcon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
+              className={`focus-ring relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                activeTab === id ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              {/* Active indicator riding the top border */}
+              {activeTab === id && (
+                <span aria-hidden="true" className="absolute top-0 inset-x-6 h-0.5 rounded-full bg-primary" />
+              )}
+              <TabIcon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       <SettingsDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
       <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
