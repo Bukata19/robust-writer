@@ -31,7 +31,7 @@ Paste your question → structured outline, per-section word counts, draft-and-a
 <td width="50%">
 
 **💬 Writing Coach**
-A quiet, specific tip below your paragraph each time you pause. No popups, no chatbot.
+A quiet, specific tip below your paragraph each time you pause.
 
 </td>
 </tr>
@@ -44,14 +44,6 @@ Three intensity levels with sentence-level reconstruction to lower AI-detection 
 </td>
 <td width="50%">
 
-**🔍 Plagiarism Checker**
-Burstiness, AI-signature density & coherence analysis → originality score + risk map.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
 **🪄 Writing Polish**
 Clarity Check flags weak/passive/wordy lines. Smart Rewrite offers three alternatives.
 
@@ -60,6 +52,48 @@ Clarity Check flags weak/passive/wordy lines. Smart Rewrite offers three alterna
 
 **📝 Rich-Text Editor**
 TipTap multi-page canvas, templates, version history, focus mode, PDF/DOCX export.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**🎯 Reliable AI Detection**
+The plagiarism/AI checker computes its score from deterministic writing signals, not a fresh AI guess each time — the same text always returns the same score.
+
+</td>
+<td width="50%">
+
+**🙋 Personalization**
+A one-time setup asks your name, academic level, field of study, and preferred tone — the chat assistant adapts to you from then on.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**📡 Works Offline**
+Your last-opened document stays readable and exportable with no connection, and unsaved changes are backed up locally so nothing is ever lost mid-write.
+
+</td>
+<td width="50%">
+
+**🏠 Home / Library Dashboard**
+The dashboard has been split into a Home tab (create & continue writing) and a Library tab (browse, search, sort your documents) — bottom tabs on mobile, top nav on desktop.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**🔔 What's New**
+A quiet dot on the settings icon lets you know when there's something new — no popups, just a small tab to check when you're curious.
+
+</td>
+<td width="50%">
+
+**📲 Installable App**
+Full PWA support — install RobAssister to your home screen on Android or desktop and it runs like a native app.
 
 </td>
 </tr>
