@@ -33,6 +33,12 @@ import {
 } from 'lucide-react';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
+
+// Static tab chrome config — module scope so it isn't reallocated per render.
+const TABS = [
+  { id: 'home' as const, label: 'Home', icon: Home },
+  { id: 'library' as const, label: 'Library', icon: FolderOpen },
+];
 type SortMode = 'recent' | 'alpha' | 'risk';
 
 interface Document {
@@ -168,11 +174,6 @@ const Dashboard: React.FC = () => {
   // Library = browse/manage. One shared component tree; the inactive tab's
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library'>('home');
-
-  const TABS = [
-    { id: 'home' as const, label: 'Home', icon: Home },
-    { id: 'library' as const, label: 'Library', icon: FolderOpen },
-  ];
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
