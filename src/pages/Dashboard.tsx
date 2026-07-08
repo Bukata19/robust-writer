@@ -5,6 +5,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useIntroTour, DASHBOARD_TOUR_KEY } from '@/hooks/useIntroTour';
+import { hasUnseenUpdate } from '@/data/whatsNew';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SettingsDrawer from '@/components/SettingsDrawer';
@@ -175,12 +176,21 @@ const Dashboard: React.FC = () => {
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library'>('home');
 
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<DocType | 'all'>('all');
   const [sortBy, setSortBy] = useState<SortMode>('recent');
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Passive "What's New" dot on the settings gear. Re-checked whenever the
+  // drawer closes so viewing the What's New section clears it without a
+  // reload; the initial useState read covers cross-page marking too.
+  const [unseenUpdate, setUnseenUpdate] = useState(hasUnseenUpdate);
+  useEffect(() => {
+    if (!settingsOpen) setUnseenUpdate(hasUnseenUpdate());
+  }, [settingsOpen]);
 
   // Inline rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -367,10 +377,25 @@ const Dashboard: React.FC = () => {
             <Button
               variant="ghost" size="icon"
               onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
+              aria-label={unseenUpdate ? 'Settings — updates available' : 'Settings'}
               data-intro-id="settings-btn"
+              className="relative"
             >
               <Settings className="w-4 h-4" />
+              {/* Passive what's-new dot — informational (primary, not
+                  destructive), ringed with the card color to separate it from
+                  the glass header. The ping twin is gated on BOTH motion
+                  systems: the in-app toggle unmounts it, motion-reduce hides
+                  it (the 0.01ms .reduce-motion rule can't silence an infinite
+                  loop). */}
+              {unseenUpdate && (
+                <span aria-hidden="true" className="absolute top-1 right-1 flex h-2 w-2">
+                  {!settings.reduceMotion && (
+                    <span className="motion-reduce:hidden absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                  )}
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary ring-2 ring-card" />
+                </span>
+              )}
             </Button>
 
             {/* Account menu — gives a sign-out path that was previously missing */}

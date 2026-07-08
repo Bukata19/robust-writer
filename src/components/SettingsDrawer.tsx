@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Search,
   Sparkles,
+  Megaphone,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -45,6 +46,7 @@ import {
 } from '@/components/onboarding/OnboardingModal';
 import { CUSTOM_INSTRUCTIONS_MAX } from '@/contexts/AuthContext';
 import { DASHBOARD_TOUR_KEY, EDITOR_TOUR_KEY } from '@/hooks/useIntroTour';
+import { WHATS_NEW, markUpdatesSeen } from '@/data/whatsNew';
 import {
   useSettings,
   type ColorTheme,
@@ -74,7 +76,7 @@ interface SettingsDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SectionId = 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'profile' | 'account';
+type SectionId = 'whats-new' | 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'profile' | 'account';
 
 interface SectionMeta {
   id: SectionId;
@@ -83,6 +85,7 @@ interface SectionMeta {
 }
 
 const SECTIONS: SectionMeta[] = [
+  { id: 'whats-new', title: "What's New", icon: <Megaphone className="h-4 w-4" /> },
   { id: 'appearance', title: 'Appearance', icon: <Palette className="h-4 w-4" /> },
   { id: 'editor', title: 'Editor', icon: <FileText className="h-4 w-4" /> },
   { id: 'behaviour', title: 'Behaviour', icon: <Timer className="h-4 w-4" /> },
@@ -113,6 +116,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>({
+    'whats-new': null,
     appearance: null,
     editor: null,
     behaviour: null,
@@ -125,7 +129,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
   useEffect(() => {
     if (open) {
       setQuery('');
-      setActiveSection('appearance');
+      // Default to the first section so the rail highlight matches what's
+      // actually at the top of the freshly-opened drawer.
+      setActiveSection(SECTIONS[0].id);
       setDraftName(profile?.display_name ?? '');
       setDraftCustom(profile?.custom_instructions ?? '');
       const saved = profile?.field_of_study ?? '';
@@ -194,8 +200,38 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
     return () => observer.disconnect();
   }, [open, query]);
 
+  // Clear the settings-gear dot when the drawer opens: What's New is the
+  // first section, rendered at the top of the freshly-opened (unscrolled)
+  // drawer, so opening the drawer IS seeing it. Marking on open is also
+  // deterministic where the scroll-spy is not (its initial pass doesn't
+  // reliably crown the top section).
+  useEffect(() => {
+    if (open) markUpdatesSeen();
+  }, [open]);
+
   // ── FIELD DEFINITIONS PER SECTION ──────────────────────────────────────────
   const fieldsBySection = useMemo<Record<SectionId, Field[]>>(() => ({
+    // Per-entry fields so drawer search can match changelog text too.
+    'whats-new': WHATS_NEW.map((entry, idx) => ({
+      label: entry.title,
+      keywords: `${entry.description} ${entry.date} changelog updates news release`,
+      render: () => (
+        <div
+          className="surface-card animate-fade-in p-3"
+          style={{ animationDelay: `${idx * 60}ms` }}
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-sm font-medium text-foreground">{entry.title}</p>
+            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+              {entry.date}
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            {entry.description}
+          </p>
+        </div>
+      ),
+    })),
     appearance: [
       {
         label: 'Theme',
