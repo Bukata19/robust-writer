@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bot, Wand2, ShieldCheck, LayoutTemplate, Save, Lock,
+  Bot, Wand2, Target, LayoutTemplate, Save, Lock,
   PenLine, FlaskConical, BarChart3, File, FileDown, FileType, FileText,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,7 +23,7 @@ const prefersReducedMotion = () =>
 const FEATURES: { num: string; icon: LucideIcon; title: string; desc: string }[] = [
   { num: '01', icon: Bot, title: 'AI Writing Assistant', desc: 'Ask questions, get suggestions, brainstorm ideas — your personal tutor lives inside the editor, always ready to help you write better.' },
   { num: '02', icon: Wand2, title: 'Text Humanizer', desc: 'Transform stiff AI-generated text into natural, human-sounding writing. Choose from Subtle, Moderate, or Full intensity levels.' },
-  { num: '03', icon: ShieldCheck, title: 'Plagiarism Checker', desc: 'Get an originality score instantly. Flagged passages, severity ratings, and actionable suggestions — all inside your document.' },
+  { num: '03', icon: Target, title: 'Writing Coach', desc: 'A live coach that watches how you write — spotting passive voice, wordy phrasing, and weak openers, and nudging you with tips tuned to your level.' },
   { num: '04', icon: LayoutTemplate, title: 'Smart Templates', desc: 'Start any document with a structured template. Essays, research papers, reports, and general documents — all pre-scaffolded for you.' },
   { num: '05', icon: Save, title: 'Autosave & Export', desc: "Your work saves automatically. Export to PDF, DOCX, or TXT in one click when you're done. No lost work, ever." },
   { num: '06', icon: Lock, title: 'Secure & Private', desc: 'Powered by Supabase. Your documents belong to you, protected by email authentication and row-level security.' },
@@ -32,7 +32,7 @@ const FEATURES: { num: string; icon: LucideIcon; title: string; desc: string }[]
 const STEPS = [
   { num: '01', title: 'Create Your Document', desc: 'Sign in and pick your document type — essay, research paper, report, or general. RobAssister loads a smart template to get you started immediately.' },
   { num: '02', title: 'Write & Get AI Help', desc: 'Use the rich-text editor to write. Open the AI chat panel any time for instant suggestions, outline help, or rewrites. Humanize any section with one click.' },
-  { num: '03', title: 'Check & Export', desc: 'Run the plagiarism checker to see your originality score and fix flagged passages. Then export your final document in the format you need.' },
+  { num: '03', title: 'Polish & Export', desc: 'Let the coach and polish tools tighten your draft, then export your final document in the format you need.' },
 ];
 
 const DOC_TYPES: { icon: LucideIcon; label: string }[] = [
@@ -54,7 +54,7 @@ const STATS = [
 const LandingPage: React.FC = () => {
   usePageTitle(
     'AI Writing Assistant for Students',
-    'RobAssister helps students write essays, research papers and reports with AI chat, text humanizing, plagiarism checking and smart assignment guidance — free to start.'
+    'RobAssister helps students write essays, research papers and reports with AI chat, text humanizing, live writing coaching and smart assignment guidance — free to start.'
   );
 
   const { user, loading } = useAuth();
@@ -312,7 +312,7 @@ const LandingPage: React.FC = () => {
             <span className="lp-line-dim">Stay Original.</span>
           </h1>
           <p className="lp-hero-sub">
-            RobAssister is your intelligent writing co-pilot — humanize your text, beat plagiarism detection, and get AI-guided feedback on essays, research papers, and reports.
+            RobAssister is your intelligent writing co-pilot — humanize your text, get live coaching as you write, and AI-guided feedback on essays, research papers, and reports.
           </p>
           <div className="lp-hero-actions">
             <button type="button" className="lp-btn-primary" onClick={launch} disabled={loading}>
