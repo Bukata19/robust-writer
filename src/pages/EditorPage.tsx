@@ -84,6 +84,8 @@ import {
   type HighlightCategory,
   type HighlightMeta,
 } from '@/lib/aiHighlightCompute';
+import { buildFlatText, mapTextRange } from '@/lib/editorPositions';
+import { findOccurrences } from '@/lib/aiDetection';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 const TextStyleWithFontSize = TextStyle.extend({
@@ -271,7 +273,7 @@ const EditorPage: React.FC = () => {
   // Humanizer
   const [humanizerIntensity, setHumanizerIntensity] = useState(settings.defaultHumanizerIntensity);
   const [humanizing, setHumanizing] = useState(false);
-  const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string } | null>(null);
+  const [humanizerResult, setHumanizerResult] = useState<{ original: string; humanized: string; from: number; to: number } | null>(null);
   const [wordCountMode, setWordCountMode] = useState<'unchanged' | 'preset' | 'custom'>('unchanged');
   const [presetWordCount, setPresetWordCount] = useState<number>(500);
   const [customWordCount, setCustomWordCount] = useState<string>('');
@@ -458,12 +460,44 @@ const EditorPage: React.FC = () => {
     setTimeout(() => refreshAiHighlights(), 50);
   }, [editor, refreshAiHighlights]);
 
-  const handleHumanizeMeta = useCallback((meta: HighlightMeta) => {
-    navigator.clipboard.writeText(meta.text).catch(() => {});
+  // Shared "Fix with Humanizer" path for BOTH entry points: select the exact
+  // range in the editor, reveal it, and open the Humanizer — so clicking
+  // Humanize acts on it just like a manual highlight (getSelectedText reads
+  // editor.state.selection). No clipboard hand-off, no manual re-select step.
+  const humanizePassageAt = useCallback((from: number, to: number) => {
+    if (!editor) return;
+    editor.chain().focus().setTextSelection({ from, to }).scrollIntoView().run();
     setHumanizerOpen(true);
     setPopoverMeta(null);
-    toast.success('Passage copied — select it in the editor then click Humanize');
-  }, []);
+  }, [editor]);
+
+  // Inline highlight popover already carries exact positions — no search.
+  const handleHumanizeMeta = useCallback((meta: HighlightMeta) => {
+    humanizePassageAt(meta.from, meta.to);
+  }, [humanizePassageAt]);
+
+  // Plagiarism panel gives only the passage TEXT — locate it in the live doc
+  // with the same flexible search the inline highlighter uses (so matches are
+  // identical), then select it. Falls back to clipboard+toast ONLY when the
+  // passage can't be found verbatim (e.g. edited since the scan).
+  const handleHumanizePassage = useCallback((passage: string) => {
+    if (editor) {
+      const { text, posMap } = buildFlatText(editor.state.doc);
+      const occ = findOccurrences(text, passage, { flexible: true })[0];
+      if (occ) {
+        const range = mapTextRange(posMap, occ.start, occ.end);
+        if (range) {
+          humanizePassageAt(range.from, range.to);
+          return;
+        }
+      }
+    }
+    setHumanizerOpen(true);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(passage).catch(() => {});
+    }
+    toast('That passage has changed since the scan — copied to clipboard, please select it manually.');
+  }, [editor, humanizePassageAt]);
 
   const decoder = useAssignmentDecoder({
     editor,
@@ -742,6 +776,10 @@ usePageTitle(
       toast.error('Selected text exceeds 25,000 character limit');
       return;
     }
+    // Capture the exact range NOW so applying the result targets THIS passage,
+    // even if the selection drifts (a doc click, autosave remap, or highlight
+    // rebuild) before the user hits Apply.
+    const { from: humFrom, to: humTo } = editor!.state.selection;
 
     setHumanizing(true);
     setHumanizerResult(null);
@@ -756,7 +794,7 @@ usePageTitle(
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setHumanizerResult({ original: selectedText, humanized: data.humanizedText });
+      setHumanizerResult({ original: selectedText, humanized: data.humanizedText, from: humFrom, to: humTo });
     } catch (err: any) {
       toast.error(err.message || 'Humanizer failed');
     } finally {
@@ -931,17 +969,25 @@ usePageTitle(
 
   const acceptHumanized = () => {
     if (!humanizerResult || !editor) return;
-    const { from, to } = editor.state.selection;
-    // If selection still matches, replace it
-    const currentSelection = editor.state.doc.textBetween(from, to, ' ');
-    if (currentSelection === humanizerResult.original) {
-      editor.chain().focus().insertContentAt({ from, to }, humanizerResult.humanized).run();
+    const { original, humanized, from, to } = humanizerResult;
+
+    // Prefer the range captured when the user hit Humanize, if it still holds
+    // the original text.
+    if (editor.state.doc.textBetween(from, to, ' ') === original) {
+      editor.chain().focus().insertContentAt({ from, to }, humanized).run();
     } else {
-      // Fallback: search and replace in HTML
-      const html = editor.getHTML();
-      const escaped = humanizerResult.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'g');
-      editor.commands.setContent(html.replace(regex, humanizerResult.humanized));
+      // The document changed since. Re-locate the exact passage ONCE and
+      // replace that single range — never a global regex over getHTML +
+      // setContent, which would replace every occurrence and rebuild the
+      // whole document (losing decorations / risking formatting).
+      const { text, posMap } = buildFlatText(editor.state.doc);
+      const occ = findOccurrences(text, original, { flexible: true })[0];
+      const range = occ ? mapTextRange(posMap, occ.start, occ.end) : null;
+      if (!range) {
+        toast.error("Couldn't apply — the original text has changed. Please re-select and try again.");
+        return;
+      }
+      editor.chain().focus().insertContentAt({ from: range.from, to: range.to }, humanized).run();
     }
     setHumanizerResult(null);
     toast.success('Humanized text applied!');
@@ -1409,17 +1455,7 @@ usePageTitle(
           onToggleFilter={toggleHighlightFilter}
           liveDetect={liveDetect}
           onToggleLiveDetect={() => setLiveDetect(v => !v)}
-         onHumanizePassage={(passage) => {
-  setHumanizerOpen(true);
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(passage).then(
-      () => toast.success('Passage copied — select it in the editor then click Humanize'),
-      () => toast('Open the Humanizer, then select this passage in the editor to humanize it'),
-    );
-  } else {
-    toast('Open the Humanizer, then select this passage in the editor to humanize it');
-  }
-}}
+         onHumanizePassage={handleHumanizePassage}
 />
       )}
 
