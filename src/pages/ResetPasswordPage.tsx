@@ -110,7 +110,7 @@ const ResetPasswordPage: React.FC = () => {
                   This password reset link is no longer valid. Please request a new one.
                 </p>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/auth')}>
                 Back to sign in
               </Button>
             </div>
