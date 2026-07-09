@@ -44,6 +44,17 @@ describe('CoachMemory — tip history + dedupe', () => {
     expect(m.hasSeenTip('A different tip.')).toBe(false);
   });
 
+  it('updateTipAction upgrades the most recent matching record', () => {
+    const m = new CoachMemory('s1');
+    m.recordTip(tip('Try active voice.'), 'shown');
+    m.updateTipAction('try active voice.', 'accepted');
+    expect(m.getTipHistory()[0].action).toBe('accepted');
+    expect(m.getAcceptedCount()).toBe(1);
+
+    const restored = new CoachMemory('s1');
+    expect(restored.getAcceptedCount()).toBe(1);
+  });
+
   it('counts accepted tips', () => {
     const m = new CoachMemory('s1');
     m.recordTip(tip('a'), 'accepted');

@@ -55,7 +55,8 @@ import {
   Wand2,
   Settings,
 } from 'lucide-react';
-import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
+import { useWritingCoach } from '@/hooks/useWritingCoach';
+import { useCoach } from '@/contexts/CoachContext';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
 import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
@@ -267,9 +268,6 @@ const EditorPage: React.FC = () => {
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [coachEnabled, setCoachEnabled] = useState(() => localStorage.getItem('ra_coach_enabled') !== 'false');
-  const [coachSuggestion, setCoachSuggestion] = useState<string | null>(null);
-  const [coachLoading, setCoachLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -336,8 +334,6 @@ const EditorPage: React.FC = () => {
     },
     onUpdate: ({ editor: ed }) => {
   setWordCount(ed.storage.characterCount.words());
-  setCoachSuggestion(null);
-  setCoachLoading(false);
   // Local backup safety net: mirror genuine user edits to localStorage so
   // in-progress writing survives a crash / connection drop. Never during the
   // initial content load or while viewing a read-only offline copy.
@@ -363,17 +359,23 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [id]);
   
-  const { tipHistory } = useInlineAiSuggestion({
-    editor,
-    docType: doc?.doc_type,
-    enabled: coachEnabled,
-    assignmentContext: decoder.sessionContext || undefined,
-    onLoadingStart: useCallback(() => { setCoachLoading(true); setCoachSuggestion(null); }, []),
-    onSuggestion: useCallback((tip: string | null, loading: boolean) => {
-      setCoachLoading(loading);
-      setCoachSuggestion(tip);
-    }, []),
-  });
+  const coach = useCoach();
+  const {
+    tip: coachTip,
+    onAccept: onCoachAccept,
+    onSkip: onCoachSkip,
+    dismiss: dismissCoachTip,
+  } = useWritingCoach({ editor });
+
+  // One coach session per opened document; batch-synced to Supabase on close.
+  useEffect(() => {
+    if (!id) return;
+    coach.startSession(id);
+    return () => coach.endSession();
+    // startSession/endSession are stable per provider render; re-running on
+    // their identity would churn sessions on every profile refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Apply chat default state from settings
   useEffect(() => {
@@ -1465,20 +1467,16 @@ const formatButtons = editor ? (
               data-intro-id="coach-btn"
               aria-label="Writing Coach"
               onClick={() => {
-                const next = !coachEnabled;
-                setCoachEnabled(next);
-                localStorage.setItem('ra_coach_enabled', String(next));
-                if (!next) {
-                  setCoachSuggestion(null);
-                  setCoachLoading(false);
-                }
+                const next = !coach.enabled;
+                coach.setEnabled(next);
+                if (!next) dismissCoachTip();
               }}
-              className={`scale-click ${coachEnabled ? 'text-primary' : ''}`}
+              className={`scale-click ${coach.enabled ? 'text-primary' : ''}`}
             >
               <Brain className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{coachEnabled ? 'Writing Coach: On' : 'Writing Coach: Off'}</TooltipContent>
+          <TooltipContent>{coach.enabled ? 'Writing Coach: On' : 'Writing Coach: Off'}</TooltipContent>
         </Tooltip>
 
         {/* Export dropdown */}
@@ -1662,15 +1660,10 @@ const formatButtons = editor ? (
 )}
           <InlineParagraphTip
             editor={editor}
-            suggestion={coachSuggestion}
-            loading={coachLoading}
-            tipHistory={tipHistory}
-            onDismiss={() => { setCoachSuggestion(null); setCoachLoading(false); }}
-            onSendToChat={(tip) => {
-              setChatInput(tip);
-              setChatOpen(true);
-              setCoachSuggestion(null);
-            }}
+            tip={coachTip}
+            onAccept={onCoachAccept}
+            onSkip={onCoachSkip}
+            onDismiss={dismissCoachTip}
           />
         </div>
 

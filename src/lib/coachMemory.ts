@@ -90,6 +90,18 @@ export class CoachMemory {
     return this.state.tips.some((t) => normalizeTip(t.text) === norm);
   }
 
+  /** Upgrade the most recent record of this tip (e.g. 'shown' → 'accepted'). */
+  updateTipAction(tipText: string, action: TipAction): void {
+    const norm = normalizeTip(tipText);
+    for (let i = this.state.tips.length - 1; i >= 0; i--) {
+      if (normalizeTip(this.state.tips[i].text) === norm) {
+        this.state.tips[i].action = action;
+        this.save();
+        return;
+      }
+    }
+  }
+
   getAcceptedCount(): number {
     return this.state.tips.filter((t) => t.action === 'accepted').length;
   }
