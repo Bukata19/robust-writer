@@ -58,6 +58,7 @@ import {
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useCoach } from '@/contexts/CoachContext';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
+import CoachPanel from '@/components/CoachPanel';
 import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
 import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
@@ -249,6 +250,7 @@ const EditorPage: React.FC = () => {
   // Sidebars
   const [chatOpen, setChatOpen] = useState(false);
   const [humanizerOpen, setHumanizerOpen] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPolish, setShowPolish] = useState(false);
   const [showDecoder, setShowDecoder] = useState(false);
@@ -1009,7 +1011,7 @@ usePageTitle(
   },
   {
     element: '[data-intro-id="coach-btn"]',
-    intro: '<strong>Writing Coach</strong><br/>When on, a live tip appears below the paragraph you are writing whenever you pause. Toggle it on or off here.',
+    intro: '<strong>Writing Coach</strong><br/>A live coach that offers one tip at a time when you pause typing — accept or skip each one. Open the panel here to set its mode, pick focus areas, and see your trends.',
   },
   {
     element: '[data-intro-id="history-btn"]',
@@ -1042,11 +1044,12 @@ usePageTitle(
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showCoach ? 'coach' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowPolish(false);
     setShowDecoder(false);
@@ -1056,6 +1059,7 @@ usePageTitle(
     setShowHistory(true);
     setChatOpen(false);
     setHumanizerOpen(false);
+    setShowCoach(false);
     setShowPolish(false);
     setShowDecoder(false);
   };
@@ -1064,6 +1068,7 @@ usePageTitle(
     setShowPolish(true);
     setChatOpen(false);
     setHumanizerOpen(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowDecoder(false);
   };
@@ -1072,6 +1077,7 @@ usePageTitle(
     setShowDecoder(true);
     setChatOpen(false);
     setHumanizerOpen(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowPolish(false);
   };
@@ -1226,6 +1232,9 @@ usePageTitle(
         </>
       )}
 
+      {/* Writing Coach Sidebar */}
+      {showCoach && <CoachPanel onClose={() => setShowCoach(false)} />}
+
       {/* Version History Sidebar */}
       {showHistory && id && (
         <VersionHistoryPanel
@@ -1269,8 +1278,9 @@ usePageTitle(
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowCoach(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowCoach(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openCoach = () => { setShowCoach(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
@@ -1466,17 +1476,13 @@ const formatButtons = editor ? (
               size="icon"
               data-intro-id="coach-btn"
               aria-label="Writing Coach"
-              onClick={() => {
-                const next = !coach.enabled;
-                coach.setEnabled(next);
-                if (!next) dismissCoachTip();
-              }}
+              onClick={() => toggleOrOpen(showCoach, openCoach, () => setShowCoach(false))}
               className={`scale-click ${coach.enabled ? 'text-primary' : ''}`}
             >
               <Brain className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{coach.enabled ? 'Writing Coach: On' : 'Writing Coach: Off'}</TooltipContent>
+          <TooltipContent>Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
         </Tooltip>
 
         {/* Export dropdown */}
