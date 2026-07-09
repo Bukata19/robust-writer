@@ -16,6 +16,13 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: 'writing-coach',
+    date: '2026-07-09',
+    title: 'Meet your Writing Coach',
+    description:
+      'The AI detector has been replaced by a live Writing Coach. Pause while writing and it offers one tip at a time — passive voice, wordy phrasing, weak openers and more — tuned to your level. Open its panel to pick focus areas, set the mode, track your trends, and export a progress report.',
+  },
+  {
     id: 'home-library-tabs',
     date: '2026-07-07',
     title: 'New Home and Library tabs',

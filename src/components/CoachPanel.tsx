@@ -45,9 +45,11 @@ const PATTERN_LABEL: Record<string, string> = {
 
 interface Props {
   onClose: () => void;
+  /** One-line note when the Assignment Decoder is steering the coach. */
+  assignmentSummary?: string | null;
 }
 
-export default function CoachPanel({ onClose }: Props) {
+export default function CoachPanel({ onClose, assignmentSummary }: Props) {
   const coach = useCoach();
   const s = coach.session;
   const [exportOpen, setExportOpen] = useState(false);
@@ -105,6 +107,11 @@ export default function CoachPanel({ onClose }: Props) {
       </div>
 
       <div className="px-3 pt-3 space-y-3 shrink-0">
+        {assignmentSummary && (
+          <p className="text-[11px] leading-snug text-primary/90 bg-primary/5 border border-primary/20 rounded-md px-2.5 py-1.5">
+            {assignmentSummary}
+          </p>
+        )}
         <div>
           <SegmentedControl<CoachMode>
             aria-label="Coach mode"

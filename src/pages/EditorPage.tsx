@@ -56,6 +56,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
+import { useAssignmentContext } from '@/hooks/useAssignmentContext';
 import { useCoach } from '@/contexts/CoachContext';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
 import CoachPanel from '@/components/CoachPanel';
@@ -362,12 +363,13 @@ useEffect(() => {
 }, [id]);
   
   const coach = useCoach();
+  const assignmentCtx = useAssignmentContext(decoder);
   const {
     tip: coachTip,
     onAccept: onCoachAccept,
     onSkip: onCoachSkip,
     dismiss: dismissCoachTip,
-  } = useWritingCoach({ editor });
+  } = useWritingCoach({ editor, suggestedFocus: assignmentCtx.suggestedFocus });
 
   // One coach session per opened document; batch-synced to Supabase on close.
   useEffect(() => {
@@ -1233,7 +1235,12 @@ usePageTitle(
       )}
 
       {/* Writing Coach Sidebar */}
-      {showCoach && <CoachPanel onClose={() => setShowCoach(false)} />}
+      {showCoach && (
+        <CoachPanel
+          onClose={() => setShowCoach(false)}
+          assignmentSummary={assignmentCtx.summary}
+        />
+      )}
 
       {/* Version History Sidebar */}
       {showHistory && id && (
