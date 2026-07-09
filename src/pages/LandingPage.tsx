@@ -226,11 +226,17 @@ const LandingPage: React.FC = () => {
     if (!root) return;
     const reduce = prefersReducedMotion();
 
+    // Timers started inside the observer callbacks outlive the observers, so
+    // track their handles and clear them on unmount — disconnect() only stops
+    // future intersections, not a pending reveal delay or a ticking counter.
+    const timeouts: number[] = [];
+    const intervals: number[] = [];
+
     const reveal = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) {
           const delay = Number((e.target as HTMLElement).dataset.delay || 0);
-          window.setTimeout(() => e.target.classList.add('lp-visible'), reduce ? 0 : delay);
+          timeouts.push(window.setTimeout(() => e.target.classList.add('lp-visible'), reduce ? 0 : delay));
           reveal.unobserve(e.target);
         }
       });
@@ -255,13 +261,19 @@ const LandingPage: React.FC = () => {
             el.textContent = `${val}${suffix}`;
             if (val >= target) window.clearInterval(timer);
           }, 35);
+          intervals.push(timer);
         });
         counters.unobserve(e.target);
       });
     }, { threshold: 0.5 });
     if (strip) counters.observe(strip);
 
-    return () => { reveal.disconnect(); counters.disconnect(); };
+    return () => {
+      reveal.disconnect();
+      counters.disconnect();
+      timeouts.forEach((t) => window.clearTimeout(t));
+      intervals.forEach((i) => window.clearInterval(i));
+    };
   }, []);
 
   return (
