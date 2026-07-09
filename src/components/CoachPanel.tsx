@@ -2,14 +2,15 @@
 // (lazy-loaded charts so recharts stays out of the main bundle), and a dry
 // progress checklist. Reads everything from CoachContext.
 
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import CoachReportExporter from '@/components/CoachReportExporter';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  X, Brain, Activity, TrendingUp, Flag, Check, Loader2,
+  X, Brain, Activity, TrendingUp, Flag, Check, Loader2, Download,
   Target, Zap, MessageSquare, Ruler, PenLine,
   type LucideIcon,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ interface Props {
 export default function CoachPanel({ onClose }: Props) {
   const coach = useCoach();
   const s = coach.session;
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     void coach.refreshStats();
@@ -240,6 +242,15 @@ export default function CoachPanel({ onClose }: Props) {
                   </ul>
                 </div>
               )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-5"
+                onClick={() => setExportOpen(true)}
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" /> Export report
+              </Button>
             </div>
           )}
         </TabsContent>
@@ -273,6 +284,8 @@ export default function CoachPanel({ onClose }: Props) {
           </p>
         </TabsContent>
       </Tabs>
+
+      <CoachReportExporter open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
 }
