@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Bot, Wand2, ShieldCheck, LayoutTemplate, Save, Lock,
+  PenLine, FlaskConical, BarChart3, File, FileDown, FileType, FileText,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import './LandingPage.css';
@@ -15,13 +20,13 @@ const prefersReducedMotion = () =>
   (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
     document.documentElement.classList.contains('reduce-motion'));
 
-const FEATURES = [
-  { num: '01', icon: '🤖', title: 'AI Writing Assistant', desc: 'Ask questions, get suggestions, brainstorm ideas — your personal tutor lives inside the editor, always ready to help you write better.' },
-  { num: '02', icon: '🧬', title: 'Text Humanizer', desc: 'Transform stiff AI-generated text into natural, human-sounding writing. Choose from Subtle, Moderate, or Full intensity levels.' },
-  { num: '03', icon: '🛡️', title: 'Plagiarism Checker', desc: 'Get an originality score instantly. Flagged passages, severity ratings, and actionable suggestions — all inside your document.' },
-  { num: '04', icon: '📄', title: 'Smart Templates', desc: 'Start any document with a structured template. Essays, research papers, reports, and general documents — all pre-scaffolded for you.' },
-  { num: '05', icon: '💾', title: 'Autosave & Export', desc: "Your work saves automatically. Export to PDF, DOCX, or TXT in one click when you're done. No lost work, ever." },
-  { num: '06', icon: '🔐', title: 'Secure & Private', desc: 'Powered by Supabase. Your documents belong to you, protected by email authentication and row-level security.' },
+const FEATURES: { num: string; icon: LucideIcon; title: string; desc: string }[] = [
+  { num: '01', icon: Bot, title: 'AI Writing Assistant', desc: 'Ask questions, get suggestions, brainstorm ideas — your personal tutor lives inside the editor, always ready to help you write better.' },
+  { num: '02', icon: Wand2, title: 'Text Humanizer', desc: 'Transform stiff AI-generated text into natural, human-sounding writing. Choose from Subtle, Moderate, or Full intensity levels.' },
+  { num: '03', icon: ShieldCheck, title: 'Plagiarism Checker', desc: 'Get an originality score instantly. Flagged passages, severity ratings, and actionable suggestions — all inside your document.' },
+  { num: '04', icon: LayoutTemplate, title: 'Smart Templates', desc: 'Start any document with a structured template. Essays, research papers, reports, and general documents — all pre-scaffolded for you.' },
+  { num: '05', icon: Save, title: 'Autosave & Export', desc: "Your work saves automatically. Export to PDF, DOCX, or TXT in one click when you're done. No lost work, ever." },
+  { num: '06', icon: Lock, title: 'Secure & Private', desc: 'Powered by Supabase. Your documents belong to you, protected by email authentication and row-level security.' },
 ];
 
 const STEPS = [
@@ -30,7 +35,15 @@ const STEPS = [
   { num: '03', title: 'Check & Export', desc: 'Run the plagiarism checker to see your originality score and fix flagged passages. Then export your final document in the format you need.' },
 ];
 
-const DOC_TYPES = ['📝 Essay', '🔬 Research Paper', '📊 Report', '📄 General Document', '📤 PDF Export', '📃 DOCX Export', '🗒️ TXT Export'];
+const DOC_TYPES: { icon: LucideIcon; label: string }[] = [
+  { icon: PenLine, label: 'Essay' },
+  { icon: FlaskConical, label: 'Research Paper' },
+  { icon: BarChart3, label: 'Report' },
+  { icon: File, label: 'General Document' },
+  { icon: FileDown, label: 'PDF Export' },
+  { icon: FileType, label: 'DOCX Export' },
+  { icon: FileText, label: 'TXT Export' },
+];
 
 const STATS = [
   { target: 3, suffix: '+', label: 'AI-Powered Tools' },
@@ -262,13 +275,15 @@ const LandingPage: React.FC = () => {
 
       {/* NAV */}
       <nav className="lp-nav">
-        <button type="button" className="lp-nav-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <span className="lp-nav-logo-icon">RA</span>
-          <span className="lp-nav-logo-text">RobAssister</span>
-        </button>
-        <button type="button" className="lp-nav-cta" onClick={launch} disabled={loading}>
-          Launch App ↗
-        </button>
+        <div className="lp-nav-inner">
+          <button type="button" className="lp-nav-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <span className="lp-nav-logo-icon">RA</span>
+            <span className="lp-nav-logo-text">RobAssister</span>
+          </button>
+          <button type="button" className="lp-nav-cta" onClick={launch} disabled={loading}>
+            Launch App ↗
+          </button>
+        </div>
       </nav>
 
       {/* HERO */}
@@ -323,7 +338,7 @@ const LandingPage: React.FC = () => {
             {FEATURES.map((f) => (
               <div className="lp-feature-card" key={f.num}>
                 <span className="lp-feature-num">{f.num}</span>
-                <div className="lp-feature-icon">{f.icon}</div>
+                <div className="lp-feature-icon"><f.icon size={22} strokeWidth={1.8} /></div>
                 <div className="lp-feature-title">{f.title}</div>
                 <div className="lp-feature-desc">{f.desc}</div>
               </div>
@@ -358,7 +373,10 @@ const LandingPage: React.FC = () => {
           <p className="lp-section-sub">Whether you're writing a quick essay or a full research paper, RobAssister has the right template and tools for the job.</p>
           <div className="lp-doc-types-grid">
             {DOC_TYPES.map((d) => (
-              <div className="lp-doc-type-chip" key={d}>{d}</div>
+              <div className="lp-doc-type-chip" key={d.label}>
+                <d.icon size={14} strokeWidth={2} />
+                {d.label}
+              </div>
             ))}
           </div>
         </div>
@@ -381,11 +399,13 @@ const LandingPage: React.FC = () => {
 
       {/* FOOTER */}
       <footer className="lp-footer">
-        <span className="lp-footer-logo">ROBASSISTER</span>
-        <span className="lp-footer-note">Built for students. Powered by AI.</span>
-        <a href="https://robobuddy-writer.lovable.app" target="_blank" rel="noopener noreferrer" className="lp-footer-link">
-          robobuddy-writer.lovable.app ↗
-        </a>
+        <div className="lp-footer-inner">
+          <span className="lp-footer-logo">ROBASSISTER</span>
+          <span className="lp-footer-note">Built for students. Powered by AI.</span>
+          <a href="https://robobuddy-writer.lovable.app" target="_blank" rel="noopener noreferrer" className="lp-footer-link">
+            robobuddy-writer.lovable.app ↗
+          </a>
+        </div>
       </footer>
     </div>
   );

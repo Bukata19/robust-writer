@@ -68,11 +68,16 @@
 .lp-root .lp-nav {
   position: fixed; top: 0; left: 0; right: 0;
   z-index: 100;
-  padding: 1.2rem 2.5rem;
-  display: flex; align-items: center; justify-content: space-between;
   background: linear-gradient(180deg, rgba(8,10,12,0.95) 0%, transparent 100%);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--lp-border);
+}
+/* Nav, hero, sections, and footer all share the same centered 1100px column
+   so the page has a single left grid line instead of two competing ones. */
+.lp-root .lp-nav-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 1.2rem 2.5rem;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .lp-root .lp-nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; background: none; border: none; padding: 0; }
 .lp-root .lp-nav-logo-icon {
@@ -105,7 +110,7 @@
   display: flex; align-items: center; overflow: hidden;
 }
 .lp-root .lp-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-.lp-root .lp-hero-content { position: relative; z-index: 2; max-width: 720px; padding: 8rem 2.5rem 4rem; }
+.lp-root .lp-hero-content { position: relative; z-index: 2; width: 100%; max-width: 1100px; margin: 0 auto; padding: 8rem 2.5rem 4rem; }
 .lp-root .lp-hero-badge {
   display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.35rem 0.9rem;
@@ -148,7 +153,10 @@
 .lp-root .lp-btn-ghost:hover { border-color: var(--lp-teal); color: var(--lp-teal); }
 
 .lp-root .lp-scroll-hint {
-  position: absolute; bottom: 2.5rem; left: 2.5rem;
+  /* Track the shared 1100px column's left edge (falls back to the plain
+     2.5rem gutter on viewports narrower than the column). */
+  position: absolute; bottom: 2.5rem;
+  left: max(2.5rem, calc(50% - 550px + 2.5rem));
   display: flex; align-items: center; gap: 0.8rem;
   font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
   color: var(--lp-fg-dim); letter-spacing: 0.1em;
@@ -181,7 +189,7 @@
 .lp-root .lp-section-sub { font-size: 1rem; color: var(--lp-fg-dim); line-height: 1.7; max-width: 520px; margin-bottom: 3.5rem; }
 
 /* ── FEATURES ── */
-.lp-root .lp-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5px; background: var(--lp-border); border: 1px solid var(--lp-border); border-radius: 16px; overflow: hidden; }
+.lp-root .lp-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: var(--lp-border); border: 1px solid var(--lp-border); border-radius: 16px; overflow: hidden; }
 .lp-root .lp-feature-card { background: var(--lp-black); padding: 2rem; position: relative; overflow: hidden; opacity: 0; transform: translateY(24px); transition: opacity 0.5s, transform 0.5s, background 0.3s; }
 .lp-root .lp-feature-card.lp-visible { opacity: 1; transform: translateY(0); }
 .lp-root .lp-feature-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 0% 0%, var(--lp-teal-glow), transparent 60%); opacity: 0; transition: opacity 0.4s; }
@@ -195,7 +203,12 @@
 
 /* ── HOW ── */
 .lp-root .lp-how { background: linear-gradient(180deg, var(--lp-black) 0%, var(--lp-slate) 50%, var(--lp-black) 100%); }
-.lp-root .lp-steps-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; }
+/* Explicit 3 → 1 columns: auto-fit gave a 2+1 layout on tablets, orphaning
+   step 03 next to an empty cell. */
+.lp-root .lp-steps-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+@media (max-width: 900px) {
+  .lp-root .lp-steps-list { grid-template-columns: 1fr; gap: 2.5rem; }
+}
 .lp-root .lp-step { position: relative; opacity: 0; transform: translateX(-20px); transition: opacity 0.6s, transform 0.6s; }
 .lp-root .lp-step.lp-visible { opacity: 1; transform: translateX(0); }
 .lp-root .lp-step-num { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 4rem; line-height: 1; margin-bottom: 0.5rem; -webkit-text-stroke: 1px var(--lp-teal-dim); color: transparent; }
@@ -207,6 +220,7 @@
 .lp-root .lp-doc-type-chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.2rem; border: 1px solid var(--lp-border); border-radius: 10px; font-size: 0.88rem; font-weight: 600; color: var(--lp-fg-dim); opacity: 0; transform: scale(0.9); transition: opacity 0.4s, transform 0.4s, border-color 0.25s, color 0.25s, box-shadow 0.25s, background 0.25s; }
 .lp-root .lp-doc-type-chip.lp-visible { opacity: 1; transform: scale(1); }
 .lp-root .lp-doc-type-chip:hover { border-color: var(--lp-teal); color: var(--lp-teal); box-shadow: 0 0 16px var(--lp-teal-dim); background: var(--lp-teal-glow); }
+.lp-root .lp-doc-type-chip svg { color: var(--lp-teal); flex-shrink: 0; }
 
 /* ── CTA ── */
 .lp-root .lp-cta { background: var(--lp-black); text-align: center; overflow: hidden; }
@@ -219,7 +233,8 @@
 .lp-root .lp-cta-actions { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
 
 /* ── FOOTER ── */
-.lp-root .lp-footer { position: relative; z-index: 2; border-top: 1px solid var(--lp-border); padding: 1.8rem 2.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.lp-root .lp-footer { position: relative; z-index: 2; border-top: 1px solid var(--lp-border); }
+.lp-root .lp-footer-inner { max-width: 1100px; margin: 0 auto; padding: 1.8rem 2.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
 .lp-root .lp-footer-logo { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 0.9rem; color: var(--lp-fg-dim); }
 .lp-root .lp-footer-note { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--lp-fg-dim); letter-spacing: 0.05em; }
 .lp-root .lp-footer-link { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--lp-teal); text-decoration: none; letter-spacing: 0.05em; transition: opacity 0.2s; }
@@ -229,12 +244,14 @@
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .lp-root .lp-nav { padding: 1rem 1.5rem; }
+  .lp-root .lp-nav-inner { padding: 1rem 1.5rem; }
   .lp-root .lp-hero-content { padding: 7rem 1.5rem 3rem; }
+  .lp-root .lp-scroll-hint { left: 1.5rem; }
   .lp-root .lp-section-inner { padding: 4rem 1.5rem; }
   .lp-root .lp-stats-inner { padding: 0 1rem; }
   .lp-root .lp-stat-num { font-size: 1.6rem; }
-  .lp-root .lp-footer { padding: 1.5rem; flex-direction: column; text-align: center; }
+  .lp-root .lp-stat-label { font-size: 0.72rem; }
+  .lp-root .lp-footer-inner { padding: 1.5rem; flex-direction: column; text-align: center; }
 }
 
 /* ── REDUCED MOTION — kill looping/entrance animation, show final state ── */
