@@ -36,6 +36,7 @@ class ErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
+import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import Dashboard from "./pages/Dashboard";
@@ -53,7 +54,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       </div>
     );
   }
-  return user ? <>{children}</> : <Navigate to="/" replace />;
+  return user ? <>{children}</> : <Navigate to="/auth" replace />;
 };
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,7 +79,8 @@ const App = () => (
           <AuthProvider>
             <ErrorBoundary>
             <Routes>
-              <Route path="/" element={<PublicRoute><AuthPage /></PublicRoute>} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
               {/* Standalone: the recovery session must not be redirected by PublicRoute. */}
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
