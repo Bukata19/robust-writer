@@ -1,29 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <!-- Auth / Landing page — publicly accessible -->
+  <!-- Only the public landing/auth page is indexable. /dashboard and /editor
+       are auth-gated (they redirect crawlers to sign-in), so listing them here
+       would just point search engines at soft-404s. -->
   <url>
     <loc>https://robobuddy-writer.lovable.app/</loc>
-    <lastmod>2026-06-05</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2026-07-07</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- Dashboard — auth required but listed for completeness -->
-  <url>
-    <loc>https://robobuddy-writer.lovable.app/dashboard</loc>
-    <lastmod>2026-06-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-<!-- Editor page — dynamic route pattern -->
- <url>
-  <loc>https://robobuddy-writer.lovable.app/editor</loc>
-  <lastmod>2026-06-05</lastmod>
-  <changefreq>daily</changefreq>
-  <priority>0.7</priority>
-</url>
 
 </urlset>
