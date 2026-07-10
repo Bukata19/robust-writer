@@ -69,10 +69,6 @@ const LandingPage: React.FC = () => {
     }
   }, [loading, user, navigate]);
 
-  if (loading || user) {
-    return null; // brief blank frame while auth resolves / redirect fires — avoids a flash of the marketing page
-  }
-
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -288,6 +284,10 @@ const LandingPage: React.FC = () => {
       intervals.forEach((i) => window.clearInterval(i));
     };
   }, []);
+
+  if (loading || user) {
+    return null;
+  }
 
   return (
     <div className="lp-root" ref={rootRef}>
