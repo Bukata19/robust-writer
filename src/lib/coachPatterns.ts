@@ -87,10 +87,25 @@ const STOPWORDS = new Set([
   'much', 'against', 'itself',
 ]);
 
+// Require a 3+ char stem before "ed" so common short adjectives ("red",
+// "sad", "mad", "bad") don't get flagged as passive-voice participles. Real
+// past participles of any length still fall through IRREGULAR_PARTICIPLES.
 const PASSIVE_RE = new RegExp(
-  `\\b(?:is|are|was|were|been|being|be)\\s+(?:\\w+ed|${IRREGULAR_PARTICIPLES.join('|')})\\b`,
+  `\\b(?:is|are|was|were|been|being|be)\\s+(?:\\w{3,}ed|${IRREGULAR_PARTICIPLES.join('|')})\\b`,
   'gi',
 );
+
+/**
+ * Add/remove a focus area with an inclusive cap (default 3). Shared by the
+ * Writing Coach panel and Settings drawer so both stay in lockstep.
+ */
+export function toggleFocusArea<T>(current: T[], area: T, max = 3): T[] {
+  return current.includes(area)
+    ? current.filter((a) => a !== area)
+    : current.length < max
+      ? [...current, area]
+      : current;
+}
 
 const WEAK_OPENER_RE = /^(?:it\s+is|it's|there\s+is|there\s+are|there\s+was|there\s+were)\b/i;
 
