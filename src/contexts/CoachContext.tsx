@@ -96,7 +96,8 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const memoryRef = useRef<CoachMemory | null>(null);
   const [session, setSession] = useState<CoachSessionState | null>(null);
-  const serverSessionRef = useRef<boolean>(false);
+  // Store the server-returned session ID so endSession can use the real record
+  const serverSessionIdRef = useRef<string | null>(null);
 
   const [aggregates, setAggregates] = useState<CoachPatternAggRow[]>([]);
   const [recentSessions, setRecentSessions] = useState<CoachSessionRow[]>([]);
@@ -160,7 +161,7 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const sessionId = crypto.randomUUID();
     const memory = new CoachMemory(sessionId);
     memoryRef.current = memory;
-    serverSessionRef.current = false;
+    serverSessionIdRef.current = null; // will be populated by server response
     setSession({
       sessionId,
       documentId,
@@ -170,12 +171,15 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       streak: 0,
     });
     // Server row is best-effort; offline sessions just skip the sync.
+    // Pass the current focusAreas instead of an empty array.
     if (user) {
-      void createCoachSession(user.id, documentId, []).then((id) => {
-        serverSessionRef.current = id !== null;
+      void createCoachSession(user.id, documentId, focusAreas).then((serverId) => {
+        if (serverId) {
+          serverSessionIdRef.current = serverId;
+        }
       });
     }
-  }, [user]);
+  }, [user, focusAreas]);
 
   const endSession = useCallback(() => {
     const memory = memoryRef.current;
@@ -194,11 +198,11 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       milestones: [] as string[],
     };
 
-    if (user && serverSessionRef.current) {
-      // Batch sync, then clear local state only on success — a failed sync
-      // keeps the localStorage copy (swept on sign-out regardless).
+    if (user && serverSessionIdRef.current) {
+      // Batch sync using the real server session ID, then clear local state only on success.
+      // A failed sync keeps the localStorage copy (swept on sign-out regardless).
       void (async () => {
-        const ok = await closeCoachSession(current.sessionId, close);
+        const ok = await closeCoachSession(serverSessionIdRef.current!, close);
         if (Object.keys(patterns).length > 0) {
           await upsertPatternAggregates(user.id, patterns);
         }
@@ -206,7 +210,7 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await insertTipHistory(
             tips.map((t) => ({
               user_id: user.id,
-              session_id: current.sessionId,
+              session_id: serverSessionIdRef.current!,
               tip_text: t.text.slice(0, 500),
               pattern_type: t.patternType,
               category: t.category,
@@ -218,7 +222,7 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (ok) memory.clear();
       })();
     }
-  }, [user, session]);
+  }, [user]);
 
   const hasSeenTip = useCallback(
     (text: string) => memoryRef.current?.hasSeenTip(text) ?? false,
