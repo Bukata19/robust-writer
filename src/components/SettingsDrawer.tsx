@@ -30,6 +30,7 @@ import {
   Search,
   Sparkles,
   Megaphone,
+  Brain,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -62,6 +63,9 @@ import {
   type ThemeMode,
 } from '@/contexts/SettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCoach } from '@/contexts/CoachContext';
+import type { CoachMode } from '@/lib/coachTips';
+import type { PatternCategory } from '@/lib/coachPatterns';
 import { toast } from 'sonner';
 import {
   OptionGroup,
@@ -76,7 +80,7 @@ interface SettingsDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type SectionId = 'whats-new' | 'appearance' | 'editor' | 'behaviour' | 'accessibility' | 'profile' | 'account';
+type SectionId = 'whats-new' | 'appearance' | 'editor' | 'behaviour' | 'coach' | 'accessibility' | 'profile' | 'account';
 
 interface SectionMeta {
   id: SectionId;
@@ -89,6 +93,7 @@ const SECTIONS: SectionMeta[] = [
   { id: 'appearance', title: 'Appearance', icon: <Palette className="h-4 w-4" /> },
   { id: 'editor', title: 'Editor', icon: <FileText className="h-4 w-4" /> },
   { id: 'behaviour', title: 'Behaviour', icon: <Timer className="h-4 w-4" /> },
+  { id: 'coach', title: 'Writing Coach', icon: <Brain className="h-4 w-4" /> },
   { id: 'accessibility', title: 'Accessibility', icon: <Eye className="h-4 w-4" /> },
   { id: 'profile', title: 'Profile & Personalization', icon: <Sparkles className="h-4 w-4" /> },
   { id: 'account', title: 'Account', icon: <User className="h-4 w-4" /> },
@@ -104,6 +109,7 @@ interface Field {
 const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) => {
   const { settings, resolvedMode, updateSetting, resetSettings, setThemeMode } = useSettings();
   const { signOut, user, profile, updateProfile } = useAuth();
+  const coach = useCoach();
 
   const [query, setQuery] = useState('');
   const [activeSection, setActiveSection] = useState<SectionId>(SECTIONS[0].id);
@@ -120,6 +126,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
     appearance: null,
     editor: null,
     behaviour: null,
+    coach: null,
     accessibility: null,
     profile: null,
     account: null,
@@ -418,6 +425,89 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
         ),
       },
     ],
+    coach: [
+      {
+        label: 'Writing Coach',
+        keywords: 'coach tips enable disable suggestions',
+        render: () => (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-foreground">Enable Writing Coach</p>
+              <p className="text-xs text-muted-foreground">
+                Live tips below the paragraph you're writing when you pause.
+              </p>
+            </div>
+            <Switch
+              checked={coach.enabled}
+              onCheckedChange={coach.setEnabled}
+              aria-label="Enable Writing Coach"
+            />
+          </div>
+        ),
+      },
+      {
+        label: 'Coach Mode',
+        keywords: 'coach strict balanced encouraging intensity',
+        render: () => (
+          <OptionGroup label="Coach Mode">
+            <SegmentedControl<CoachMode>
+              aria-label="Coach mode"
+              value={coach.mode}
+              onChange={coach.setMode}
+              options={[
+                { value: 'encouraging', label: 'Encouraging' },
+                { value: 'balanced', label: 'Balanced' },
+                { value: 'strict', label: 'Strict' },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Encouraging: fewest, gentlest tips · Balanced: confident findings · Strict: everything.
+            </p>
+          </OptionGroup>
+        ),
+      },
+      {
+        label: 'Focus Areas',
+        keywords: 'coach clarity conciseness tone structure grammar priorities',
+        render: () => (
+          <OptionGroup label="Focus Areas (up to 3)">
+            <div className="flex flex-wrap gap-1.5">
+              {(['clarity', 'conciseness', 'tone', 'structure', 'grammar'] as PatternCategory[]).map((area) => {
+                const active = coach.focusAreas.includes(area);
+                const full = !active && coach.focusAreas.length >= 3;
+                return (
+                  <button
+                    key={area}
+                    type="button"
+                    disabled={full}
+                    aria-pressed={active}
+                    onClick={() =>
+                      coach.setFocusAreas(
+                        active
+                          ? coach.focusAreas.filter((a) => a !== area)
+                          : [...coach.focusAreas, area],
+                      )
+                    }
+                    className={`focus-ring px-2 py-1 rounded-md border text-xs font-medium capitalize transition-colors ${
+                      active
+                        ? 'border-primary/60 bg-primary/10 text-primary'
+                        : full
+                          ? 'border-border text-muted-foreground/50 cursor-not-allowed'
+                          : 'border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {area}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              The coach prioritizes tips in these areas. Leave empty to let it choose.
+            </p>
+          </OptionGroup>
+        ),
+      },
+    ],
     accessibility: [
       {
         label: 'Reduce Motion',
@@ -596,7 +686,8 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
       },
     ],
   }), [settings, resolvedMode, chips, updateSetting, setThemeMode, user, resetTour, signOut,
-       profile, commitProfile, draftName, draftCustom, draftFieldOther, savedField, fieldSelectValue]);
+       profile, commitProfile, draftName, draftCustom, draftFieldOther, savedField, fieldSelectValue,
+       coach]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const isSearching = normalizedQuery.length > 0;

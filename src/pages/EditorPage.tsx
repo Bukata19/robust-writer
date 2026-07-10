@@ -12,7 +12,6 @@ import OfflineBadge from '@/components/OfflineBadge';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { cacheDocument, getCachedDocument, getLastCachedDocument, type CachedDoc } from '@/lib/offlineDocCache';
 import { saveLocalDraft, getLocalDraft, clearLocalDraft, hasNewerDraft } from '@/lib/localDraft';
-import PlagiarismPanel from '@/components/PlagiarismPanel';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import PolishPanel from '@/components/PolishPanel';
 import {
@@ -30,7 +29,6 @@ import {
   Download,
   Bot,
   Sparkles,
-  ShieldCheck,
   MessageCircle,
   X,
   Bold,
@@ -57,8 +55,11 @@ import {
   Wand2,
   Settings,
 } from 'lucide-react';
-import { useInlineAiSuggestion } from '@/hooks/useInlineAiSuggestion';
+import { useWritingCoach } from '@/hooks/useWritingCoach';
+import { useAssignmentContext } from '@/hooks/useAssignmentContext';
+import { useCoach } from '@/contexts/CoachContext';
 import InlineParagraphTip from '@/components/InlineSuggestionBubble';
+import CoachPanel from '@/components/CoachPanel';
 import AssignmentDecoderPanel from '@/components/AssignmentDecoder/AssignmentDecoderPanel';
 import SectionTip from '@/components/AssignmentDecoder/SectionTip';
 import { useAssignmentDecoder } from '@/hooks/useAssignmentDecoder';
@@ -75,17 +76,8 @@ import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
-import AiHighlight from '@/extensions/ai-highlight';
-import AiHighlightPopover from '@/components/AiHighlightPopover';
-import {
-  computeAiHighlights,
-  DEFAULT_FILTERS,
-  type HighlightFilters,
-  type HighlightCategory,
-  type HighlightMeta,
-} from '@/lib/aiHighlightCompute';
 import { buildFlatText, mapTextRange } from '@/lib/editorPositions';
-import { findOccurrences } from '@/lib/aiDetection';
+import { findOccurrences } from '@/lib/textSearch';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 const TextStyleWithFontSize = TextStyle.extend({
@@ -118,8 +110,6 @@ interface DocumentData {
   title: string;
   content: Json | null;
   doc_type: DocType;
-  plagiarism_score: number | null;
-  plagiarism_data: Json | null;
   updated_at: string;
 }
 
@@ -261,7 +251,7 @@ const EditorPage: React.FC = () => {
   // Sidebars
   const [chatOpen, setChatOpen] = useState(false);
   const [humanizerOpen, setHumanizerOpen] = useState(false);
-  const [showPlagiarism, setShowPlagiarism] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPolish, setShowPolish] = useState(false);
   const [showDecoder, setShowDecoder] = useState(false);
@@ -278,41 +268,9 @@ const EditorPage: React.FC = () => {
   const [presetWordCount, setPresetWordCount] = useState<number>(500);
   const [customWordCount, setCustomWordCount] = useState<string>('');
 
-  // Plagiarism
-  const [plagiarismRunning, setPlagiarismRunning] = useState(false);
-  const [plagiarismReport, setPlagiarismReport] = useState<{
-  overall_score: number;
-  risk_level?: 'clean' | 'low_risk' | 'moderate' | 'high_risk';
-  summary: string;
-  flagged_passages: Array<{
-    excerpt: string;
-    concern_type: string;
-    reason: string;
-    severity: string;
-    confidence?: number;
-    suggestion?: string;
-  }>;
-  originality_strengths?: string[];
-  source_indicators?: Record<string, unknown>;
-  raw_signals?: Record<string, unknown>;
-} | null>(null);
-  const [plagiarismHighlightsVisible, setPlagiarismHighlightsVisible] = useState(true);
-  // AI Detector highlight controls
-  const [highlightFilters, setHighlightFilters] = useState<HighlightFilters>(DEFAULT_FILTERS);
-  const [liveDetect, setLiveDetect] = useState(true);
-  const [aiHighlightCounts, setAiHighlightCounts] = useState<Record<HighlightCategory, number>>({
-    word: 0, phrase: 0, passage: 0, structure: 0,
-  });
-  const [popoverMeta, setPopoverMeta] = useState<HighlightMeta | null>(null);
-  const [popoverRect, setPopoverRect] = useState<DOMRect | null>(null);
-  const highlightMetaRef = useRef<Record<string, HighlightMeta>>({});
-
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [coachEnabled, setCoachEnabled] = useState(() => localStorage.getItem('ra_coach_enabled') !== 'false');
-  const [coachSuggestion, setCoachSuggestion] = useState<string | null>(null);
-  const [coachLoading, setCoachLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -370,7 +328,6 @@ const EditorPage: React.FC = () => {
       CharacterCount,
       TextStyleWithFontSize,
       FontFamily,
-      AiHighlight,
     ],
     autofocus: true,
     editorProps: {
@@ -380,8 +337,6 @@ const EditorPage: React.FC = () => {
     },
     onUpdate: ({ editor: ed }) => {
   setWordCount(ed.storage.characterCount.words());
-  setCoachSuggestion(null);
-  setCoachLoading(false);
   // Local backup safety net: mirror genuine user edits to localStorage so
   // in-progress writing survives a crash / connection drop. Never during the
   // initial content load or while viewing a read-only offline copy.
@@ -394,110 +349,6 @@ const EditorPage: React.FC = () => {
 },
   });
 
-  // ===== AI DETECTOR HIGHLIGHTS (ephemeral ProseMirror decorations) =====
-  // Recompute highlight targets from the live lexicon + any flagged passages,
-  // then push them to the decoration plugin. Never mutates the document.
-  const refreshAiHighlights = useCallback(() => {
-    if (!editor) return;
-    if (!plagiarismHighlightsVisible) {
-      editor.commands.clearAiHighlights();
-      highlightMetaRef.current = {};
-      setAiHighlightCounts({ word: 0, phrase: 0, passage: 0, structure: 0 });
-      return;
-    }
-    const { targets, metaById, counts } = computeAiHighlights(
-      editor,
-      plagiarismReport?.flagged_passages,
-      highlightFilters,
-    );
-    editor.commands.setAiHighlights(targets);
-    highlightMetaRef.current = metaById;
-    setAiHighlightCounts(counts);
-  }, [editor, plagiarismReport, highlightFilters, plagiarismHighlightsVisible]);
-
-  // Refresh when the report, filters, or visibility change.
-  useEffect(() => { refreshAiHighlights(); }, [refreshAiHighlights]);
-
-  // Live (debounced) re-detection of AI words/phrases as the user types.
-  useEffect(() => {
-    if (!editor) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const handler = () => {
-      if (!liveDetect || !plagiarismHighlightsVisible) return;
-      clearTimeout(timer);
-      timer = setTimeout(() => refreshAiHighlights(), 300);
-    };
-    editor.on('update', handler);
-    return () => { clearTimeout(timer); editor.off('update', handler); };
-  }, [editor, liveDetect, plagiarismHighlightsVisible, refreshAiHighlights]);
-
-  // Click a highlight → open the action popover.
-  useEffect(() => {
-    if (!editor) return;
-    const dom = editor.view.dom;
-    const onClick = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest('[data-ai-id]') as HTMLElement | null;
-      if (!el) return;
-      const id = el.getAttribute('data-ai-id');
-      const meta = id ? highlightMetaRef.current[id] : null;
-      if (meta) {
-        setPopoverMeta(meta);
-        setPopoverRect(el.getBoundingClientRect());
-      }
-    };
-    dom.addEventListener('click', onClick);
-    return () => dom.removeEventListener('click', onClick);
-  }, [editor]);
-
-  const toggleHighlightFilter = useCallback((cat: HighlightCategory) => {
-    setHighlightFilters((f) => ({ ...f, [cat]: !f[cat] }));
-  }, []);
-
-  const handleSwapWord = useCallback((meta: HighlightMeta) => {
-    if (!editor || !meta.swapText) return;
-    editor.chain().focus().insertContentAt({ from: meta.from, to: meta.to }, meta.swapText).run();
-    setPopoverMeta(null);
-    setTimeout(() => refreshAiHighlights(), 50);
-  }, [editor, refreshAiHighlights]);
-
-  // Shared "Fix with Humanizer" path for BOTH entry points: select the exact
-  // range in the editor, reveal it, and open the Humanizer — so clicking
-  // Humanize acts on it just like a manual highlight (getSelectedText reads
-  // editor.state.selection). No clipboard hand-off, no manual re-select step.
-  const humanizePassageAt = useCallback((from: number, to: number) => {
-    if (!editor) return;
-    editor.chain().focus().setTextSelection({ from, to }).scrollIntoView().run();
-    setHumanizerOpen(true);
-    setPopoverMeta(null);
-  }, [editor]);
-
-  // Inline highlight popover already carries exact positions — no search.
-  const handleHumanizeMeta = useCallback((meta: HighlightMeta) => {
-    humanizePassageAt(meta.from, meta.to);
-  }, [humanizePassageAt]);
-
-  // Plagiarism panel gives only the passage TEXT — locate it in the live doc
-  // with the same flexible search the inline highlighter uses (so matches are
-  // identical), then select it. Falls back to clipboard+toast ONLY when the
-  // passage can't be found verbatim (e.g. edited since the scan).
-  const handleHumanizePassage = useCallback((passage: string) => {
-    if (editor) {
-      const { text, posMap } = buildFlatText(editor.state.doc);
-      const occ = findOccurrences(text, passage, { flexible: true })[0];
-      if (occ) {
-        const range = mapTextRange(posMap, occ.start, occ.end);
-        if (range) {
-          humanizePassageAt(range.from, range.to);
-          return;
-        }
-      }
-    }
-    setHumanizerOpen(true);
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(passage).catch(() => {});
-    }
-    toast('That passage has changed since the scan — copied to clipboard, please select it manually.');
-  }, [editor, humanizePassageAt]);
 
   const decoder = useAssignmentDecoder({
     editor,
@@ -511,17 +362,24 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [id]);
   
-  const { tipHistory } = useInlineAiSuggestion({
-    editor,
-    docType: doc?.doc_type,
-    enabled: coachEnabled,
-    assignmentContext: decoder.sessionContext || undefined,
-    onLoadingStart: useCallback(() => { setCoachLoading(true); setCoachSuggestion(null); }, []),
-    onSuggestion: useCallback((tip: string | null, loading: boolean) => {
-      setCoachLoading(loading);
-      setCoachSuggestion(tip);
-    }, []),
-  });
+  const coach = useCoach();
+  const assignmentCtx = useAssignmentContext(decoder);
+  const {
+    tip: coachTip,
+    onAccept: onCoachAccept,
+    onSkip: onCoachSkip,
+    dismiss: dismissCoachTip,
+  } = useWritingCoach({ editor, suggestedFocus: assignmentCtx.suggestedFocus });
+
+  // One coach session per opened document; batch-synced to Supabase on close.
+  useEffect(() => {
+    if (!id) return;
+    coach.startSession(id);
+    return () => coach.endSession();
+    // startSession/endSession are stable per provider render; re-running on
+    // their identity would churn sessions on every profile refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Apply chat default state from settings
   useEffect(() => {
@@ -545,7 +403,7 @@ usePageTitle(
     try {
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, content, doc_type, plagiarism_score, plagiarism_data, updated_at')
+        .select('id, title, content, doc_type, updated_at')
         .eq('id', id!)
         .single();
 
@@ -588,8 +446,6 @@ usePageTitle(
             title: cached.title,
             content: cached.content as Json,
             doc_type: cached.doc_type as DocType,
-            plagiarism_score: null,
-            plagiarism_data: null,
             updated_at: '',
           });
           setTitle(cached.title);
@@ -997,64 +853,6 @@ usePageTitle(
     setHumanizerResult(null);
   };
 
-  // ===== PLAGIARISM =====
-  const runPlagiarismCheck = async () => {
-    if (!editor || plagiarismRunning) return;
-    const text = editor.getText();
-    if (text.length < 50) {
-      toast.error('Write at least 50 characters before running plagiarism check');
-      return;
-    }
-
-    setPlagiarismRunning(true);
-    setPlagiarismReport(null);
-    setShowPlagiarism(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('plagiarism', {
-        body: { text, documentId: id },
-      });
-
-      if (error) {
-        // supabase-js wraps non-2xx responses in a FunctionsHttpError whose
-        // .message is generic; pull the function's own friendly message out of
-        // the response body when it's there.
-        let message = error.message;
-        const ctx = (error as { context?: Response }).context;
-        if (ctx && typeof ctx.json === 'function') {
-          try {
-            const body = await ctx.clone().json();
-            if (body?.error) message = body.error;
-          } catch { /* fall back to the generic message */ }
-        }
-        throw new Error(message);
-      }
-      if (data?.error) throw new Error(data.error);
-
-      setPlagiarismReport(data);
-      setPlagiarismHighlightsVisible(true);
-      // Highlights are recomputed automatically by the refreshAiHighlights
-      // effect when plagiarismReport changes (decoration overlay, not marks).
-
-      if (id) {
-        await supabase
-          .from('documents')
-          .update({
-            plagiarism_score: data.overall_score,
-            plagiarism_data: data as unknown as Json,
-          })
-          .eq('id', id);
-        setDoc((prev) => prev ? { ...prev, plagiarism_score: data.overall_score, plagiarism_data: data as unknown as Json } : prev);
-      }
-
-      toast.success(`AI analysis complete: ${data.overall_score}% AI-likelihood`);
-    } catch (err: any) {
-      toast.error(err.message || 'Plagiarism check failed');
-    } finally {
-      setPlagiarismRunning(false);
-    }
-  };
-
   // ===== CHAT =====
   const sendChatMessage = async () => {
     const msg = chatInput.trim();
@@ -1084,7 +882,6 @@ usePageTitle(
         body: JSON.stringify({
           messages: newMessages,
           documentContent,
-          plagiarismData: doc?.plagiarism_data,
           // Chat assistant only: opts into profile personalization server-side.
           // Decoder / coach / polish call the same function without this flag.
           personalize: true,
@@ -1207,10 +1004,6 @@ usePageTitle(
     intro: '<strong>Humanizer</strong><br/>Select text, then humanize it at Subtle, Moderate, or Full intensity to make AI-generated writing sound naturally human.',
   },
   {
-    element: '[data-intro-id="ai-detector-btn"]',
-    intro: "<strong>AI Detector 🛰️</strong><br/>Get an AI-likelihood score and see AI words, phrases, and passages highlighted in your text. <strong>Click any highlight</strong> to see why it was flagged and fix it in place — swap a buzzword or humanize a passage. Filter by category in the panel.",
-  },
-  {
     element: '[data-intro-id="decoder-btn"]',
     intro: '<strong>Assignment Decoder</strong><br/>Paste your assignment question. The AI breaks it into a structured outline with per-section tips, and can draft each section for you to approve.',
   },
@@ -1220,7 +1013,7 @@ usePageTitle(
   },
   {
     element: '[data-intro-id="coach-btn"]',
-    intro: '<strong>Writing Coach</strong><br/>When on, a live tip appears below the paragraph you are writing whenever you pause. Toggle it on or off here.',
+    intro: '<strong>Writing Coach</strong><br/>A live coach that offers one tip at a time when you pause typing — accept or skip each one. Open the panel here to set its mode, pick focus areas, and see your trends.',
   },
   {
     element: '[data-intro-id="history-btn"]',
@@ -1253,12 +1046,12 @@ usePageTitle(
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showPlagiarism ? 'plagiarism' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showCoach ? 'coach' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
 
   const closeSidebar = () => {
     setChatOpen(false);
     setHumanizerOpen(false);
-    setShowPlagiarism(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowPolish(false);
     setShowDecoder(false);
@@ -1268,7 +1061,7 @@ usePageTitle(
     setShowHistory(true);
     setChatOpen(false);
     setHumanizerOpen(false);
-    setShowPlagiarism(false);
+    setShowCoach(false);
     setShowPolish(false);
     setShowDecoder(false);
   };
@@ -1277,7 +1070,7 @@ usePageTitle(
     setShowPolish(true);
     setChatOpen(false);
     setHumanizerOpen(false);
-    setShowPlagiarism(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowDecoder(false);
   };
@@ -1286,7 +1079,7 @@ usePageTitle(
     setShowDecoder(true);
     setChatOpen(false);
     setHumanizerOpen(false);
-    setShowPlagiarism(false);
+    setShowCoach(false);
     setShowHistory(false);
     setShowPolish(false);
   };
@@ -1441,32 +1234,13 @@ usePageTitle(
         </>
       )}
 
-      {/* AI Detector Sidebar */}
-      {showPlagiarism && (
-        <PlagiarismPanel
-          report={plagiarismReport as any}
-          running={plagiarismRunning}
-          highlightsVisible={plagiarismHighlightsVisible}
-          onRun={runPlagiarismCheck}
-          onToggleHighlights={() => setPlagiarismHighlightsVisible(v => !v)}
-          onClose={() => setShowPlagiarism(false)}
-          filters={highlightFilters}
-          counts={aiHighlightCounts}
-          onToggleFilter={toggleHighlightFilter}
-          liveDetect={liveDetect}
-          onToggleLiveDetect={() => setLiveDetect(v => !v)}
-         onHumanizePassage={handleHumanizePassage}
-/>
+      {/* Writing Coach Sidebar */}
+      {showCoach && (
+        <CoachPanel
+          onClose={() => setShowCoach(false)}
+          assignmentSummary={assignmentCtx.summary}
+        />
       )}
-
-      {/* Click-to-act popover for AI highlights */}
-      <AiHighlightPopover
-        meta={popoverMeta}
-        anchorRect={popoverRect}
-        onClose={() => setPopoverMeta(null)}
-        onSwap={handleSwapWord}
-        onHumanize={handleHumanizeMeta}
-      />
 
       {/* Version History Sidebar */}
       {showHistory && id && (
@@ -1511,9 +1285,9 @@ usePageTitle(
   );
 
   // ===== AI tool buttons =====
-  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
-  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowPlagiarism(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
-  const openPlagiarism = () => { setShowPlagiarism(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openChat = () => { setChatOpen(true); setHumanizerOpen(false); setShowCoach(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openHumanizer = () => { setHumanizerOpen(true); setChatOpen(false); setShowCoach(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
+  const openCoach = () => { setShowCoach(true); setChatOpen(false); setHumanizerOpen(false); setShowHistory(false); setShowPolish(false); setShowDecoder(false); };
 
   const toggleOrOpen = (current: boolean, opener: () => void, closer: () => void) => {
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
@@ -1554,23 +1328,6 @@ usePageTitle(
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Humanizer</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={showPlagiarism ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => toggleOrOpen(showPlagiarism, openPlagiarism, () => setShowPlagiarism(false))}
-            aria-label="AI Detector"
-            data-intro-id="ai-detector-btn"
-            disabled={!online}
-            title={!online ? 'Needs internet' : undefined}
-            className="scale-click"
-          >
-            <ShieldCheck className="w-4 h-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">AI Detector</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -1726,21 +1483,13 @@ const formatButtons = editor ? (
               size="icon"
               data-intro-id="coach-btn"
               aria-label="Writing Coach"
-              onClick={() => {
-                const next = !coachEnabled;
-                setCoachEnabled(next);
-                localStorage.setItem('ra_coach_enabled', String(next));
-                if (!next) {
-                  setCoachSuggestion(null);
-                  setCoachLoading(false);
-                }
-              }}
-              className={`scale-click ${coachEnabled ? 'text-primary' : ''}`}
+              onClick={() => toggleOrOpen(showCoach, openCoach, () => setShowCoach(false))}
+              className={`scale-click ${coach.enabled ? 'text-primary' : ''}`}
             >
               <Brain className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{coachEnabled ? 'Writing Coach: On' : 'Writing Coach: Off'}</TooltipContent>
+          <TooltipContent>Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
         </Tooltip>
 
         {/* Export dropdown */}
@@ -1827,8 +1576,6 @@ const formatButtons = editor ? (
                 title: last.title,
                 content: last.content as Json,
                 doc_type: last.doc_type as DocType,
-                plagiarism_score: null,
-                plagiarism_data: null,
                 updated_at: '',
               });
               setTitle(last.title);
@@ -1926,15 +1673,10 @@ const formatButtons = editor ? (
 )}
           <InlineParagraphTip
             editor={editor}
-            suggestion={coachSuggestion}
-            loading={coachLoading}
-            tipHistory={tipHistory}
-            onDismiss={() => { setCoachSuggestion(null); setCoachLoading(false); }}
-            onSendToChat={(tip) => {
-              setChatInput(tip);
-              setChatOpen(true);
-              setCoachSuggestion(null);
-            }}
+            tip={coachTip}
+            onAccept={onCoachAccept}
+            onSkip={onCoachSkip}
+            onDismiss={dismissCoachTip}
           />
         </div>
 

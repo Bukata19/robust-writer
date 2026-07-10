@@ -53,7 +53,7 @@ if (userError || !userData?.user) {
       );
     }
 
-    const { messages, documentContent, plagiarismData, personalize } = await req.json();
+    const { messages, documentContent, personalize } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -90,7 +90,6 @@ You have full context of the user's document. Help with:
 - Grammar and style corrections
 - Research guidance
 - Answering questions about their content
-- Explaining plagiarism findings if any
 
 Be concise, helpful, and academic in tone. Use markdown formatting in your responses.`;
 
@@ -152,20 +151,6 @@ Be concise, helpful, and academic in tone. Use markdown formatting in your respo
           ? documentContent.slice(0, 8000) + "\n...[truncated]"
           : documentContent;
       systemPrompt += `\n\n--- CURRENT DOCUMENT ---\n${truncated}`;
-    }
-
-    if (plagiarismData) {
-      const MAX_PLAGIARISM_CHARS = 50_000;
-      let pdStr: string;
-      try {
-        pdStr = typeof plagiarismData === "string" ? plagiarismData : JSON.stringify(plagiarismData);
-      } catch {
-        pdStr = "";
-      }
-      if (pdStr.length > MAX_PLAGIARISM_CHARS) {
-        pdStr = pdStr.slice(0, MAX_PLAGIARISM_CHARS) + "\n...[truncated]";
-      }
-      systemPrompt += `\n\n--- PLAGIARISM DATA ---\n${pdStr}`;
     }
 
     const response = await fetch(

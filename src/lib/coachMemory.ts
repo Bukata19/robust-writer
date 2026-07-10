@@ -1,0 +1,148 @@
+// Per-session coach memory: which patterns fired, which tips were shown and
+// what the user did with them, and the current accept streak. Persisted to
+// localStorage (guarded — storage failures must never break the editor) so a
+// reload mid-session doesn't repeat tips; synced to Supabase at session end
+// by the coach context, then cleared.
+
+import type { PatternCategory } from './coachPatterns';
+
+export const COACH_SESSION_PREFIX = 'rb_coach_session_';
+
+export interface CoachTip {
+  text: string;
+  patternType: string;
+  category: PatternCategory;
+  confidence: number;
+  why?: string;
+  suggestion?: string;
+}
+
+export type TipAction = 'accepted' | 'skipped' | 'learned' | 'shown';
+
+export interface RecordedTip extends CoachTip {
+  action: TipAction;
+  at: number;
+}
+
+interface PersistedState {
+  patterns: Record<string, number>;
+  tips: RecordedTip[];
+  streak: number;
+}
+
+const emptyState = (): PersistedState => ({ patterns: {}, tips: [], streak: 0 });
+
+const normalizeTip = (text: string) => text.trim().toLowerCase();
+
+export class CoachMemory {
+  private readonly key: string;
+  private state: PersistedState;
+
+  constructor(sessionId: string) {
+    this.key = `${COACH_SESSION_PREFIX}${sessionId}`;
+    this.state = this.load();
+  }
+
+  private load(): PersistedState {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return emptyState();
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return emptyState();
+      return {
+        patterns: typeof parsed.patterns === 'object' && parsed.patterns ? parsed.patterns : {},
+        tips: Array.isArray(parsed.tips) ? parsed.tips : [],
+        streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+      };
+    } catch {
+      return emptyState();
+    }
+  }
+
+  private save(): void {
+    try {
+      localStorage.setItem(this.key, JSON.stringify(this.state));
+    } catch {
+      // Storage full / disabled — memory continues in-process only.
+    }
+  }
+
+  recordPattern(type: string, count: number): void {
+    this.state.patterns[type] = (this.state.patterns[type] ?? 0) + count;
+    this.save();
+  }
+
+  getSessionPatterns(): Record<string, number> {
+    return { ...this.state.patterns };
+  }
+
+  recordTip(tip: CoachTip, action: TipAction): void {
+    this.state.tips.push({ ...tip, action, at: Date.now() });
+    this.save();
+  }
+
+  getTipHistory(): RecordedTip[] {
+    return [...this.state.tips];
+  }
+
+  hasSeenTip(tipText: string): boolean {
+    const norm = normalizeTip(tipText);
+    return this.state.tips.some((t) => normalizeTip(t.text) === norm);
+  }
+
+  /** Upgrade the most recent record of this tip (e.g. 'shown' → 'accepted'). */
+  updateTipAction(tipText: string, action: TipAction): void {
+    const norm = normalizeTip(tipText);
+    for (let i = this.state.tips.length - 1; i >= 0; i--) {
+      if (normalizeTip(this.state.tips[i].text) === norm) {
+        this.state.tips[i].action = action;
+        this.save();
+        return;
+      }
+    }
+  }
+
+  getAcceptedCount(): number {
+    return this.state.tips.filter((t) => t.action === 'accepted').length;
+  }
+
+  getGivenCount(): number {
+    return this.state.tips.length;
+  }
+
+  getSkippedCount(): number {
+    return this.state.tips.filter((t) => t.action === 'skipped').length;
+  }
+
+  getStreak(): number {
+    return this.state.streak;
+  }
+
+  updateStreak(accepted: boolean): void {
+    this.state.streak = accepted ? this.state.streak + 1 : 0;
+    this.save();
+  }
+
+  /** Remove this session's stored state (after a successful server sync). */
+  clear(): void {
+    try {
+      localStorage.removeItem(this.key);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/** Sign-out sweep: remove every stored coach session. */
+export function clearAllCoachSessions(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(COACH_SESSION_PREFIX)) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // storage unavailable — nothing to sweep
+  }
+}

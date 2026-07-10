@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   FileText, BookOpen, ClipboardList, PenLine,
-  Trash2, Clock, ShieldCheck, Settings, Bot,
+  Trash2, Clock, Settings, Bot,
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
@@ -40,13 +40,12 @@ const TABS = [
   { id: 'home' as const, label: 'Home', icon: Home },
   { id: 'library' as const, label: 'Library', icon: FolderOpen },
 ];
-type SortMode = 'recent' | 'alpha' | 'risk';
+type SortMode = 'recent' | 'alpha';
 
 interface Document {
   id: string;
   title: string;
   doc_type: DocType;
-  plagiarism_score: number | null;
   updated_at: string;
 }
 
@@ -82,13 +81,6 @@ const docTypeConfig: Record<DocType, {
     icon: <PenLine className="w-4 h-4" />,
     color: 'text-muted-foreground',
   },
-};
-
-const getPlagiarismBadge = (score: number | null) => {
-  if (score === null || score === 0) return null;
-  if (score <= 15) return { label: `${score}% Clean`, className: 'bg-primary/20 text-primary' };
-  if (score <= 40) return { label: `${score}% Warning`, className: 'bg-yellow-500/20 text-yellow-400' };
-  return { label: `${score}% Risk`, className: 'bg-destructive/20 text-destructive' };
 };
 
 // Word count stored in localStorage by saveDocument in EditorPage
@@ -251,7 +243,7 @@ const Dashboard: React.FC = () => {
   const fetchDocuments = async () => {
     const { data, error } = await supabase
       .from('documents')
-      .select('id, title, doc_type, plagiarism_score, updated_at')
+      .select('id, title, doc_type, updated_at')
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -330,7 +322,6 @@ const Dashboard: React.FC = () => {
     })
     .sort((a, b) => {
       if (sortBy === 'alpha') return a.title.localeCompare(b.title);
-      if (sortBy === 'risk') return (b.plagiarism_score ?? 0) - (a.plagiarism_score ?? 0);
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
 
@@ -355,14 +346,12 @@ const Dashboard: React.FC = () => {
     );
     return days <= 7;
   }).length;
-  const cleanCount = documents.filter(
-    (d) => d.plagiarism_score !== null && d.plagiarism_score > 0 && d.plagiarism_score <= 15
-  ).length;
+  const totalWords = documents.reduce((sum, d) => sum + (getWordCount(d.id) ?? 0), 0);
 
   const statChips = [
     { icon: <FileStack className="w-3.5 h-3.5" />, value: documents.length, label: 'Documents' },
     { icon: <AlarmClock className="w-3.5 h-3.5" />, value: dueSoonCount, label: 'Due soon' },
-    { icon: <ShieldCheck className="w-3.5 h-3.5" />, value: cleanCount, label: 'Clean' },
+    { icon: <PenLine className="w-3.5 h-3.5" />, value: totalWords >= 1000 ? `${(totalWords / 1000).toFixed(1)}k` : totalWords, label: 'Words written' },
   ];
 
   return (
@@ -638,7 +627,6 @@ const Dashboard: React.FC = () => {
               {([
                 { key: 'recent', icon: <Clock className="w-3 h-3" />, label: 'Recent' },
                 { key: 'alpha', icon: <SortAsc className="w-3 h-3" />, label: 'A–Z' },
-                { key: 'risk', icon: <ShieldCheck className="w-3 h-3" />, label: 'Risk' },
               ] as const).map(({ key, icon, label }) => (
                 <button
                   key={key}
@@ -714,7 +702,6 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredDocuments.map((doc) => {
                 const config = docTypeConfig[doc.doc_type];
-                const plagBadge = getPlagiarismBadge(doc.plagiarism_score);
                 const dueBadge = getDueBadge(doc.id);
                 const wc = getWordCount(doc.id);
                 const dueDate = getDueDate(doc.id) ?? '';
@@ -834,12 +821,6 @@ const Dashboard: React.FC = () => {
                         {dueBadge && (
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${dueBadge.className}`}>
                             {dueBadge.label}
-                          </span>
-                        )}
-                        {plagBadge && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${plagBadge.className}`}>
-                            <ShieldCheck className="w-2.5 h-2.5" />
-                            {plagBadge.label}
                           </span>
                         )}
                       </div>

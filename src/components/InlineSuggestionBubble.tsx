@@ -1,40 +1,51 @@
+// The coach's inline tip bubble. Deliberately quiet: category icon, one line
+// of advice, an optional "why" expander, and Accept / Skip. Streaks, counters,
+// and charts live in the Coach panel — not in the writing surface.
+
 import { useEffect, useState } from 'react';
 import type { Editor } from '@tiptap/react';
-import { Lightbulb, X, Loader2, Send, Clock } from 'lucide-react';
+import {
+  X, Target, Zap, MessageSquare, Ruler, PenLine, Info, Check, ChevronRight,
+  type LucideIcon,
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import type { CoachTip } from '@/lib/coachMemory';
+import type { PatternCategory } from '@/lib/coachPatterns';
+
+const CATEGORY_ICON: Record<PatternCategory, LucideIcon> = {
+  clarity: Target,
+  conciseness: Zap,
+  tone: MessageSquare,
+  structure: Ruler,
+  grammar: PenLine,
+};
+
+const AUTO_DISMISS_MS = 15_000;
 
 interface Props {
   editor: Editor | null;
-  suggestion: string | null;
-  loading: boolean;
+  tip: CoachTip | null;
+  onAccept: () => void;
+  onSkip: () => void;
   onDismiss: () => void;
-  onSendToChat: (tip: string) => void;
-  tipHistory: string[];
 }
 
-export default function InlineParagraphTip({
-  editor,
-  suggestion,
-  loading,
-  onDismiss,
-  onSendToChat,
-  tipHistory,
-}: Props) {
+export default function InlineParagraphTip({ editor, tip, onAccept, onSkip, onDismiss }: Props) {
   const isMobile = useIsMobile();
   const [top, setTop] = useState<number | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
 
-  // Auto-dismiss after 12s
+  // Auto-dismiss if the writer never reacts.
   useEffect(() => {
-    if (!suggestion) return;
-    const t = window.setTimeout(onDismiss, 12000);
+    if (!tip) return;
+    setWhyOpen(false);
+    const t = window.setTimeout(onDismiss, AUTO_DISMISS_MS);
     return () => window.clearTimeout(t);
-  }, [suggestion, onDismiss]);
+  }, [tip, onDismiss]);
 
-  // Track current paragraph position relative to scroll container
+  // Track current paragraph position relative to scroll container.
   useEffect(() => {
-    if (!editor || isMobile) return;
-    if (!suggestion && !loading) return;
+    if (!editor || isMobile || !tip) return;
 
     const compute = () => {
       try {
@@ -60,66 +71,67 @@ export default function InlineParagraphTip({
       editor.off('selectionUpdate', compute);
       editor.off('update', compute);
     };
-  }, [editor, suggestion, loading, isMobile]);
+  }, [editor, tip, isMobile]);
 
-  if (!suggestion && !loading) return null;
+  if (!tip) return null;
 
-  const tipContent = (
-    <>
-      {loading && !suggestion ? (
-        <>
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />
-          <span className="text-xs text-muted-foreground italic flex-1">Coach thinking…</span>
-        </>
-      ) : (
-        <>
-          <Lightbulb className="w-[14px] h-[14px] text-primary shrink-0" />
-          <span className="text-xs text-muted-foreground italic flex-1 leading-snug">{suggestion}</span>
+  const Icon = CATEGORY_ICON[tip.category] ?? Target;
+
+  const body = (
+    <div className="flex flex-col gap-1 flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <Icon className="w-[14px] h-[14px] text-primary shrink-0" aria-hidden="true" />
+        <span className="text-xs text-foreground/90 flex-1 leading-snug">{tip.text}</span>
+        {tip.why && (
           <button
-            onClick={() => suggestion && onSendToChat(suggestion)}
-            className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-            aria-label="Send to chat"
-            title="Send to chat"
+            onClick={() => setWhyOpen((v) => !v)}
+            className="text-muted-foreground hover:text-primary transition-colors shrink-0 focus-ring rounded"
+            aria-label="Why this matters"
+            aria-expanded={whyOpen}
+            title="Why this matters"
           >
-            <Send className="w-3 h-3" />
+            <Info className="w-3 h-3" />
           </button>
-          {tipHistory.length > 0 && (
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setHistoryOpen((v) => !v)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Previous tips"
-                title="Previous tips"
-              >
-                <Clock className="w-3 h-3" />
-              </button>
-              {historyOpen && (
-                <div className="absolute right-0 bottom-full mb-1 w-64 max-w-[80vw] bg-card border border-border rounded-md shadow-lg p-1 z-50">
-                  {tipHistory.slice().reverse().map((t, i) => (
-                    <div key={i} className="px-2 py-1 text-xs text-muted-foreground italic border-b border-border/40 last:border-b-0">
-                      {t}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        )}
+        <button
+          onClick={onAccept}
+          className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors shrink-0 focus-ring rounded px-1"
+          aria-label="Accept tip"
+        >
+          <Check className="w-3 h-3" />
+          Accept
+        </button>
+        <button
+          onClick={onSkip}
+          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0 focus-ring rounded px-1"
+          aria-label="Skip tip"
+        >
+          Skip
+          <ChevronRight className="w-3 h-3" />
+        </button>
+        <button
+          onClick={onDismiss}
+          className="text-muted-foreground hover:text-foreground transition-colors shrink-0 focus-ring rounded"
+          aria-label="Dismiss"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+      {whyOpen && (
+        <div className="pl-6 pr-2 text-[11px] leading-snug text-muted-foreground">
+          {tip.why}
+          {tip.suggestion && (
+            <span className="block mt-0.5 text-muted-foreground/80">{tip.suggestion}</span>
           )}
-          <button
-            onClick={onDismiss}
-            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            aria-label="Dismiss"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </>
+        </div>
       )}
-    </>
+    </div>
   );
 
   if (isMobile) {
     return (
       <div className="fixed left-2 right-2 bottom-[64px] z-40 bg-card/95 backdrop-blur-sm border border-primary/30 rounded-md shadow-lg px-2 py-1.5 flex items-center gap-2 animate-fade-in">
-        {tipContent}
+        {body}
       </div>
     );
   }
@@ -131,7 +143,7 @@ export default function InlineParagraphTip({
       className="absolute left-1/2 -translate-x-1/2 z-20 max-w-[640px] w-[calc(100%-4rem)] bg-card/95 backdrop-blur-sm border border-primary/30 rounded-md shadow-md px-2 py-1.5 flex items-center gap-2 animate-fade-in pointer-events-auto"
       style={{ top }}
     >
-      {tipContent}
+      {body}
     </div>
   );
 }

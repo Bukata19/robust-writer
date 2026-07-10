@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { CoachProvider } from "@/contexts/CoachContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
 class ErrorBoundary extends React.Component<
@@ -77,6 +78,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <CoachProvider>
             <ErrorBoundary>
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -88,6 +90,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </ErrorBoundary>
+            </CoachProvider>
           </AuthProvider>
         </BrowserRouter>
       </SettingsProvider>
