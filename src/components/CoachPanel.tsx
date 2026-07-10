@@ -232,7 +232,7 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
                   <ul className="space-y-1">
                     {coach.aggregates.slice(0, 5).map((a) => (
                       <li key={a.pattern_type} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{PATTERN_LABEL[a.pattern_type] ?? a.pattern_type}</span>
+                        <span className="text-muted-foreground">{PATTERN_LABELS[a.pattern_type] ?? a.pattern_type}</span>
                         <span className="text-foreground font-medium">{a.total_occurrences}×</span>
                       </li>
                     ))}
