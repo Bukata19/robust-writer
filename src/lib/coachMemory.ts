@@ -151,14 +151,5 @@ export class CoachMemory {
 
 /** Sign-out sweep: remove every stored coach session. */
 export function clearAllCoachSessions(): void {
-  try {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(COACH_SESSION_PREFIX)) keys.push(k);
-    }
-    keys.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    // storage unavailable — nothing to sweep
-  }
+  sweepLocalStorageKeysWithPrefix(COACH_SESSION_PREFIX);
 }
