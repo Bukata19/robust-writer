@@ -114,6 +114,18 @@ export function downloadJSON(report: CoachReport, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+// Labels come from PATTERN_LABELS when the type is known, but fall back to
+// the raw pattern_type string from the row when it isn't — that string
+// originates in DB data and must be HTML-escaped before landing in innerHTML.
+const escapeHtml = (s: string): string =>
+  s.replace(/[&<>"']/g, (c) =>
+    c === '&' ? '&amp;'
+    : c === '<' ? '&lt;'
+    : c === '>' ? '&gt;'
+    : c === '"' ? '&quot;'
+    : '&#39;',
+  );
+
 export async function downloadPDF(report: CoachReport, filename: string): Promise<void> {
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'font-family: Georgia, serif; color: #1a1a1a; padding: 32px; max-width: 700px;';
@@ -140,12 +152,12 @@ export async function downloadPDF(report: CoachReport, filename: string): Promis
     ${report.topPatterns.length > 0 ? `
       <h2 style="font-size:15px;margin:0 0 8px;">Most frequent issues</h2>
       <ul style="font-size:13px;margin:0 0 20px;padding-left:18px;">
-        ${report.topPatterns.map((p) => `<li>${p.label} — ${p.count}×</li>`).join('')}
+        ${report.topPatterns.map((p) => `<li>${escapeHtml(p.label)} — ${p.count}×</li>`).join('')}
       </ul>` : ''}
     ${report.improvements.length > 0 ? `
       <h2 style="font-size:15px;margin:0 0 8px;">Improved this period</h2>
       <ul style="font-size:13px;margin:0 0 20px;padding-left:18px;">
-        ${report.improvements.map((i) => `<li>${i.label} — down ${i.deltaPct}%</li>`).join('')}
+        ${report.improvements.map((i) => `<li>${escapeHtml(i.label)} — down ${i.deltaPct}%</li>`).join('')}
       </ul>` : ''}
     <p style="font-size:11px;color:#888;margin-top:24px;">Generated locally by RobAssister Writing Coach.</p>
   `;
