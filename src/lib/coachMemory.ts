@@ -5,8 +5,15 @@
 // by the coach context, then cleared.
 
 import type { PatternCategory } from './coachPatterns';
+import { sweepLocalStorageKeysWithPrefix } from './storageSweep';
 
 export const COACH_SESSION_PREFIX = 'rb_coach_session_';
+
+// Cap retained per-session tip history so a long session can't inflate
+// localStorage (and the eventual server payload) without bound. When we hit
+// the cap we first drop unresolved 'shown' entries (no user action to
+// preserve), then fall back to oldest-first eviction.
+const MAX_TIP_HISTORY = 200;
 
 export interface CoachTip {
   text: string;
@@ -78,6 +85,15 @@ export class CoachMemory {
 
   recordTip(tip: CoachTip, action: TipAction): void {
     this.state.tips.push({ ...tip, action, at: Date.now() });
+    if (this.state.tips.length > MAX_TIP_HISTORY) {
+      // Prefer pruning still-'shown' tips (no user decision yet) before
+      // dropping actioned history that the server report cares about.
+      const pruned = this.state.tips.filter((t) => t.action !== 'shown');
+      this.state.tips = (pruned.length >= this.state.tips.length - MAX_TIP_HISTORY / 2
+        ? pruned
+        : this.state.tips
+      ).slice(-MAX_TIP_HISTORY);
+    }
     this.save();
   }
 
@@ -135,14 +151,5 @@ export class CoachMemory {
 
 /** Sign-out sweep: remove every stored coach session. */
 export function clearAllCoachSessions(): void {
-  try {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(COACH_SESSION_PREFIX)) keys.push(k);
-    }
-    keys.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    // storage unavailable — nothing to sweep
-  }
+  sweepLocalStorageKeysWithPrefix(COACH_SESSION_PREFIX);
 }

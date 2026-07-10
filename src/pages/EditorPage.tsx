@@ -989,7 +989,7 @@ usePageTitle(
   },
   {
     element: '[data-intro-id="editor-canvas"]',
-    intro: '<strong>Writing Canvas</strong><br/>Click anywhere and start writing — placeholders disappear as you go. As you type, the <strong>AI Detector</strong> live-highlights AI-sounding words and phrases right here so you can spot them instantly.',
+    intro: '<strong>Writing Canvas</strong><br/>Click anywhere and start writing — placeholders disappear as you go. Turn on the <strong>Writing Coach</strong> from the sidebar for quiet, confidence-scored tips on clarity, conciseness, and tone as you draft.',
   },
   {
     element: '[data-intro-id="format-toolbar"]',

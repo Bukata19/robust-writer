@@ -102,11 +102,17 @@ export async function upsertPatternAggregates(
 ): Promise<void> {
   const types = Object.keys(patterns);
   if (types.length === 0) return;
-  const { data } = await db
+  const { data, error } = await db
     .from('coach_pattern_log')
     .select('pattern_type, total_occurrences, sessions_with_pattern, first_detected')
     .eq('user_id', userId)
     .in('pattern_type', types);
+  if (error) {
+    // A failed read would silently zero out prior counts on the upsert below.
+    // Better to skip this session's fold-in than corrupt the aggregate.
+    console.error('[coachDb] pattern aggregate read failed; skipping upsert', error);
+    return;
+  }
   const existing = new Map(
     ((data ?? []) as CoachPatternAggRow[]).map((r) => [r.pattern_type, r]),
   );

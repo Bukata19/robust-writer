@@ -5,6 +5,7 @@ import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
 import { clearOfflineDocs } from '@/lib/offlineDocCache';
 import { clearAllLocalDrafts } from '@/lib/localDraft';
 import { clearAllCoachSessions } from '@/lib/coachMemory';
+import { sweepLocalStorageKeysWithPrefix } from '@/lib/storageSweep';
 import { DASHBOARD_TOUR_KEY, EDITOR_TOUR_KEY } from '@/hooks/useIntroTour';
 import { toast } from 'sonner';
 
@@ -226,14 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Coach session memory and decoded-assignment state carry the user's
     // writing patterns and assignment text — per-user data, same sweep.
     clearAllCoachSessions();
-    try {
-      const decoderKeys: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('rb_decoder_')) decoderKeys.push(k);
-      }
-      decoderKeys.forEach((k) => localStorage.removeItem(k));
-    } catch { /* storage unavailable — nothing to sweep */ }
+    sweepLocalStorageKeysWithPrefix('rb_decoder_');
     // Onboarding/tour state is also per-user: sweep it so the next account on
     // this browser gets its own onboarding modal and tours instead of
     // inheriting the previous user's "already seen" flags.

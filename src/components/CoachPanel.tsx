@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { useCoach } from '@/contexts/CoachContext';
 import type { CoachMode } from '@/lib/coachTips';
-import type { PatternCategory } from '@/lib/coachPatterns';
+import { type PatternCategory, toggleFocusArea } from '@/lib/coachPatterns';
+import { PATTERN_LABELS } from '@/lib/coachReporting';
 
 const CoachCharts = lazy(() => import('./CoachCharts'));
 
@@ -34,14 +35,8 @@ const FOCUS_OPTIONS: { value: PatternCategory; label: string; icon: LucideIcon }
   { value: 'grammar', label: 'Grammar', icon: PenLine },
 ];
 
-const PATTERN_LABEL: Record<string, string> = {
-  passive_voice: 'Passive voice',
-  wordy_phrase: 'Wordy phrasing',
-  weak_opener: 'Weak openers',
-  complex_sentence: 'Long sentences',
-  transition_density: 'Transition overuse',
-  repetition: 'Word repetition',
-};
+
+
 
 interface Props {
   onClose: () => void;
@@ -79,12 +74,7 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
   ];
 
   const toggleFocus = (area: PatternCategory) => {
-    const has = coach.focusAreas.includes(area);
-    if (has) {
-      coach.setFocusAreas(coach.focusAreas.filter((a) => a !== area));
-    } else if (coach.focusAreas.length < 3) {
-      coach.setFocusAreas([...coach.focusAreas, area]);
-    }
+    coach.setFocusAreas(toggleFocusArea(coach.focusAreas, area));
   };
 
   return (
@@ -242,7 +232,7 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
                   <ul className="space-y-1">
                     {coach.aggregates.slice(0, 5).map((a) => (
                       <li key={a.pattern_type} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{PATTERN_LABEL[a.pattern_type] ?? a.pattern_type}</span>
+                        <span className="text-muted-foreground">{PATTERN_LABELS[a.pattern_type] ?? a.pattern_type}</span>
                         <span className="text-foreground font-medium">{a.total_occurrences}×</span>
                       </li>
                     ))}
