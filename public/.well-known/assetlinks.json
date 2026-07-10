@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "app.lovable.robobuddy_writer.twa",
-        "sha256_cert_fingerprints": ["E4:AA:28:26:E2:A6:8D:B2:CE:1C:BF:0B:4E:94:68:EB:B9:9E:A0:1D:CB:A8:20:A8:D6:02:A1:C8:91:7F:98:3E"]
+        "sha256_cert_fingerprints": ["43:9F:2D:50:53:85:22:A9:8C:08:DD:2F:04:05:C8:8D:2B:6B:5E:89:17:58:D4:72:E6:3E:EE:27:BF:40:9D:69"]
       }
     }]
