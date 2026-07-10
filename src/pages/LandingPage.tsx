@@ -54,11 +54,24 @@ const STATS = [
 const LandingPage: React.FC = () => {
   usePageTitle(
     'AI Writing Assistant for Students',
-    'RobAssister helps students write essays, research papers and reports with AI chat, text humanizing, live writing coaching and smart assignment guidance — free to start.'
+    'Write essays, research papers and reports with AI chat, humanizing, plagiarism checking and smart assignment guidance — free for students.'
   );
 
+  // A returning logged-in user (web or the installed APK) should skip the
+  // marketing page entirely and land straight in their documents. Only a
+  // signed-out visitor should ever see the landing page below.
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  if (loading || user) {
+    return null; // brief blank frame while auth resolves / redirect fires — avoids a flash of the marketing page
+  }
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
