@@ -65,7 +65,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoach } from '@/contexts/CoachContext';
 import type { CoachMode } from '@/lib/coachTips';
-import type { PatternCategory } from '@/lib/coachPatterns';
+import { type PatternCategory, toggleFocusArea } from '@/lib/coachPatterns';
 import { toast } from 'sonner';
 import {
   OptionGroup,
@@ -481,13 +481,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onOpenChange }) =
                     type="button"
                     disabled={full}
                     aria-pressed={active}
-                    onClick={() =>
-                      coach.setFocusAreas(
-                        active
-                          ? coach.focusAreas.filter((a) => a !== area)
-                          : [...coach.focusAreas, area],
-                      )
-                    }
+                    onClick={() => coach.setFocusAreas(toggleFocusArea(coach.focusAreas, area))}
                     className={`focus-ring px-2 py-1 rounded-md border text-xs font-medium capitalize transition-colors ${
                       active
                         ? 'border-primary/60 bg-primary/10 text-primary'
