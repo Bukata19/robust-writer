@@ -285,9 +285,6 @@ const LandingPage: React.FC = () => {
     };
   }, []);
 
-  if (loading || user) {
-    return null;
-  }
 
   return (
     <div className="lp-root" ref={rootRef}>
