@@ -76,11 +76,18 @@ export class CoachMemory {
         patterns: typeof parsed.patterns === 'object' && parsed.patterns ? parsed.patterns : {},
         tips: Array.isArray(parsed.tips) ? parsed.tips : [],
         streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+        lastShownAt:
+          typeof parsed.lastShownAt === 'object' && parsed.lastShownAt ? parsed.lastShownAt : {},
+        lastVariantIndex:
+          typeof parsed.lastVariantIndex === 'object' && parsed.lastVariantIndex
+            ? parsed.lastVariantIndex
+            : {},
       };
     } catch {
       return emptyState();
     }
   }
+
 
   private save(): void {
     try {
