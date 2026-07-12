@@ -107,7 +107,11 @@ export class CoachMemory {
   }
 
   recordTip(tip: CoachTip, action: TipAction): void {
-    this.state.tips.push({ ...tip, action, at: Date.now() });
+    const now = Date.now();
+    this.state.tips.push({ ...tip, action, at: now });
+    if (action === 'shown') {
+      this.state.lastShownAt[tip.patternType] = now;
+    }
     if (this.state.tips.length > MAX_TIP_HISTORY) {
       // Prefer pruning still-'shown' tips (no user decision yet) before
       // dropping actioned history that the server report cares about.
@@ -128,6 +132,49 @@ export class CoachMemory {
     const norm = normalizeTip(tipText);
     return this.state.tips.some((t) => normalizeTip(t.text) === norm);
   }
+
+  /**
+   * True when a tip for `patternType` may be shown again — i.e. the last one
+   * was longer than `cooldownMs` ago (or none has been shown this session).
+   * This replaces the old permanent exact-text dedupe: recurring patterns
+   * should be re-flagged periodically within a long session.
+   */
+  canShowPattern(patternType: string, cooldownMs: number = PATTERN_COOLDOWN_MS): boolean {
+    const last = this.state.lastShownAt[patternType];
+    if (!last) return true;
+    return Date.now() - last >= cooldownMs;
+  }
+
+  /**
+   * Pick a variant index in [0, variantCount) that differs from the last one
+   * used for this pattern (when possible), and remember the choice.
+   */
+  nextVariantIndex(patternType: string, variantCount: number): number {
+    if (variantCount <= 0) return 0;
+    const last = this.state.lastVariantIndex[patternType];
+    let next = 0;
+    if (variantCount === 1 || last === undefined) {
+      next = last === undefined ? 0 : (last + 1) % variantCount;
+    } else {
+      next = (last + 1) % variantCount;
+    }
+    this.state.lastVariantIndex[patternType] = next;
+    this.save();
+    return next;
+  }
+
+  /**
+   * Short-window suppression against showing literally identical wording
+   * twice in a row. Complements `canShowPattern` for wording freshness.
+   */
+  wasSameTextShownRecently(tipText: string, windowMs: number = SAME_TEXT_SUPPRESSION_MS): boolean {
+    const norm = normalizeTip(tipText);
+    const cutoff = Date.now() - windowMs;
+    return this.state.tips.some(
+      (t) => t.at >= cutoff && normalizeTip(t.text) === norm,
+    );
+  }
+
 
   /** Upgrade the most recent record of this tip (e.g. 'shown' → 'accepted'). */
   updateTipAction(tipText: string, action: TipAction): void {
