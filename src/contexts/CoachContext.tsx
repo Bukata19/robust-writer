@@ -294,7 +294,9 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         enabled, mode, focusAreas, setEnabled, setMode, setFocusAreas,
         session, startSession, endSession,
-        hasSeenTip, recordTipShown, recordTipAction, recordPatterns,
+        hasSeenTip, canShowPattern, nextVariantIndex, wasSameTextShownRecently,
+        recordTipShown, recordTipAction, recordPatterns,
+
         aggregates, recentSessions, statsLoading, refreshStats,
       }}
     >
