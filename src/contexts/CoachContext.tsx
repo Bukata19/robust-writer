@@ -233,6 +233,23 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [],
   );
 
+  const canShowPattern = useCallback(
+    (patternType: string) => memoryRef.current?.canShowPattern(patternType) ?? true,
+    [],
+  );
+
+  const nextVariantIndex = useCallback(
+    (patternType: string, count: number) =>
+      memoryRef.current?.nextVariantIndex(patternType, count) ?? 0,
+    [],
+  );
+
+  const wasSameTextShownRecently = useCallback(
+    (text: string) => memoryRef.current?.wasSameTextShownRecently(text) ?? false,
+    [],
+  );
+
+
   const recordTipShown = useCallback((tip: CoachTip) => {
     memoryRef.current?.recordTip(tip, 'shown');
     syncCounters();
