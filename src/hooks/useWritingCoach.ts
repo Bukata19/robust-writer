@@ -6,7 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { detectPatterns, PATTERN_CATEGORY, type PatternType } from '@/lib/coachPatterns';
-import { generateTip } from '@/lib/coachTips';
+import { generateTip, variantCount } from '@/lib/coachTips';
+
 import type { CoachTip } from '@/lib/coachMemory';
 import { useCoach } from '@/contexts/CoachContext';
 import { useAuth } from '@/contexts/AuthContext';
