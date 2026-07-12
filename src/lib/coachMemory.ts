@@ -35,11 +35,27 @@ interface PersistedState {
   patterns: Record<string, number>;
   tips: RecordedTip[];
   streak: number;
+  /** Last time (ms epoch) a tip was shown for a given pattern type. */
+  lastShownAt: Record<string, number>;
+  /** Last variant index used per pattern type (for wording rotation). */
+  lastVariantIndex: Record<string, number>;
 }
 
-const emptyState = (): PersistedState => ({ patterns: {}, tips: [], streak: 0 });
+const emptyState = (): PersistedState => ({
+  patterns: {},
+  tips: [],
+  streak: 0,
+  lastShownAt: {},
+  lastVariantIndex: {},
+});
 
 const normalizeTip = (text: string) => text.trim().toLowerCase();
+
+/** Default rolling cooldown between tips for the same pattern (25 min). */
+export const PATTERN_COOLDOWN_MS = 25 * 60 * 1000;
+/** Short window in which exact-same wording is suppressed. */
+export const SAME_TEXT_SUPPRESSION_MS = PATTERN_COOLDOWN_MS;
+
 
 export class CoachMemory {
   private readonly key: string;
