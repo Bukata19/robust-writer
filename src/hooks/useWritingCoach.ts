@@ -6,7 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { detectPatterns, PATTERN_CATEGORY, type PatternType } from '@/lib/coachPatterns';
-import { generateTip } from '@/lib/coachTips';
+import { generateTip, variantCount } from '@/lib/coachTips';
+
 import type { CoachTip } from '@/lib/coachMemory';
 import { useCoach } from '@/contexts/CoachContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,15 +108,23 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
         .sort((a, b) => b.score - a.score);
 
       for (const { type, hit } of ranked) {
+        // Primary gate: has enough time elapsed since we last flagged THIS
+        // pattern? (Prevents robotic re-hits, but doesn't silence forever.)
+        if (!c.canShowPattern(type)) continue;
+        const idx = c.nextVariantIndex(type, variantCount(type, c.mode));
         const candidate = generateTip(type, hit, {
           mode: c.mode,
           academicLevel: (profileRef.current as { academic_level?: string | null } | null)?.academic_level,
+          variantIndex: idx,
         });
-        if (c.hasSeenTip(candidate.text)) continue;
+        // Secondary gate: don't repeat literally identical wording within the
+        // suppression window (belt-and-braces on top of variant rotation).
+        if (c.wasSameTextShownRecently(candidate.text)) continue;
         c.recordTipShown(candidate);
         setTip(candidate);
         return;
       }
+
     };
 
     const handler = () => {
