@@ -53,9 +53,13 @@ interface CoachContextType {
   startSession: (documentId: string | null) => void;
   endSession: () => void;
   hasSeenTip: (text: string) => boolean;
+  canShowPattern: (patternType: string) => boolean;
+  nextVariantIndex: (patternType: string, variantCount: number) => number;
+  wasSameTextShownRecently: (text: string) => boolean;
   recordTipShown: (tip: CoachTip) => void;
   recordTipAction: (tip: CoachTip, action: Exclude<TipAction, 'shown'>) => void;
   recordPatterns: (patterns: Record<string, number>) => void;
+
 
   aggregates: CoachPatternAggRow[];
   recentSessions: CoachSessionRow[];
