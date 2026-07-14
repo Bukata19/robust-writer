@@ -370,7 +370,31 @@ useEffect(() => {
     onAccept: onCoachAccept,
     onSkip: onCoachSkip,
     dismiss: dismissCoachTip,
+    requestTipNow: requestCoachTipNow,
   } = useWritingCoach({ editor, suggestedFocus: assignmentCtx.suggestedFocus });
+
+  const handleRequestCoachTip = useCallback(() => {
+    const status = requestCoachTipNow();
+    switch (status) {
+      case 'ok':
+        return;
+      case 'too_short':
+        toast('Write a bit more first', { description: 'The coach needs at least a short paragraph to look at.' });
+        return;
+      case 'no_issues':
+        toast.success('No issues spotted here — nice work');
+        return;
+      case 'cooldown':
+        toast('Just showed you one — give it a moment');
+        return;
+      case 'no_session':
+        toast('Open a document to get coaching');
+        return;
+      case 'disabled':
+        toast('Turn on the Writing Coach first');
+        return;
+    }
+  }, [requestCoachTipNow]);
 
   // One coach session per opened document; batch-synced to Supabase on close.
   useEffect(() => {
