@@ -54,6 +54,7 @@ import {
   BookOpenCheck,
   Wand2,
   Settings,
+  Lightbulb,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useAssignmentContext } from '@/hooks/useAssignmentContext';
@@ -369,7 +370,31 @@ useEffect(() => {
     onAccept: onCoachAccept,
     onSkip: onCoachSkip,
     dismiss: dismissCoachTip,
+    requestTipNow: requestCoachTipNow,
   } = useWritingCoach({ editor, suggestedFocus: assignmentCtx.suggestedFocus });
+
+  const handleRequestCoachTip = useCallback(() => {
+    const status = requestCoachTipNow();
+    switch (status) {
+      case 'ok':
+        return;
+      case 'too_short':
+        toast('Write a bit more first', { description: 'The coach needs at least a short paragraph to look at.' });
+        return;
+      case 'no_issues':
+        toast.success('No issues spotted here — nice work');
+        return;
+      case 'cooldown':
+        toast('Just showed you one — give it a moment');
+        return;
+      case 'no_session':
+        toast('Open a document to get coaching');
+        return;
+      case 'disabled':
+        toast('Turn on the Writing Coach first');
+        return;
+    }
+  }, [requestCoachTipNow]);
 
   // One coach session per opened document; batch-synced to Supabase on close.
   useEffect(() => {
@@ -1490,6 +1515,24 @@ const formatButtons = editor ? (
             </Button>
           </TooltipTrigger>
           <TooltipContent>Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Get a coach tip now"
+              onClick={handleRequestCoachTip}
+              disabled={!coach.enabled}
+              className="scale-click text-muted-foreground hover:text-primary"
+            >
+              <Lightbulb className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {coach.enabled ? 'Get a tip now' : 'Enable Writing Coach to use'}
+          </TooltipContent>
         </Tooltip>
 
         {/* Export dropdown */}
