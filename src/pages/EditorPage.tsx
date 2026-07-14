@@ -54,6 +54,7 @@ import {
   BookOpenCheck,
   Wand2,
   Settings,
+  Lightbulb,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useAssignmentContext } from '@/hooks/useAssignmentContext';
