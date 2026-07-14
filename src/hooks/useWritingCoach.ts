@@ -15,6 +15,10 @@ import { useAuth } from '@/contexts/AuthContext';
 const PAUSE_MS = 12_000;
 const MIN_WORDS = 15;
 const ACCEPT_COOLDOWN_MS = 10_000;
+/** Independent debounce for the manual "Get a tip now" button — only
+ *  prevents rapid-click spam; deliberately NOT tied to ACCEPT_COOLDOWN_MS
+ *  so users can still request a tip right after accepting an automatic one. */
+const MANUAL_COOLDOWN_MS = 6_000;
 
 // Mode → minimum confidence a pattern needs to earn a tip.
 const MODE_THRESHOLD: Record<string, number> = {
@@ -22,6 +26,14 @@ const MODE_THRESHOLD: Record<string, number> = {
   balanced: 0.7,
   strict: 0,
 };
+
+export type RequestTipStatus =
+  | 'ok'
+  | 'disabled'
+  | 'no_session'
+  | 'too_short'
+  | 'no_issues'
+  | 'cooldown';
 
 interface Options {
   editor: Editor | null;
@@ -36,6 +48,7 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
 
   const timerRef = useRef<number | null>(null);
   const cooldownUntilRef = useRef(0);
+  const manualCooldownUntilRef = useRef(0);
   const lastParagraphRef = useRef('');
   const tipRef = useRef<CoachTip | null>(null);
   tipRef.current = tip;
@@ -47,6 +60,8 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
   profileRef.current = profile;
   const suggestedFocusRef = useRef(suggestedFocus);
   suggestedFocusRef.current = suggestedFocus;
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
 
   const dismiss = useCallback(() => setTip(null), []);
 
@@ -65,30 +80,37 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
     setTip(null);
   }, []);
 
-  useEffect(() => {
-    if (!editor || !coach.enabled) {
-      setTip(null);
-      return;
-    }
-
-    const evaluate = () => {
+  /**
+   * Core evaluation: inspect the paragraph at the cursor, pick the best
+   * un-cooled pattern, and surface a tip. `opts.manual` bypasses the
+   * automatic-path accept-cooldown and duplicate-paragraph guard so a user
+   * can explicitly request a tip immediately.
+   */
+  const evaluate = useCallback(
+    (opts: { manual?: boolean } = {}): RequestTipStatus => {
+      const ed = editorRef.current;
       const c = coachRef.current;
-      if (!c.session) return;
-      if (Date.now() < cooldownUntilRef.current) return;
+      if (!ed || !c.enabled) return 'disabled';
+      if (!c.session) return 'no_session';
+      if (!opts.manual && Date.now() < cooldownUntilRef.current) return 'cooldown';
 
       let paragraph = '';
       try {
-        paragraph = editor.state.selection.$anchor.node(1)?.textContent ?? '';
+        paragraph = ed.state.selection.$anchor.node(1)?.textContent ?? '';
       } catch {
         paragraph = '';
       }
-      if (paragraph.trim().split(/\s+/).filter(Boolean).length < MIN_WORDS) return;
-      if (paragraph === lastParagraphRef.current) return;
-      lastParagraphRef.current = paragraph;
+      if (paragraph.trim().split(/\s+/).filter(Boolean).length < MIN_WORDS) {
+        return 'too_short';
+      }
+      if (!opts.manual) {
+        if (paragraph === lastParagraphRef.current) return 'no_issues';
+        lastParagraphRef.current = paragraph;
+      }
 
       const detected = detectPatterns(paragraph);
       const entries = Object.entries(detected) as [PatternType, { count: number; confidence: number }][];
-      if (entries.length === 0) return;
+      if (entries.length === 0) return 'no_issues';
 
       c.recordPatterns(Object.fromEntries(entries.map(([t, h]) => [t, h.count])));
 
@@ -108,8 +130,6 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
         .sort((a, b) => b.score - a.score);
 
       for (const { type, hit } of ranked) {
-        // Primary gate: has enough time elapsed since we last flagged THIS
-        // pattern? (Prevents robotic re-hits, but doesn't silence forever.)
         if (!c.canShowPattern(type)) continue;
         const idx = c.nextVariantIndex(type, variantCount(type, c.mode));
         const candidate = generateTip(type, hit, {
@@ -117,21 +137,40 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
           academicLevel: (profileRef.current as { academic_level?: string | null } | null)?.academic_level,
           variantIndex: idx,
         });
-        // Secondary gate: don't repeat literally identical wording within the
-        // suppression window (belt-and-braces on top of variant rotation).
         if (c.wasSameTextShownRecently(candidate.text)) continue;
         c.recordTipShown(candidate);
         setTip(candidate);
-        return;
+        return 'ok';
       }
 
-    };
+      return 'no_issues';
+    },
+    [],
+  );
+
+  /** Manual trigger for the "Get a tip now" button. */
+  const requestTipNow = useCallback((): RequestTipStatus => {
+    if (Date.now() < manualCooldownUntilRef.current) return 'cooldown';
+    const status = evaluate({ manual: true });
+    // Only debounce the button when we actually attempted an evaluation;
+    // "disabled"/"no_session" shouldn't trip its cooldown.
+    if (status === 'ok' || status === 'no_issues') {
+      manualCooldownUntilRef.current = Date.now() + MANUAL_COOLDOWN_MS;
+    }
+    return status;
+  }, [evaluate]);
+
+  useEffect(() => {
+    if (!editor || !coach.enabled) {
+      setTip(null);
+      return;
+    }
 
     const handler = () => {
       // Typing again means the current tip was ignored — clear it and rearm.
       setTip(null);
       if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(evaluate, PAUSE_MS);
+      timerRef.current = window.setTimeout(() => evaluate(), PAUSE_MS);
     };
 
     editor.on('update', handler);
@@ -139,7 +178,14 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
       editor.off('update', handler);
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
-  }, [editor, coach.enabled]);
+  }, [editor, coach.enabled, evaluate]);
 
-  return { tip, streak: coach.session?.streak ?? 0, onAccept, onSkip, dismiss };
+  return {
+    tip,
+    streak: coach.session?.streak ?? 0,
+    onAccept,
+    onSkip,
+    dismiss,
+    requestTipNow,
+  };
 }
