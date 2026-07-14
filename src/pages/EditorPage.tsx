@@ -1517,6 +1517,24 @@ const formatButtons = editor ? (
           <TooltipContent>Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Get a coach tip now"
+              onClick={handleRequestCoachTip}
+              disabled={!coach.enabled}
+              className="scale-click text-muted-foreground hover:text-primary"
+            >
+              <Lightbulb className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {coach.enabled ? 'Get a tip now' : 'Enable Writing Coach to use'}
+          </TooltipContent>
+        </Tooltip>
+
         {/* Export dropdown */}
         <div className="relative" ref={exportMenuRef}>
           <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn" className="btn-glow">
