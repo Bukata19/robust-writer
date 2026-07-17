@@ -1470,7 +1470,7 @@ const formatButtons = editor ? (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
       <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : 'relative z-10'}`}>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="scale-click">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="scale-click shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
@@ -1497,8 +1497,9 @@ const formatButtons = editor ? (
           <div className="flex-1" />
         )}
 
-        <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono">{wordCount} words</span>
+        <span className="text-xs text-muted-foreground hidden sm:inline whitespace-nowrap font-mono shrink-0">{wordCount} words</span>
 
+        <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-dark shrink">
         <OfflineBadge />
 
         <Tooltip>
@@ -1586,8 +1587,9 @@ const formatButtons = editor ? (
           </TooltipTrigger>
           <TooltipContent>Settings</TooltipContent>
         </Tooltip>
+        </div>
 
-        <Button onClick={() => saveDocument({ manual: true })} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow" aria-label={saving ? 'Saving document' : 'Save document'}>
+        <Button onClick={() => saveDocument({ manual: true })} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow shrink-0" aria-label={saving ? 'Saving document' : 'Save document'}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span className="hidden sm:inline ml-1">Save</span>
         </Button>
