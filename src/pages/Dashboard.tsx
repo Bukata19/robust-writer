@@ -836,6 +836,13 @@ const Dashboard: React.FC = () => {
 
         </div>
         )}
+
+        {/* ══ TOOLS TAB — standalone AI utilities (no document required) ══ */}
+        {activeTab === 'tools' && (
+          <div className="animate-fade-in">
+            <StandaloneHumanizer />
+          </div>
+        )}
       </main>
 
       {/* ── MOBILE BOTTOM TAB BAR — same activeTab state as the desktop nav.
