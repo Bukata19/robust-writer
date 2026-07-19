@@ -168,7 +168,7 @@ const Dashboard: React.FC = () => {
   // Tab view-state only — no routes, no URLs. Home = create/continue,
   // Library = browse/manage. One shared component tree; the inactive tab's
   // content is conditionally unrendered (state lives here, so it survives).
-  const [activeTab, setActiveTab] = useState<'home' | 'library'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
 
 
   const [documents, setDocuments] = useState<Document[]>([]);
