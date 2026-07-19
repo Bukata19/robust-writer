@@ -30,8 +30,9 @@ import {
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
-  Home, FolderOpen,
+  Home, FolderOpen, Wrench,
 } from 'lucide-react';
+import StandaloneHumanizer from '@/components/StandaloneHumanizer';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
@@ -39,6 +40,7 @@ type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 const TABS = [
   { id: 'home' as const, label: 'Home', icon: Home },
   { id: 'library' as const, label: 'Library', icon: FolderOpen },
+  { id: 'tools' as const, label: 'Tools', icon: Wrench },
 ];
 type SortMode = 'recent' | 'alpha';
 
