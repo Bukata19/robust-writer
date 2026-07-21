@@ -547,6 +547,84 @@ OUTPUT RULES:
     };
   }, [editor, step]);
 
+  // ── ANSWER MODE ──────────────────────────────────────────────────────────
+  // Chat-style path for problem-based questions. Reuses the same chat edge
+  // function (via callChat), just with its own clarity-focused system prompt.
+  // The essay-oriented HUMAN_STYLE_RULES are intentionally NOT applied here.
+  const enterAnswerMode = useCallback(() => {
+    setSessionContext(question);
+    setStep('answer_mode');
+  }, [question]);
+
+  const buildAnswerSystemPrompt = useCallback((): string => {
+    const levelLabel =
+      academicLevel === 'high_school' ? 'high school'
+      : academicLevel === 'undergraduate' ? 'undergraduate'
+      : academicLevel === 'postgraduate' ? 'postgraduate'
+      : 'general';
+    const fieldLine = effectiveField
+      ? `\nFIELD OF STUDY: ${effectiveField}. Use notation, units, and conventions standard in that field.`
+      : '';
+    return `You are a rigorous problem-solving tutor helping a ${levelLabel} student with a computational / worked-solution assignment.
+
+ORIGINAL ASSIGNMENT QUESTION (context for every reply, do not repeat back verbatim):
+${sessionContext || question}
+${fieldLine}
+
+HOW TO ANSWER:
+- Prioritise correctness and clarity. This is a worked answer, NOT an essay.
+- Show the reasoning step by step, in the order a student would work it out. Number the steps when there is more than one.
+- State any assumptions you make and why.
+- Give the final answer clearly at the end (label it "Answer:" on its own line). Include units where relevant.
+- Use plain text math with standard notation (e.g. x^2, sqrt(2), integral from 0 to 1 of ...). Use LaTeX only if the student uses it first.
+- If the student pastes multiple sub-questions (e.g. "1a, 1b, 2"), solve each one under its own clearly labelled heading.
+- If something in the question is ambiguous, ask ONE clarifying question rather than guessing.
+- Do NOT add motivational filler, do NOT vary sentence rhythm for style, do NOT hedge unnecessarily. Be direct.`;
+  }, [academicLevel, effectiveField, sessionContext, question]);
+
+  const sendAnswerMessage = useCallback(async (userText: string) => {
+    const text = userText.trim();
+    if (!text || answerSending) return;
+    const userMsg: AnswerModeMessage = {
+      id: `am-u-${Date.now()}`,
+      role: 'user',
+      content: text,
+    };
+    const nextHistory = [...answerMessages, userMsg];
+    setAnswerMessages(nextHistory);
+    setAnswerSending(true);
+    try {
+      const system = buildAnswerSystemPrompt();
+      const reply = await callChat([
+        { role: 'system', content: system },
+        ...nextHistory.map((m) => ({ role: m.role, content: m.content })),
+      ]);
+      if (!reply.trim()) throw new Error('empty');
+      setAnswerMessages((prev) => [
+        ...prev,
+        { id: `am-a-${Date.now()}`, role: 'assistant', content: reply.trim() },
+      ]);
+    } catch {
+      toast.error('Could not get an answer — try again');
+    } finally {
+      setAnswerSending(false);
+    }
+  }, [answerMessages, answerSending, buildAnswerSystemPrompt]);
+
+  const insertAnswerIntoDocument = useCallback((content: string) => {
+    if (!editor) return;
+    const paragraphs = content
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => ({ type: 'paragraph', content: [{ type: 'text', text: p }] }));
+    if (paragraphs.length === 0) return;
+    editor.chain().focus().insertContent(paragraphs).run();
+    toast.success('Answer inserted into document');
+  }, [editor]);
+
+  const clearAnswerMessages = useCallback(() => setAnswerMessages([]), []);
+
   return {
     question,
     setQuestion,
@@ -571,5 +649,16 @@ OUTPUT RULES:
     acceptSection,
     rewriteSection,
     reset,
+    // Field-of-study (real profile value or inferred fallback)
+    effectiveField,
+    // Answer Mode
+    isProblemBased: questionAnalysis?.isProblemBased === true,
+    answerMessages,
+    answerSending,
+    enterAnswerMode,
+    sendAnswerMessage,
+    insertAnswerIntoDocument,
+    clearAnswerMessages,
   };
 }
+
