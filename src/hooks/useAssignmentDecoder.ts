@@ -223,10 +223,11 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
       const toSave: PersistedDecoderState = {
         question, detectedDocType, detectionReason, confirmedDocType,
         academicLevel, outline, sessionContext, step, questionAnalysis,
+        answerMessages,
       };
       localStorage.setItem(DECODER_STORAGE_KEY(documentId), JSON.stringify(toSave));
     } catch { /* ignore */ }
-  }, [documentId, question, detectedDocType, detectionReason, confirmedDocType, academicLevel, outline, sessionContext, step, questionAnalysis]);
+  }, [documentId, question, detectedDocType, detectionReason, confirmedDocType, academicLevel, outline, sessionContext, step, questionAnalysis, answerMessages]);
 
   const reset = useCallback(() => {
     if (documentId) {
@@ -243,6 +244,7 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
     setActiveSection(null);
     setGeneratingSection(null);
     setSectionDraft(null);
+    setAnswerMessages([]);
     setStep('input');
   }, [documentId]);
 
@@ -251,15 +253,23 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
     if (!question.trim()) return;
     setAnalysing(true);
     try {
+      // Only ask the model to infer a field when the profile doesn't have a
+      // real one. If profileField is set, we skip that step to save tokens
+      // and to keep the stated profile value authoritative.
+      const askInferField = !profileField;
+
       const system = `You are an academic assignment analyser. Read the student's assignment question carefully and produce a structured breakdown.
 
-STEP 1 — INSTRUCTION VERBS: Identify the command word(s) that define HOW the student must answer (e.g. discuss, analyse, evaluate, compare, contrast, critically assess, justify, examine, describe, explain). These dictate the entire structure. For example "evaluate" demands weighing strengths against weaknesses and reaching a judgement; "compare" demands systematic side-by-side treatment; "critically assess" demands taking and defending a position.
+STEP 1 — INSTRUCTION VERBS: Identify the command word(s) that define HOW the student must answer (e.g. discuss, analyse, evaluate, compare, contrast, critically assess, justify, examine, describe, explain, solve, calculate, derive, prove, find, compute, show that). These dictate the entire structure. For example "evaluate" demands weighing strengths against weaknesses and reaching a judgement; "compare" demands systematic side-by-side treatment; "solve" or "calculate" demands a worked numerical/derivational answer, not an essay.
 
 STEP 2 — MARKS: If the question states mark allocations per part (e.g. "(5 marks)", "[20]"), capture them. If none are stated, use null.
 
 STEP 3 — DOC TYPE: Pick the most appropriate from "essay", "research_paper", "report", "general".
 
-STEP 4 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known.
+STEP 4 — PROBLEM-BASED CLASSIFICATION: Set isProblemBased to true ONLY if this is a computational / worked-solution question typical of Math, Physics, Chemistry, Engineering, or Computer Science (verbs like solve, calculate, derive, prove, find, compute, evaluate the integral, show that…). Set it to false for essays, discussions, reports, and other prose-based assignments. This applies at any academic level.
+
+STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. (For problem-based questions, still produce a sensible outline as a fallback in case the student chooses the written path anyway.)
+${askInferField ? `\nSTEP 6 — INFERRED FIELD: Based on the terminology and subject matter of the question, infer the most likely field of study (e.g. "Economics", "Molecular Biology", "Mechanical Engineering", "English Literature"). Keep it short. Use null only if genuinely impossible to tell.` : ''}
 
 Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
 {
@@ -268,6 +278,7 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
   "instructionVerbs": ["string"],
   "verbGuidance": "one or two sentences on what these command words require the writer to actually DO",
   "totalMarks": number | null,
+  "isProblemBased": boolean,${askInferField ? `\n  "inferredField": "string" | null,` : ''}
   "suggestedTotalWords": number,
   "outlineSections": [
     { "heading": "string", "guidanceTip": "short actionable guidance referencing the instruction verb where relevant", "wordCountSuggestion": number, "marks": number | null }
@@ -288,12 +299,16 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
       setConfirmedDocType(dt);
       setDetectionReason(typeof parsed.reason === 'string' ? parsed.reason : '');
 
-      // ENHANCEMENT 1: store the instruction-verb analysis
+      // ENHANCEMENT 1: store the instruction-verb analysis (+ new optional fields)
       setQuestionAnalysis({
         instructionVerbs: Array.isArray(parsed.instructionVerbs)
           ? parsed.instructionVerbs.map((v: any) => String(v)) : [],
         verbGuidance: typeof parsed.verbGuidance === 'string' ? parsed.verbGuidance : '',
         totalMarks: typeof parsed.totalMarks === 'number' ? parsed.totalMarks : null,
+        inferredField: askInferField && typeof parsed.inferredField === 'string'
+          ? parsed.inferredField.trim() || null
+          : null,
+        isProblemBased: parsed.isProblemBased === true,
       });
 
       let sections: OutlineSection[] = parsed.outlineSections.map((s: any, i: number) => ({
@@ -314,7 +329,8 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
     } finally {
       setAnalysing(false);
     }
-  }, [question]);
+  }, [question, profileField]);
+
 
   const confirmAndBuildOutline = useCallback(
     async (docType: DecoderDocType, level: AcademicLevel) => {
