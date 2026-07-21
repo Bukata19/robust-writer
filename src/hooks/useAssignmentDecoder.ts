@@ -174,6 +174,43 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
   const [step, setStep] = useState<DecoderStep>(persisted.step ?? 'input');
   const [analysing, setAnalysing] = useState(false);
 
+  // ── FIELD OF STUDY ────────────────────────────────────────────────────────
+  // Fetched once from the authenticated user's profile row (RLS-scoped, so
+  // this cannot leak another user's data). A real stated field always takes
+  // priority over any inferred fallback from questionAnalysis.
+  const [profileField, setProfileField] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const uid = userRes?.user?.id;
+        if (!uid) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('field_of_study')
+          .eq('user_id', uid)
+          .maybeSingle();
+        if (!cancelled) {
+          const f = (data?.field_of_study ?? '').trim();
+          setProfileField(f && f.toLowerCase() !== 'other' ? f : null);
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Effective field: real profile value wins; otherwise fall back to inferred.
+  const effectiveField: string | null =
+    profileField ?? (questionAnalysis?.inferredField?.trim() || null);
+
+  // ── ANSWER MODE state ─────────────────────────────────────────────────────
+  const [answerMessages, setAnswerMessages] = useState<AnswerModeMessage[]>(
+    persisted.answerMessages ?? [],
+  );
+  const [answerSending, setAnswerSending] = useState(false);
+
+
   // Persist whenever meaningful state changes
   useEffect(() => {
     if (!documentId || step === 'input') {
