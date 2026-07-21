@@ -114,6 +114,23 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             {decoder.detectionReason && (
               <p className="text-xs text-muted-foreground italic">{decoder.detectionReason}</p>
             )}
+
+            {decoder.isProblemBased && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+                <p className="text-xs text-foreground">
+                  This looks like a <span className="text-primary font-medium">problem-based</span> question
+                  (solve / calculate / derive). Want to work through it as a chat instead of writing an essay?
+                </p>
+                <Button
+                  size="sm"
+                  onClick={decoder.enterAnswerMode}
+                  className="w-full btn-glow"
+                >
+                  Use Answer Mode →
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-1 flex-wrap">
               {DOC_TYPES.map((d) => (
                 <button
@@ -144,6 +161,9 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             </Button>
           </>
         )}
+
+        {decoder.step === 'answer_mode' && <AnswerModeView decoder={decoder} />}
+
 
         {decoder.step === 'outline_ready' && (
           <>
