@@ -7,7 +7,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export type DecoderDocType = 'essay' | 'research_paper' | 'report' | 'general';
 export type AcademicLevel = 'high_school' | 'undergraduate' | 'postgraduate' | null;
-export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing';
+// 'answer_mode' is an additive path for problem-based (compute/solve) questions.
+export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing' | 'answer_mode';
 
 export interface OutlineSection {
   id: string;
@@ -17,11 +18,21 @@ export interface OutlineSection {
   marks?: number | null;           // ENHANCEMENT 6: marks for this section, if specified
 }
 
-// ENHANCEMENT 1: structured result of analysing the question's command words
+// ENHANCEMENT 1: structured result of analysing the question's command words.
+// New fields (inferredField, isProblemBased) are OPTIONAL so old persisted
+// sessions continue to load without migration.
 export interface QuestionAnalysis {
   instructionVerbs: string[];      // e.g. ["evaluate", "compare"]
   verbGuidance: string;            // what those verbs demand of the writer
   totalMarks: number | null;       // total marks if the question stated them
+  inferredField?: string | null;   // fallback field-of-study guess when profile is empty/'Other'
+  isProblemBased?: boolean;        // true for compute/solve/derive-style questions
+}
+
+export interface AnswerModeMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 const DECODER_STORAGE_KEY = (docId: string) => `rb_decoder_${docId}`;
@@ -36,6 +47,7 @@ interface PersistedDecoderState {
   sessionContext: string;
   step: DecoderStep;
   questionAnalysis: QuestionAnalysis | null;   // ENHANCEMENT 1: persisted
+  answerMessages?: AnswerModeMessage[];        // optional — Answer Mode chat history
 }
 
 interface UseAssignmentDecoderOptions {
