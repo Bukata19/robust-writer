@@ -469,7 +469,7 @@ OUTPUT RULES:
         setGeneratingSection(null);
       }
     },
-    [outline, confirmedDocType, academicLevel, sessionContext, questionAnalysis, buildCrossSectionContext],
+    [outline, confirmedDocType, academicLevel, sessionContext, questionAnalysis, effectiveField, buildCrossSectionContext],
   );
 
   const acceptSection = useCallback(() => {
