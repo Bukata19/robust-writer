@@ -437,12 +437,17 @@ This section must actively DO what these verbs require — not merely describe. 
           ? `\nALREADY WRITTEN IN OTHER SECTIONS (do NOT repeat these points, examples, or restate the introduction — build on them and stay consistent with them):\n${crossContext}`
           : '';
 
+        // FIELD OF STUDY: injected the same way academicLevel already is.
+        const fieldBlock = effectiveField
+          ? `\nTHE STUDENT'S FIELD OF STUDY: ${effectiveField}. Calibrate examples, terminology, and depth appropriately for that field.`
+          : '';
+
         const system = `You are ${persona}. You are writing the "${heading}" section of a ${confirmedDocType ?? 'essay'}.
 
 THE ASSIGNMENT QUESTION: ${sessionContext}
 
 SECTION GUIDANCE: ${section.guidanceTip}
-TARGET LENGTH: approximately ${section.wordCountSuggestion} words.${verbBlock}${crossBlock}
+TARGET LENGTH: approximately ${section.wordCountSuggestion} words.${verbBlock}${fieldBlock}${crossBlock}
 
 ${HUMAN_STYLE_RULES}
 
@@ -450,6 +455,7 @@ OUTPUT RULES:
 - Write ONLY the body of the "${heading}" section as paragraphs. Do NOT include the heading itself.
 - No markdown, no bullet symbols, no labels — just clean paragraphs of prose.
 - Preserve full academic substance and accuracy while sounding genuinely human.`;
+
 
         const content = await callChat([
           { role: 'system', content: system },
