@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpenCheck, ChevronDown, ChevronRight, Loader2, X } from 'lucide-react';
+import { BookOpenCheck, ChevronDown, ChevronRight, Loader2, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { useAssignmentDecoder, DecoderDocType, AcademicLevel } from '@/hooks/useAssignmentDecoder';
@@ -114,6 +114,23 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             {decoder.detectionReason && (
               <p className="text-xs text-muted-foreground italic">{decoder.detectionReason}</p>
             )}
+
+            {decoder.isProblemBased && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+                <p className="text-xs text-foreground">
+                  This looks like a <span className="text-primary font-medium">problem-based</span> question
+                  (solve / calculate / derive). Want to work through it as a chat instead of writing an essay?
+                </p>
+                <Button
+                  size="sm"
+                  onClick={decoder.enterAnswerMode}
+                  className="w-full btn-glow"
+                >
+                  Use Answer Mode →
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-1 flex-wrap">
               {DOC_TYPES.map((d) => (
                 <button
@@ -144,6 +161,9 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             </Button>
           </>
         )}
+
+        {decoder.step === 'answer_mode' && <AnswerModeView decoder={decoder} />}
+
 
         {decoder.step === 'outline_ready' && (
           <>
@@ -215,4 +235,91 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
   );
 };
 
+const AnswerModeView: React.FC<{ decoder: DecoderApi }> = ({ decoder }) => {
+  const [input, setInput] = useState('');
+  const submit = () => {
+    const t = input.trim();
+    if (!t || decoder.answerSending) return;
+    setInput('');
+    void decoder.sendAnswerMessage(t);
+  };
+  return (
+    <>
+      <div className="rounded-lg border border-border bg-muted/30 p-2">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Answer Mode</p>
+        <p className="text-xs text-foreground mt-1 line-clamp-3">{decoder.sessionContext || decoder.question}</p>
+      </div>
+
+      <div className="space-y-2">
+        {decoder.answerMessages.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">
+            Ask a specific part (e.g. "solve 1a" or paste multiple sub-questions). Answers appear here.
+          </p>
+        )}
+        {decoder.answerMessages.map((m) => (
+          <div
+            key={m.id}
+            className={`rounded-lg p-2 text-xs whitespace-pre-wrap ${
+              m.role === 'user'
+                ? 'bg-primary/10 text-foreground'
+                : 'bg-muted/40 text-foreground border border-border'
+            }`}
+          >
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+              {m.role === 'user' ? 'You' : 'Tutor'}
+            </p>
+            <div>{m.content}</div>
+            {m.role === 'assistant' && (
+              <div className="mt-2 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[11px]"
+                  onClick={() => decoder.insertAnswerIntoDocument(m.content)}
+                >
+                  Insert this answer into the document
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+        {decoder.answerSending && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" /> Working through it…
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-1 items-end">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          rows={2}
+          placeholder="Ask a question or paste sub-questions (e.g. 1a, 1b, 2)…"
+          className="flex-1 text-sm rounded-lg border border-border bg-background text-foreground p-2 resize-y min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <Button size="icon" onClick={submit} disabled={decoder.answerSending || !input.trim()}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" className="flex-1" onClick={() => decoder.setStep('confirm_type')}>
+          ← Back
+        </Button>
+        <Button variant="ghost" size="sm" className="flex-1" onClick={decoder.clearAnswerMessages}>
+          Clear chat
+        </Button>
+      </div>
+    </>
+  );
+};
+
 export default AssignmentDecoderPanel;
+

@@ -7,7 +7,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export type DecoderDocType = 'essay' | 'research_paper' | 'report' | 'general';
 export type AcademicLevel = 'high_school' | 'undergraduate' | 'postgraduate' | null;
-export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing';
+// 'answer_mode' is an additive path for problem-based (compute/solve) questions.
+export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing' | 'answer_mode';
 
 export interface OutlineSection {
   id: string;
@@ -17,11 +18,21 @@ export interface OutlineSection {
   marks?: number | null;           // ENHANCEMENT 6: marks for this section, if specified
 }
 
-// ENHANCEMENT 1: structured result of analysing the question's command words
+// ENHANCEMENT 1: structured result of analysing the question's command words.
+// New fields (inferredField, isProblemBased) are OPTIONAL so old persisted
+// sessions continue to load without migration.
 export interface QuestionAnalysis {
   instructionVerbs: string[];      // e.g. ["evaluate", "compare"]
   verbGuidance: string;            // what those verbs demand of the writer
   totalMarks: number | null;       // total marks if the question stated them
+  inferredField?: string | null;   // fallback field-of-study guess when profile is empty/'Other'
+  isProblemBased?: boolean;        // true for compute/solve/derive-style questions
+}
+
+export interface AnswerModeMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 const DECODER_STORAGE_KEY = (docId: string) => `rb_decoder_${docId}`;
@@ -36,6 +47,7 @@ interface PersistedDecoderState {
   sessionContext: string;
   step: DecoderStep;
   questionAnalysis: QuestionAnalysis | null;   // ENHANCEMENT 1: persisted
+  answerMessages?: AnswerModeMessage[];        // optional — Answer Mode chat history
 }
 
 interface UseAssignmentDecoderOptions {
@@ -162,6 +174,43 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
   const [step, setStep] = useState<DecoderStep>(persisted.step ?? 'input');
   const [analysing, setAnalysing] = useState(false);
 
+  // ── FIELD OF STUDY ────────────────────────────────────────────────────────
+  // Fetched once from the authenticated user's profile row (RLS-scoped, so
+  // this cannot leak another user's data). A real stated field always takes
+  // priority over any inferred fallback from questionAnalysis.
+  const [profileField, setProfileField] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: userRes } = await supabase.auth.getUser();
+        const uid = userRes?.user?.id;
+        if (!uid) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('field_of_study')
+          .eq('user_id', uid)
+          .maybeSingle();
+        if (!cancelled) {
+          const f = (data?.field_of_study ?? '').trim();
+          setProfileField(f && f.toLowerCase() !== 'other' ? f : null);
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Effective field: real profile value wins; otherwise fall back to inferred.
+  const effectiveField: string | null =
+    profileField ?? (questionAnalysis?.inferredField?.trim() || null);
+
+  // ── ANSWER MODE state ─────────────────────────────────────────────────────
+  const [answerMessages, setAnswerMessages] = useState<AnswerModeMessage[]>(
+    persisted.answerMessages ?? [],
+  );
+  const [answerSending, setAnswerSending] = useState(false);
+
+
   // Persist whenever meaningful state changes
   useEffect(() => {
     if (!documentId || step === 'input') {
@@ -174,10 +223,11 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
       const toSave: PersistedDecoderState = {
         question, detectedDocType, detectionReason, confirmedDocType,
         academicLevel, outline, sessionContext, step, questionAnalysis,
+        answerMessages,
       };
       localStorage.setItem(DECODER_STORAGE_KEY(documentId), JSON.stringify(toSave));
     } catch { /* ignore */ }
-  }, [documentId, question, detectedDocType, detectionReason, confirmedDocType, academicLevel, outline, sessionContext, step, questionAnalysis]);
+  }, [documentId, question, detectedDocType, detectionReason, confirmedDocType, academicLevel, outline, sessionContext, step, questionAnalysis, answerMessages]);
 
   const reset = useCallback(() => {
     if (documentId) {
@@ -194,6 +244,7 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
     setActiveSection(null);
     setGeneratingSection(null);
     setSectionDraft(null);
+    setAnswerMessages([]);
     setStep('input');
   }, [documentId]);
 
@@ -202,15 +253,23 @@ export function useAssignmentDecoder({ editor, documentId, onConfirmReplace }: U
     if (!question.trim()) return;
     setAnalysing(true);
     try {
+      // Only ask the model to infer a field when the profile doesn't have a
+      // real one. If profileField is set, we skip that step to save tokens
+      // and to keep the stated profile value authoritative.
+      const askInferField = !profileField;
+
       const system = `You are an academic assignment analyser. Read the student's assignment question carefully and produce a structured breakdown.
 
-STEP 1 — INSTRUCTION VERBS: Identify the command word(s) that define HOW the student must answer (e.g. discuss, analyse, evaluate, compare, contrast, critically assess, justify, examine, describe, explain). These dictate the entire structure. For example "evaluate" demands weighing strengths against weaknesses and reaching a judgement; "compare" demands systematic side-by-side treatment; "critically assess" demands taking and defending a position.
+STEP 1 — INSTRUCTION VERBS: Identify the command word(s) that define HOW the student must answer (e.g. discuss, analyse, evaluate, compare, contrast, critically assess, justify, examine, describe, explain, solve, calculate, derive, prove, find, compute, show that). These dictate the entire structure. For example "evaluate" demands weighing strengths against weaknesses and reaching a judgement; "compare" demands systematic side-by-side treatment; "solve" or "calculate" demands a worked numerical/derivational answer, not an essay.
 
 STEP 2 — MARKS: If the question states mark allocations per part (e.g. "(5 marks)", "[20]"), capture them. If none are stated, use null.
 
 STEP 3 — DOC TYPE: Pick the most appropriate from "essay", "research_paper", "report", "general".
 
-STEP 4 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known.
+STEP 4 — PROBLEM-BASED CLASSIFICATION: Set isProblemBased to true ONLY if this is a computational / worked-solution question typical of Math, Physics, Chemistry, Engineering, or Computer Science (verbs like solve, calculate, derive, prove, find, compute, evaluate the integral, show that…). Set it to false for essays, discussions, reports, and other prose-based assignments. This applies at any academic level.
+
+STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. (For problem-based questions, still produce a sensible outline as a fallback in case the student chooses the written path anyway.)
+${askInferField ? `\nSTEP 6 — INFERRED FIELD: Based on the terminology and subject matter of the question, infer the most likely field of study (e.g. "Economics", "Molecular Biology", "Mechanical Engineering", "English Literature"). Keep it short. Use null only if genuinely impossible to tell.` : ''}
 
 Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
 {
@@ -219,6 +278,7 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
   "instructionVerbs": ["string"],
   "verbGuidance": "one or two sentences on what these command words require the writer to actually DO",
   "totalMarks": number | null,
+  "isProblemBased": boolean,${askInferField ? `\n  "inferredField": "string" | null,` : ''}
   "suggestedTotalWords": number,
   "outlineSections": [
     { "heading": "string", "guidanceTip": "short actionable guidance referencing the instruction verb where relevant", "wordCountSuggestion": number, "marks": number | null }
@@ -239,12 +299,16 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
       setConfirmedDocType(dt);
       setDetectionReason(typeof parsed.reason === 'string' ? parsed.reason : '');
 
-      // ENHANCEMENT 1: store the instruction-verb analysis
+      // ENHANCEMENT 1: store the instruction-verb analysis (+ new optional fields)
       setQuestionAnalysis({
         instructionVerbs: Array.isArray(parsed.instructionVerbs)
           ? parsed.instructionVerbs.map((v: any) => String(v)) : [],
         verbGuidance: typeof parsed.verbGuidance === 'string' ? parsed.verbGuidance : '',
         totalMarks: typeof parsed.totalMarks === 'number' ? parsed.totalMarks : null,
+        inferredField: askInferField && typeof parsed.inferredField === 'string'
+          ? parsed.inferredField.trim() || null
+          : null,
+        isProblemBased: parsed.isProblemBased === true,
       });
 
       let sections: OutlineSection[] = parsed.outlineSections.map((s: any, i: number) => ({
@@ -265,7 +329,8 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
     } finally {
       setAnalysing(false);
     }
-  }, [question]);
+  }, [question, profileField]);
+
 
   const confirmAndBuildOutline = useCallback(
     async (docType: DecoderDocType, level: AcademicLevel) => {
@@ -372,12 +437,17 @@ This section must actively DO what these verbs require — not merely describe. 
           ? `\nALREADY WRITTEN IN OTHER SECTIONS (do NOT repeat these points, examples, or restate the introduction — build on them and stay consistent with them):\n${crossContext}`
           : '';
 
+        // FIELD OF STUDY: injected the same way academicLevel already is.
+        const fieldBlock = effectiveField
+          ? `\nTHE STUDENT'S FIELD OF STUDY: ${effectiveField}. Calibrate examples, terminology, and depth appropriately for that field.`
+          : '';
+
         const system = `You are ${persona}. You are writing the "${heading}" section of a ${confirmedDocType ?? 'essay'}.
 
 THE ASSIGNMENT QUESTION: ${sessionContext}
 
 SECTION GUIDANCE: ${section.guidanceTip}
-TARGET LENGTH: approximately ${section.wordCountSuggestion} words.${verbBlock}${crossBlock}
+TARGET LENGTH: approximately ${section.wordCountSuggestion} words.${verbBlock}${fieldBlock}${crossBlock}
 
 ${HUMAN_STYLE_RULES}
 
@@ -385,6 +455,7 @@ OUTPUT RULES:
 - Write ONLY the body of the "${heading}" section as paragraphs. Do NOT include the heading itself.
 - No markdown, no bullet symbols, no labels — just clean paragraphs of prose.
 - Preserve full academic substance and accuracy while sounding genuinely human.`;
+
 
         const content = await callChat([
           { role: 'system', content: system },
@@ -398,7 +469,7 @@ OUTPUT RULES:
         setGeneratingSection(null);
       }
     },
-    [outline, confirmedDocType, academicLevel, sessionContext, questionAnalysis, buildCrossSectionContext],
+    [outline, confirmedDocType, academicLevel, sessionContext, questionAnalysis, effectiveField, buildCrossSectionContext],
   );
 
   const acceptSection = useCallback(() => {
@@ -476,6 +547,84 @@ OUTPUT RULES:
     };
   }, [editor, step]);
 
+  // ── ANSWER MODE ──────────────────────────────────────────────────────────
+  // Chat-style path for problem-based questions. Reuses the same chat edge
+  // function (via callChat), just with its own clarity-focused system prompt.
+  // The essay-oriented HUMAN_STYLE_RULES are intentionally NOT applied here.
+  const enterAnswerMode = useCallback(() => {
+    setSessionContext(question);
+    setStep('answer_mode');
+  }, [question]);
+
+  const buildAnswerSystemPrompt = useCallback((): string => {
+    const levelLabel =
+      academicLevel === 'high_school' ? 'high school'
+      : academicLevel === 'undergraduate' ? 'undergraduate'
+      : academicLevel === 'postgraduate' ? 'postgraduate'
+      : 'general';
+    const fieldLine = effectiveField
+      ? `\nFIELD OF STUDY: ${effectiveField}. Use notation, units, and conventions standard in that field.`
+      : '';
+    return `You are a rigorous problem-solving tutor helping a ${levelLabel} student with a computational / worked-solution assignment.
+
+ORIGINAL ASSIGNMENT QUESTION (context for every reply, do not repeat back verbatim):
+${sessionContext || question}
+${fieldLine}
+
+HOW TO ANSWER:
+- Prioritise correctness and clarity. This is a worked answer, NOT an essay.
+- Show the reasoning step by step, in the order a student would work it out. Number the steps when there is more than one.
+- State any assumptions you make and why.
+- Give the final answer clearly at the end (label it "Answer:" on its own line). Include units where relevant.
+- Use plain text math with standard notation (e.g. x^2, sqrt(2), integral from 0 to 1 of ...). Use LaTeX only if the student uses it first.
+- If the student pastes multiple sub-questions (e.g. "1a, 1b, 2"), solve each one under its own clearly labelled heading.
+- If something in the question is ambiguous, ask ONE clarifying question rather than guessing.
+- Do NOT add motivational filler, do NOT vary sentence rhythm for style, do NOT hedge unnecessarily. Be direct.`;
+  }, [academicLevel, effectiveField, sessionContext, question]);
+
+  const sendAnswerMessage = useCallback(async (userText: string) => {
+    const text = userText.trim();
+    if (!text || answerSending) return;
+    const userMsg: AnswerModeMessage = {
+      id: `am-u-${Date.now()}`,
+      role: 'user',
+      content: text,
+    };
+    const nextHistory = [...answerMessages, userMsg];
+    setAnswerMessages(nextHistory);
+    setAnswerSending(true);
+    try {
+      const system = buildAnswerSystemPrompt();
+      const reply = await callChat([
+        { role: 'system', content: system },
+        ...nextHistory.map((m) => ({ role: m.role, content: m.content })),
+      ]);
+      if (!reply.trim()) throw new Error('empty');
+      setAnswerMessages((prev) => [
+        ...prev,
+        { id: `am-a-${Date.now()}`, role: 'assistant', content: reply.trim() },
+      ]);
+    } catch {
+      toast.error('Could not get an answer — try again');
+    } finally {
+      setAnswerSending(false);
+    }
+  }, [answerMessages, answerSending, buildAnswerSystemPrompt]);
+
+  const insertAnswerIntoDocument = useCallback((content: string) => {
+    if (!editor) return;
+    const paragraphs = content
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => ({ type: 'paragraph', content: [{ type: 'text', text: p }] }));
+    if (paragraphs.length === 0) return;
+    editor.chain().focus().insertContent(paragraphs).run();
+    toast.success('Answer inserted into document');
+  }, [editor]);
+
+  const clearAnswerMessages = useCallback(() => setAnswerMessages([]), []);
+
   return {
     question,
     setQuestion,
@@ -500,5 +649,16 @@ OUTPUT RULES:
     acceptSection,
     rewriteSection,
     reset,
+    // Field-of-study (real profile value or inferred fallback)
+    effectiveField,
+    // Answer Mode
+    isProblemBased: questionAnalysis?.isProblemBased === true,
+    answerMessages,
+    answerSending,
+    enterAnswerMode,
+    sendAnswerMessage,
+    insertAnswerIntoDocument,
+    clearAnswerMessages,
   };
 }
+
