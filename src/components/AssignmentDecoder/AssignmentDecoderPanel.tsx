@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpenCheck, ChevronDown, ChevronRight, Loader2, X } from 'lucide-react';
+import { BookOpenCheck, ChevronDown, ChevronRight, Loader2, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { useAssignmentDecoder, DecoderDocType, AcademicLevel } from '@/hooks/useAssignmentDecoder';
