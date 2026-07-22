@@ -25,13 +25,13 @@ Decode assignments · be coached on your writing · humanize text · detect AI �
 <td width="50%">
 
 **🧩 Assignment Decoder**
-Paste your question → structured outline, per-section word counts, draft-and-approve flow.
+Paste your question → structured outline, per-section word counts, draft-and-approve flow. Added new chat capability for problem based questions (Math, Chemistry, you name it). 
 
 </td>
 <td width="50%">
 
 **💬 Writing Coach**
-A quiet, specific tip below your paragraph each time you pause.
+A quiet, specific tip below your paragraph each time you pause - New and improved, and now includes a manual button for instant tips. 
 
 </td>
 </tr>
@@ -45,27 +45,13 @@ Three intensity levels with sentence-level reconstruction to lower AI-detection 
 <td width="50%">
 
 **🪄 Writing Polish**
-Clarity Check flags weak/passive/wordy lines. Smart Rewrite offers three alternatives.
-
-</td>
-<td width="50%">
-
-**📝 Rich-Text Editor**
-TipTap multi-page canvas, templates, version history, focus mode, PDF/DOCX export.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**🎯 Reliable AI Detection**
-The plagiarism/AI checker computes its score from deterministic writing signals, not a fresh AI guess each time — the same text always returns the same score.
+Two-in-one Feature - Clarity Check flags weak/passive/wordy lines. Smart Rewrite offers three alternatives for selected text.
 
 </td>
 <td width="50%">
 
 **🙋 Personalization**
-A one-time setup asks your name, academic level, field of study, and preferred tone — the chat assistant adapts to you from then on.
+A tour setup asks your name, academic level, field of study, and preferred tone — the chat assistant adapts to you from then on.
 
 </td>
 </tr>
@@ -78,8 +64,8 @@ Your last-opened document stays readable and exportable with no connection, and 
 </td>
 <td width="50%">
 
-**🏠 Home / Library Dashboard**
-The dashboard has been split into a Home tab (create & continue writing) and a Library tab (browse, search, sort your documents) — bottom tabs on mobile, top nav on desktop.
+**🏠 Home, Library & Tools Tabs on Dashboard -**
+The dashboard has been split into a Home tab (create & continue writing), a Library tab (browse, search, sort your documents) and a Tools tab for faster, standalone access to some of the AI features — bottom tabs on mobile, top nav on desktop.
 
 </td>
 </tr>
@@ -154,8 +140,8 @@ React 18 · TypeScript · Vite · TipTap · Tailwind CSS · shadcn/ui · Supabas
 
 <div align="center">
 
-Built by **Sashi** — a student making tools for students.
+Built by **Sashi** — a solo rookie aiming big and going against the grain.
 
-*Write smarter. Feel smarter.*
+*RobAssister. Write smarter. Feel smarter.*
 
 </div>
