@@ -5,8 +5,8 @@ import 'intro.js/introjs.css';
 // Single source of truth for the live tour done-keys. Both the tour effects
 // and SettingsDrawer's resetTour import these, so bumping a tour version is a
 // one-line change that can't silently strand the reset button on an old key.
-export const DASHBOARD_TOUR_KEY = 'rb_dashboard_tour_v3_done';
-export const EDITOR_TOUR_KEY = 'rb_editor_tour_v4_done';
+export const DASHBOARD_TOUR_KEY = 'rb_dashboard_tour_v4_done';
+export const EDITOR_TOUR_KEY = 'rb_editor_tour_v5_done';
 
 export interface IntroTourStep {
   element?: string;
