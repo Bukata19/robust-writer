@@ -16,6 +16,34 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: 'decoder-smarter',
+    date: '2026-07-20',
+    title: 'A sharper Assignment Decoder',
+    description:
+      'The decoder now reads the actual command words in your question (discuss, evaluate, compare...) to shape its outline, keeps sections consistent with each other, and scales word counts to match stated mark allocations.',
+  },
+  {
+    id: 'tools-tab',
+    date: '2026-07-17',
+    title: 'Humanizer without opening a document',
+    description:
+      'A new Tools tab on your dashboard lets you paste text and humanize it directly — no document required.',
+  },
+  {
+    id: 'landing-page',
+    date: '2026-07-12',
+    title: 'A real front door',
+    description:
+      'RobAssister now has a proper landing page for new visitors, with a quick look at every document template before you sign up.',
+  },
+  {
+    id: 'personalization',
+    date: '2026-07-11',
+    title: 'Make it yours',
+    description:
+      'Tell RobAssister your name, academic level, field of study, and preferred writing tone during a quick one-time setup, and the AI chat assistant adapts to you.',
+  },
+  {
     id: 'writing-coach',
     date: '2026-07-09',
     title: 'Meet your Writing Coach',
@@ -35,13 +63,6 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: 'Cleaner sign-out on shared devices',
     description:
       'Signing out now clears your onboarding and tour progress, so the next person to use the same browser starts fresh instead of inheriting your flags.',
-  },
-  {
-    id: 'ai-detector-stable',
-    date: '2026-07-04',
-    title: 'More consistent AI detection',
-    description:
-      'The AI detector now returns a stable score whose highlights and explanations always match — re-running it on the same text gives the same result every time.',
   },
   {
     id: 'offline-access',
