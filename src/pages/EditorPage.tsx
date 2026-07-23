@@ -1038,7 +1038,7 @@ usePageTitle(
   },
   {
     element: '[data-intro-id="coach-btn"]',
-    intro: '<strong>Writing Coach</strong><br/>A live coach that offers one tip at a time when you pause typing — accept or skip each one. Open the panel here to set its mode, pick focus areas, and see your trends.',
+    intro: '<strong>Writing Coach</strong><br/>A live coach that offers one tip at a time when you pause typing — accept or skip each one. Open the panel here to set its mode, pick focus areas, and see your trends. Don\'t want to wait? Tap the lightbulb button next to it for an instant tip.',
   },
   {
     element: '[data-intro-id="history-btn"]',
@@ -1527,6 +1527,7 @@ const formatButtons = editor ? (
               onClick={handleRequestCoachTip}
               disabled={!coach.enabled}
               className="scale-click text-muted-foreground hover:text-primary"
+              data-intro-id="coach-tip-btn"
             >
               <Lightbulb className="w-4 h-4" />
             </Button>
