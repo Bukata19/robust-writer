@@ -239,6 +239,10 @@ const Dashboard: React.FC = () => {
         element: '[data-intro-id="settings-btn"]',
         intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), font and canvas defaults, autosave, and accessibility — and you can replay this tour anytime from here.',
       },
+      {
+        element: '[data-intro-id="dashboard-tabs"]',
+        intro: '<strong>Home, Library & Tools</strong><br/>Home is for starting and continuing documents, Library is for browsing and searching everything you\'ve written, and Tools has standalone AI features like the Humanizer — usable without opening a document.',
+      },
     ],
   });
 
@@ -434,7 +438,7 @@ const Dashboard: React.FC = () => {
         className="hidden sm:block sticky top-14 z-10 glass-panel border-b border-border"
       >
         <div className="max-w-6xl mx-auto px-4 py-2">
-          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/60 border border-border">
+          <div data-intro-id="dashboard-tabs" className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/60 border border-border">
             {TABS.map(({ id, label, icon: TabIcon }) => (
               <button
                 key={id}
@@ -852,7 +856,7 @@ const Dashboard: React.FC = () => {
         aria-label="Dashboard sections"
         className="sm:hidden fixed bottom-0 inset-x-0 z-20 glass-panel border-t border-border safe-area-bottom"
       >
-        <div className="flex h-14">
+        <div data-intro-id="dashboard-tabs" className="flex h-14">
           {TABS.map(({ id, label, icon: TabIcon }) => (
             <button
               key={id}
