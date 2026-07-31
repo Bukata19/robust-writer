@@ -3,6 +3,7 @@ import { BookOpenCheck, ChevronDown, ChevronRight, Loader2, Send, X } from 'luci
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { useAssignmentDecoder, DecoderDocType, AcademicLevel } from '@/hooks/useAssignmentDecoder';
+import ReactMarkdown from 'react-markdown';
 
 type DecoderApi = ReturnType<typeof useAssignmentDecoder>;
 
@@ -268,7 +269,15 @@ const AnswerModeView: React.FC<{ decoder: DecoderApi }> = ({ decoder }) => {
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
               {m.role === 'user' ? 'You' : 'Tutor'}
             </p>
-            <div>{m.content}</div>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {m.role === 'assistant' ? (
+                <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>
+                  {m.content}
+                </ReactMarkdown>
+              ) : (
+                m.content
+              )}
+            </div>
             {m.role === 'assistant' && (
               <div className="mt-2 flex justify-end">
                 <Button
