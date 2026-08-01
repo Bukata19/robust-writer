@@ -43,6 +43,9 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-dark">
         {decoder.step === 'input' && (
           <>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Paste your assignment question and I'll break it into a plan you can work through, section by section.
+            </p>
             <label className="text-xs text-muted-foreground block">Paste your assignment question</label>
             <textarea
               value={decoder.question}
