@@ -1318,8 +1318,20 @@ usePageTitle(
     if (isMobile) { opener(); } else { current ? closer() : opener(); }
   };
 
+  // Cluster separator — vertical bar in the horizontal (mobile) row, a
+  // horizontal rule in the vertical (desktop) strip. Token-only colors.
+  const clusterDivider = isMobile
+    ? <div className="w-px h-6 bg-border mx-1 shrink-0" aria-hidden="true" />
+    : <div className="h-px w-6 bg-border my-1.5 shrink-0" aria-hidden="true" />;
+
+  const clusterClass = isMobile
+    ? 'flex items-center gap-1'
+    : 'flex flex-col items-center gap-1.5';
+
   const aiToolButtons = (
     <>
+      {/* Cluster 1 — Writing Aids */}
+      <div className={clusterClass} role="group" aria-label="Writing aids">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -1340,19 +1352,17 @@ usePageTitle(
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={humanizerOpen ? 'default' : 'ghost'}
+            variant="ghost"
             size="icon"
-            onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
-            aria-label="Humanizer"
-            data-intro-id="humanizer-btn"
-            disabled={!online}
-            title={!online ? 'Needs internet' : undefined}
-            className="scale-click"
+            data-intro-id="coach-btn"
+            aria-label="Writing Coach"
+            onClick={() => toggleOrOpen(showCoach, openCoach, () => setShowCoach(false))}
+            className={`scale-click ${coach.enabled ? 'text-primary' : ''}`}
           >
-            <Sparkles className="w-4 h-4" />
+            <Brain className="w-4 h-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Humanizer</TooltipContent>
+        <TooltipContent side="left">Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -1371,6 +1381,29 @@ usePageTitle(
         </TooltipTrigger>
         <TooltipContent side="left">Writing Polish</TooltipContent>
       </Tooltip>
+      </div>
+
+      {clusterDivider}
+
+      {/* Cluster 2 — Structure & Rewriting */}
+      <div className={clusterClass} role="group" aria-label="Structure and rewriting">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={humanizerOpen ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => toggleOrOpen(humanizerOpen, openHumanizer, () => setHumanizerOpen(false))}
+            aria-label="Humanizer"
+            data-intro-id="humanizer-btn"
+            disabled={!online}
+            title={!online ? 'Needs internet' : undefined}
+            className="scale-click"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Humanizer</TooltipContent>
+      </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -1388,8 +1421,10 @@ usePageTitle(
         </TooltipTrigger>
         <TooltipContent side="left">Assignment Decoder</TooltipContent>
       </Tooltip>
+      </div>
     </>
   );
+
 
   // ===== Formatting toolbar buttons =====
   const currentFontFamily = editor?.getAttributes('textStyle').fontFamily as string | undefined;
