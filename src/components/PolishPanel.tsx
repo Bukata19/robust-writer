@@ -292,10 +292,16 @@ const PolishPanel: React.FC<PolishPanelProps> = ({ editor, onClose }) => {
               <span className="text-sm font-medium text-foreground">Clarity Check</span>
             </div>
             <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3 scrollbar-dark">
+              {!clarityResult && !analysing && (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Run Clarity Check to scan your document, or select text and use Smart Rewrite for alternatives.
+                </p>
+              )}
               <Button onClick={analyseDocument} disabled={analysing} className="w-full btn-glow">
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 Analyse Document
               </Button>
+
 
               {analysing && (
                 <div className="space-y-2 pt-2">
