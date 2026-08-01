@@ -1542,22 +1542,6 @@ const formatButtons = editor ? (
             <Button
               variant="ghost"
               size="icon"
-              data-intro-id="coach-btn"
-              aria-label="Writing Coach"
-              onClick={() => toggleOrOpen(showCoach, openCoach, () => setShowCoach(false))}
-              className={`scale-click ${coach.enabled ? 'text-primary' : ''}`}
-            >
-              <Brain className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Writing Coach{coach.enabled ? '' : ' (off)'}</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
               aria-label="Get a coach tip now"
               onClick={handleRequestCoachTip}
               disabled={!coach.enabled}
@@ -1572,57 +1556,49 @@ const formatButtons = editor ? (
           </TooltipContent>
         </Tooltip>
 
-        {/* Export dropdown */}
-        <div className="relative" ref={exportMenuRef}>
-          <Button variant="outline" size="sm" onClick={() => setExportMenuOpen(!exportMenuOpen)} disabled={exporting} data-intro-id="export-btn" className="btn-glow">
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span className="hidden sm:inline ml-1">Export</span>
-            <ChevronDown className="w-3 h-3 ml-1" />
-          </Button>
-          {exportMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-[9999] min-w-[160px] animate-scale-in overflow-hidden">
-              <button
-                onClick={exportToPdf}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-              >
-                <FileText className="w-4 h-4" /> Export as PDF
-              </button>
-              <button
-                onClick={exportToDocx}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-              >
-                <FileDown className="w-4 h-4" /> Export as DOCX
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Low-frequency actions live in one overflow menu so the header keeps
+            a single primary action (Save). data-intro-ids travel with the
+            items themselves. */}
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="More actions" data-intro-id="more-btn" className="scale-click">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>More</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="min-w-[190px] z-[9999]">
+            <DropdownMenuItem onClick={openHistory} data-intro-id="history-btn">
+              <History className="w-4 h-4 mr-2" /> Version History
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={exporting} data-intro-id="export-btn">
+                {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Export
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="z-[9999]">
+                <DropdownMenuItem onClick={exportToPdf}>
+                  <FileText className="w-4 h-4 mr-2" /> Export as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToDocx}>
+                  <FileDown className="w-4 h-4 mr-2" /> Export as DOCX
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setFocusMode(!focusMode)} data-intro-id="focus-btn">
+              {focusMode ? <Minimize className="w-4 h-4 mr-2" /> : <Maximize className="w-4 h-4 mr-2" />}
+              {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} data-intro-id="settings-btn">
+              <Settings className="w-4 h-4 mr-2" /> Settings
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={openHistory} aria-label="Version history" data-intro-id="history-btn" className="scale-click">
-              <History className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Version History</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => setFocusMode(!focusMode)} aria-label={focusMode ? 'Exit focus mode' : 'Focus mode'} data-intro-id="focus-btn" className="scale-click">
-              {focusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{focusMode ? 'Exit Focus Mode' : 'Focus Mode'}</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings" data-intro-id="settings-btn" className="scale-click">
-              <Settings className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Settings</TooltipContent>
-        </Tooltip>
         </div>
 
         <Button onClick={() => saveDocument({ manual: true })} disabled={saving} size="sm" data-intro-id="save-btn" className="btn-glow shrink-0" aria-label={saving ? 'Saving document' : 'Save document'}>
