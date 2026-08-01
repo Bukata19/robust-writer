@@ -420,6 +420,6 @@
   .lp-root .lp-stat-item,
   .lp-root .lp-feature-card,
   .lp-root .lp-step,
-  .lp-root .lp-preview-shell { opacity: 1 !important; transform: none !important; }
+  .lp-root .lp-preview-shell { opacity: 1 !important; transform: none !important; transition: none !important; }
   .lp-root .lp-chev { transition: none !important; }
 }
