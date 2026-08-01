@@ -1052,21 +1052,13 @@ usePageTitle(
     intro: '<strong>Writing Coach</strong><br/>A live coach that offers one tip at a time when you pause typing — accept or skip each one. Open the panel here to set its mode, pick focus areas, and see your trends. Don\'t want to wait? Tap the lightbulb button next to it for an instant tip.',
   },
   {
-    element: '[data-intro-id="history-btn"]',
-    intro: '<strong>Version History</strong><br/>Every save creates a restore point. Browse past versions and restore any of them with one click.',
+    // The four low-frequency actions now live inside this overflow menu, so
+    // the tour points at the trigger (their data-intro-ids moved with them
+    // onto the menu items).
+    element: '[data-intro-id="more-btn"]',
+    intro: '<strong>More actions</strong><br/><strong>Version History</strong> (restore any past save), <strong>Export</strong> (PDF or DOCX), <strong>Focus Mode</strong> (hide every panel — Esc to exit), and <strong>Settings</strong> (theme, canvas width, spacing, and replaying this tour) all live in this menu.',
   },
-  {
-    element: '[data-intro-id="focus-btn"]',
-    intro: '<strong>Focus Mode</strong><br/>Hides every toolbar and panel — just you and the page. Press Esc or click again to return.',
-  },
-  {
-    element: '[data-intro-id="settings-btn"]',
-    intro: '<strong>Settings</strong><br/>Theme (Light / Dark / System), canvas width (A4 or full), line spacing, font defaults, and accessibility — plus a button to replay this tour anytime.',
-  },
-  {
-    element: '[data-intro-id="export-btn"]',
-    intro: '<strong>Export</strong><br/>Download your finished document as PDF or DOCX. Your default format is configurable in Settings.',
-  },
+
   {
     element: '[data-intro-id="save-btn"]',
     intro: '<strong>Save</strong><br/>Click here or press Ctrl+S — every save also snapshots Version History, and autosave runs in the background. You are all set! 🎓',
