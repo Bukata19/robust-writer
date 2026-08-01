@@ -116,6 +116,9 @@ const StandaloneHumanizer: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* ── INPUT ── */}
         <div className="surface-card p-4 flex flex-col">
+          <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+            Paste any text and get a more natural-sounding rewrite — no document required.
+          </p>
           <div className="flex items-center justify-between mb-2">
             <label htmlFor="humanizer-input" className="text-xs font-medium text-foreground">
               Your text
