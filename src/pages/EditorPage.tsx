@@ -65,6 +65,7 @@ import {
   Wand2,
   Settings,
   Lightbulb,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useAssignmentContext } from '@/hooks/useAssignmentContext';
