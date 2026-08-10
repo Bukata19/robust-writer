@@ -53,7 +53,7 @@ if (userError || !userData?.user) {
       );
     }
 
-    const { messages, documentContent, personalize } = await req.json();
+    const { messages, documentContent, personalize, preset } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
