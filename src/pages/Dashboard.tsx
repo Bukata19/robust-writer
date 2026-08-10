@@ -30,9 +30,10 @@ import {
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
-  Home, FolderOpen, Wrench,
+  Home, FolderOpen, Wrench, Wand2, BookOpenCheck,
 } from 'lucide-react';
 import StandaloneHumanizer from '@/components/StandaloneHumanizer';
+import StandaloneAnswerTool from '@/components/StandaloneAnswerTool';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
@@ -41,6 +42,12 @@ const TABS = [
   { id: 'home' as const, label: 'Home', icon: Home },
   { id: 'library' as const, label: 'Library', icon: FolderOpen },
   { id: 'tools' as const, label: 'Tools', icon: Wrench },
+];
+
+// Standalone tools available inside the Tools tab.
+const TOOL_OPTIONS = [
+  { id: 'humanizer' as const, label: 'Humanizer', icon: Wand2 },
+  { id: 'answer' as const, label: 'Answer a Question', icon: BookOpenCheck },
 ];
 type SortMode = 'recent' | 'alpha';
 
@@ -169,6 +176,8 @@ const Dashboard: React.FC = () => {
   // Library = browse/manage. One shared component tree; the inactive tab's
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
+  // Which standalone tool the Tools tab is showing.
+  const [activeTool, setActiveTool] = useState<'humanizer' | 'answer'>('humanizer');
 
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -844,9 +853,36 @@ const Dashboard: React.FC = () => {
         {/* ══ TOOLS TAB — standalone AI utilities (no document required) ══ */}
         {activeTab === 'tools' && (
           <div className="animate-fade-in">
-            <StandaloneHumanizer />
+            {/* Tool picker — segmented control, same active/inactive treatment
+                as the Home/Library/Tools nav above. */}
+            <div
+              role="tablist"
+              aria-label="Standalone tools"
+              className="mb-5 inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
+            >
+              {TOOL_OPTIONS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  role="tab"
+                  type="button"
+                  aria-selected={activeTool === id}
+                  onClick={() => setActiveTool(id)}
+                  className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
+                    activeTool === id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {activeTool === 'humanizer' ? <StandaloneHumanizer /> : <StandaloneAnswerTool />}
           </div>
         )}
+
       </main>
 
       {/* ── MOBILE BOTTOM TAB BAR — same activeTab state as the desktop nav.

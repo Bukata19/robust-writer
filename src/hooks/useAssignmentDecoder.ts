@@ -2,13 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { callDecoderChat, buildAnswerSystemPrompt as buildSharedAnswerPrompt } from '@/lib/decoderChat';
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+// Decoder-specific transport: tuned model + low temperature (see decoderChat.ts).
+const callChat = callDecoderChat;
 
 export type DecoderDocType = 'essay' | 'research_paper' | 'report' | 'general';
 export type AcademicLevel = 'high_school' | 'undergraduate' | 'postgraduate' | null;
 // 'answer_mode' is an additive path for problem-based (compute/solve) questions.
-export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing' | 'answer_mode';
+// 'confirm_path' is the upfront Outline-vs-Direct-Answer fork shown for
+// problem-based questions, before any outline is generated.
+export type DecoderStep = 'input' | 'confirm_type' | 'confirm_path' | 'outline_ready' | 'writing' | 'answer_mode';
 
 export interface OutlineSection {
   id: string;
@@ -54,48 +58,6 @@ interface UseAssignmentDecoderOptions {
   editor: Editor | null;
   documentId?: string;
   onConfirmReplace?: () => Promise<boolean> | boolean;
-}
-
-async function callChat(messages: { role: string; content: string }[]): Promise<string> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(CHAT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
-    body: JSON.stringify({ messages }),
-  });
-
-  if (!res.ok || !res.body) throw new Error('Request failed');
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let out = '';
-  let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith('data:')) continue;
-      const payload = t.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
-      try {
-        const json = JSON.parse(payload);
-        const delta = json?.choices?.[0]?.delta?.content ?? json?.choices?.[0]?.message?.content ?? '';
-        if (delta) out += delta;
-      } catch { /* ignore */ }
-    }
-  }
-  return out;
 }
 
 function extractJson(raw: string): any | null {
@@ -268,7 +230,7 @@ STEP 3 — DOC TYPE: Pick the most appropriate from "essay", "research_paper", "
 
 STEP 4 — PROBLEM-BASED CLASSIFICATION: Set isProblemBased to true ONLY if this is a computational / worked-solution question typical of Math, Physics, Chemistry, Engineering, or Computer Science (verbs like solve, calculate, derive, prove, find, compute, evaluate the integral, show that…). Set it to false for essays, discussions, reports, and other prose-based assignments. This applies at any academic level.
 
-STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. (For problem-based questions, still produce a sensible outline as a fallback in case the student chooses the written path anyway.)
+STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. IMPORTANT: if isProblemBased is true, return an EMPTY outlineSections array — do NOT invent an outline for a computational question; the student is offered a direct worked-answer path instead and will be asked separately if they want an outline.
 ${askInferField ? `\nSTEP 6 — INFERRED FIELD: Based on the terminology and subject matter of the question, infer the most likely field of study (e.g. "Economics", "Molecular Biology", "Mechanical Engineering", "English Literature"). Keep it short. Use null only if genuinely impossible to tell.` : ''}
 
 Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
@@ -323,13 +285,69 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
       sections = applyMarksToWordCounts(sections);
 
       setOutline(sections);
-      setStep('confirm_type');
+      // FORK: computational questions get a real upfront choice between the
+      // structured-outline flow and Answer Mode. No outline exists yet at this
+      // point for those questions — one is only built if they pick "Outline".
+      setStep(parsed.isProblemBased === true ? 'confirm_path' : 'confirm_type');
     } catch {
       toast.error('Could not analyse question — try rephrasing it');
     } finally {
       setAnalysing(false);
     }
   }, [question, profileField]);
+
+  // ── FORK: the student explicitly picked the structured-outline path for a
+  // problem-based question. Only NOW do we build an outline (the analysis step
+  // deliberately returns none for these), then hand off to the existing
+  // doc-type confirmation flow completely unchanged.
+  const chooseOutlinePath = useCallback(async () => {
+    if (outline.length > 0) {
+      setStep('confirm_type');
+      return;
+    }
+    setAnalysing(true);
+    try {
+      const verbBlock = questionAnalysis && questionAnalysis.instructionVerbs.length > 0
+        ? `\nINSTRUCTION VERBS: ${questionAnalysis.instructionVerbs.join(', ')}.\nWHAT THEY DEMAND: ${questionAnalysis.verbGuidance}`
+        : '';
+      const system = `You are an academic assignment analyser. The student has chosen to answer this assignment as a written, structured document.
+
+Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known.${verbBlock}
+
+Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
+{
+  "suggestedTotalWords": number,
+  "outlineSections": [
+    { "heading": "string", "guidanceTip": "short actionable guidance referencing the instruction verb where relevant", "wordCountSuggestion": number, "marks": number | null }
+  ]
+}`;
+      const raw = await callChat([
+        { role: 'system', content: system },
+        { role: 'user', content: question },
+      ]);
+      const parsed = extractJson(raw);
+      if (!parsed || !Array.isArray(parsed.outlineSections) || parsed.outlineSections.length === 0) {
+        toast.error('Could not build an outline — try rephrasing the question');
+        return;
+      }
+      let sections: OutlineSection[] = parsed.outlineSections.map((s: any, i: number) => ({
+        id: `sec-${i}-${Date.now()}`,
+        heading: String(s.heading ?? `Section ${i + 1}`),
+        guidanceTip: String(s.guidanceTip ?? ''),
+        wordCountSuggestion: Number(s.wordCountSuggestion) || 200,
+        marks: typeof s.marks === 'number' ? s.marks : null,
+      }));
+      sections = applyMarksToWordCounts(sections);
+      setOutline(sections);
+      setStep('confirm_type');
+    } catch {
+      toast.error('Could not build an outline — try again');
+    } finally {
+      setAnalysing(false);
+    }
+  }, [outline, question, questionAnalysis]);
+
+
 
 
   const confirmAndBuildOutline = useCallback(
@@ -556,31 +574,18 @@ OUTPUT RULES:
     setStep('answer_mode');
   }, [question]);
 
-  const buildAnswerSystemPrompt = useCallback((): string => {
-    const levelLabel =
-      academicLevel === 'high_school' ? 'high school'
-      : academicLevel === 'undergraduate' ? 'undergraduate'
-      : academicLevel === 'postgraduate' ? 'postgraduate'
-      : 'general';
-    const fieldLine = effectiveField
-      ? `\nFIELD OF STUDY: ${effectiveField}. Use notation, units, and conventions standard in that field.`
-      : '';
-    return `You are a rigorous problem-solving tutor helping a ${levelLabel} student with a computational / worked-solution assignment.
+  // Prompt CONTENT is unchanged — it now lives in @/lib/decoderChat so the
+  // standalone Dashboard tool answers with exactly the same rules.
+  const buildAnswerSystemPrompt = useCallback(
+    (): string =>
+      buildSharedAnswerPrompt({
+        question: sessionContext || question,
+        academicLevel,
+        field: effectiveField,
+      }),
+    [academicLevel, effectiveField, sessionContext, question],
+  );
 
-ORIGINAL ASSIGNMENT QUESTION (context for every reply, do not repeat back verbatim):
-${sessionContext || question}
-${fieldLine}
-
-HOW TO ANSWER:
-- Prioritise correctness and clarity. This is a worked answer, NOT an essay.
-- Show the reasoning step by step, in the order a student would work it out. Number the steps when there is more than one.
-- State any assumptions you make and why.
-- Give the final answer clearly at the end (label it "Answer:" on its own line). Include units where relevant.
-- Use plain text math with standard notation (e.g. x^2, sqrt(2), integral from 0 to 1 of ...). Use LaTeX only if the student uses it first.
-- If the student pastes multiple sub-questions (e.g. "1a, 1b, 2"), solve each one under its own clearly labelled heading.
-- If something in the question is ambiguous, ask ONE clarifying question rather than guessing.
-- Do NOT add motivational filler, do NOT vary sentence rhythm for style, do NOT hedge unnecessarily. Be direct.`;
-  }, [academicLevel, effectiveField, sessionContext, question]);
 
   const sendAnswerMessage = useCallback(async (userText: string) => {
     const text = userText.trim();
@@ -644,6 +649,7 @@ HOW TO ANSWER:
     setStep,
     analysing,
     analyseQuestion,
+    chooseOutlinePath,
     confirmAndBuildOutline,
     generateSection,
     acceptSection,

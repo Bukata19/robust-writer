@@ -53,7 +53,7 @@ if (userError || !userData?.user) {
       );
     }
 
-    const { messages, documentContent, personalize } = await req.json();
+    const { messages, documentContent, personalize, preset } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -153,24 +153,45 @@ Be concise, helpful, and academic in tone. Use markdown formatting in your respo
       systemPrompt += `\n\n--- CURRENT DOCUMENT ---\n${truncated}`;
     }
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
+    // ── MODEL SELECTION ──────────────────────────────────────────────────────
+    // Callers may opt into a tuned preset. Chat itself (no preset) is untouched
+    // and stays on google/gemini-3-flash-preview.
+    // `decoder` mirrors the humanizer's proven model + resilience pattern
+    // (Claude Haiku primary, Gemini 2.0 Flash fallback) but with a LOW
+    // temperature, since outline structure and worked answers need determinism
+    // rather than the conversational variety casual chat benefits from.
+    const isDecoder = preset === "decoder";
+    const primaryModel = isDecoder ? "anthropic/claude-haiku-3-5" : "google/gemini-3-flash-preview";
+    const fallbackModel = isDecoder ? "google/gemini-2.0-flash" : null;
+    const temperature = isDecoder ? 0.2 : undefined;
+
+    const callModel = (model: string) =>
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model,
           messages: [
             { role: "system", content: systemPrompt },
             ...sanitizedMessages,
           ],
           stream: true,
+          ...(temperature !== undefined ? { temperature } : {}),
         }),
-      }
-    );
+      });
+
+    let response = await callModel(primaryModel);
+
+    // Same resilience pattern as the humanizer: if the primary model fails for
+    // a reason other than rate limiting / billing, retry once on the fallback.
+    if (!response.ok && fallbackModel && response.status !== 429 && response.status !== 402) {
+      console.warn(`Primary model ${primaryModel} failed (${response.status}), falling back to ${fallbackModel}`);
+      response = await callModel(fallbackModel);
+    }
+
 
     if (!response.ok) {
       if (response.status === 429) {

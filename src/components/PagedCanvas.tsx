@@ -16,19 +16,29 @@ interface PagedCanvasProps {
 }
 
 /**
- * Continuous A4-width "sheet" with subtle page-divider lines.
+ * Continuous A4-width "sheet" with subtle page-divider markers.
  *
  * Rather than simulating discrete pages (which forces whole paragraphs to jump
  * across a grey gutter and bleeds long paragraphs), the content flows in one
- * continuous sheet. Faint dashed "Page N" markers are drawn behind the text at
- * each A4 interval, so text can never fall into a broken gap. On phones the
- * sheet reflows full-width with no dividers.
+ * continuous sheet. Faint boundary markers are drawn behind the text at each A4
+ * interval, so text can never fall into a broken gap.
+ *
+ * IMPORTANT (mobile overflow fix): this sheet lives inside a ROW flex container
+ * (`flex justify-center` in EditorPage). Flex's default `align-items: stretch`
+ * sizes a flex item's cross axis to the *line* height — i.e. the scroll
+ * container's own height — so the card could never grow past one viewport and
+ * long documents spilled their text outside the white card onto the desk
+ * background. On desktop the explicit `minHeight` masked it; on mobile
+ * (`minHeight: undefined`) it was fully visible. `self-start` opts the sheet out
+ * of stretching so its height is always driven by its content.
  */
 const PagedCanvas: React.FC<PagedCanvasProps> = ({
   children, maxWidth, className, style, onClick, ...rest
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth < 640
   );
@@ -92,25 +102,83 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
   const showPages = pageCount > 1;
   const minHeight = isMobile ? undefined : pageCount * PAGE_HEIGHT;
 
+  // ── Live page-position indicator (mobile only; desktop is out of scope) ──
+  // Derives "which page am I looking at" from the scroll container's viewport
+  // centre relative to the sheet's own top offset.
+  useEffect(() => {
+    if (!isMobile || !showPages) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const scroller = root.closest('[data-editor-scroll]') as HTMLElement | null;
+    if (!scroller) return;
+
+    let rafId: number | null = null;
+    const update = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const rootTop = root.getBoundingClientRect().top;
+        const scrollTop = scroller.getBoundingClientRect().top;
+        // Distance from the sheet's top to the middle of the visible area.
+        const offset = scrollTop - rootTop + scroller.clientHeight / 2;
+        const page = Math.floor(offset / PAGE_HEIGHT) + 1;
+        setCurrentPage(Math.min(pageCount, Math.max(1, page)));
+      });
+    };
+
+    scroller.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => {
+      scroller.removeEventListener('scroll', update);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [isMobile, showPages, pageCount]);
+
   return (
     <div
-      className={`relative ${maxWidth} w-full rounded-sm bg-editor-page shadow-page border border-border`}
+      ref={rootRef}
+      className={`relative self-start ${maxWidth} w-full rounded-sm bg-editor-page shadow-page border border-border`}
       style={{ minHeight }}
       onClick={onClick}
       {...rest}
     >
-      {/* Page-divider markers — behind the text, never intercept the caret. */}
+      {/* Page-boundary markers — behind the text, never intercept the caret.
+          Reads as "paper ending / paper beginning": a soft shadow fade below the
+          outgoing page, a hairline rule, then a light fade into the next page. */}
       {showPages && Array.from({ length: pageCount - 1 }, (_, i) => (
         <div
           key={`divider-${i}`}
-          className="pointer-events-none absolute left-0 right-0 z-0 select-none border-t border-dashed border-border"
+          className="pointer-events-none absolute left-0 right-0 z-0 select-none"
           style={{ top: (i + 1) * PAGE_HEIGHT }}
         >
+          {/* trailing shadow of the page that just ended */}
+          <div
+            className="absolute left-0 right-0 h-4 -top-4"
+            style={{ background: 'linear-gradient(to bottom, transparent, hsl(var(--border) / 0.45))' }}
+          />
+          {/* the boundary itself */}
+          <div className="absolute left-0 right-0 top-0 border-t border-border" />
+          {/* fresh sheet easing in */}
+          <div
+            className="absolute left-0 right-0 h-4 top-0"
+            style={{ background: 'linear-gradient(to bottom, hsl(var(--border) / 0.22), transparent)' }}
+          />
           <span className="absolute right-3 -top-2.5 rounded bg-editor-page px-1.5 text-[10px] font-mono text-muted-foreground">
             Page {i + 2}
           </span>
         </div>
       ))}
+
+      {/* Sticky live position indicator — mobile, multi-page documents only.
+          Sits top-right inside the sheet, clear of the bottom toolbars. */}
+      {isMobile && showPages && (
+        <div
+          aria-live="polite"
+          className="pointer-events-none sticky top-2 z-20 float-right mr-2 rounded-full border border-border bg-card/90 px-2 py-0.5 text-[10px] font-mono text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none"
+        >
+          Page {currentPage} of {pageCount}
+        </div>
+      )}
 
       {/* Editor content. Paddings (the page margins) are forced LAST so a
           caller-supplied `style` can never override them. */}
