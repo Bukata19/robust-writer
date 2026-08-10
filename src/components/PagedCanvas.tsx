@@ -174,7 +174,7 @@ const PagedCanvas: React.FC<PagedCanvasProps> = ({
       {isMobile && showPages && (
         <div
           aria-live="polite"
-          className="pointer-events-none sticky top-2 z-20 float-right mr-2 -mb-6 rounded-full border border-border bg-card/90 px-2 py-0.5 text-[10px] font-mono text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none"
+          className="pointer-events-none sticky top-2 z-20 float-right mr-2 rounded-full border border-border bg-card/90 px-2 py-0.5 text-[10px] font-mono text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none"
         >
           Page {currentPage} of {pageCount}
         </div>
