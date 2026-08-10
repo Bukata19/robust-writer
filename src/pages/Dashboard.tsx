@@ -844,9 +844,36 @@ const Dashboard: React.FC = () => {
         {/* ══ TOOLS TAB — standalone AI utilities (no document required) ══ */}
         {activeTab === 'tools' && (
           <div className="animate-fade-in">
-            <StandaloneHumanizer />
+            {/* Tool picker — segmented control, same active/inactive treatment
+                as the Home/Library/Tools nav above. */}
+            <div
+              role="tablist"
+              aria-label="Standalone tools"
+              className="mb-5 inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
+            >
+              {TOOL_OPTIONS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  role="tab"
+                  type="button"
+                  aria-selected={activeTool === id}
+                  onClick={() => setActiveTool(id)}
+                  className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
+                    activeTool === id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {activeTool === 'humanizer' ? <StandaloneHumanizer /> : <StandaloneAnswerTool />}
           </div>
         )}
+
       </main>
 
       {/* ── MOBILE BOTTOM TAB BAR — same activeTab state as the desktop nav.
