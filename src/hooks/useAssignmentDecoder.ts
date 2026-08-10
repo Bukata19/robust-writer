@@ -2,13 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { callDecoderChat, buildAnswerSystemPrompt as buildSharedAnswerPrompt } from '@/lib/decoderChat';
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+// Decoder-specific transport: tuned model + low temperature (see decoderChat.ts).
+const callChat = callDecoderChat;
 
 export type DecoderDocType = 'essay' | 'research_paper' | 'report' | 'general';
 export type AcademicLevel = 'high_school' | 'undergraduate' | 'postgraduate' | null;
 // 'answer_mode' is an additive path for problem-based (compute/solve) questions.
-export type DecoderStep = 'input' | 'confirm_type' | 'outline_ready' | 'writing' | 'answer_mode';
+// 'confirm_path' is the upfront Outline-vs-Direct-Answer fork shown for
+// problem-based questions, before any outline is generated.
+export type DecoderStep = 'input' | 'confirm_type' | 'confirm_path' | 'outline_ready' | 'writing' | 'answer_mode';
 
 export interface OutlineSection {
   id: string;
@@ -54,48 +58,6 @@ interface UseAssignmentDecoderOptions {
   editor: Editor | null;
   documentId?: string;
   onConfirmReplace?: () => Promise<boolean> | boolean;
-}
-
-async function callChat(messages: { role: string; content: string }[]): Promise<string> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(CHAT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
-    body: JSON.stringify({ messages }),
-  });
-
-  if (!res.ok || !res.body) throw new Error('Request failed');
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let out = '';
-  let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith('data:')) continue;
-      const payload = t.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
-      try {
-        const json = JSON.parse(payload);
-        const delta = json?.choices?.[0]?.delta?.content ?? json?.choices?.[0]?.message?.content ?? '';
-        if (delta) out += delta;
-      } catch { /* ignore */ }
-    }
-  }
-  return out;
 }
 
 function extractJson(raw: string): any | null {
@@ -268,7 +230,7 @@ STEP 3 — DOC TYPE: Pick the most appropriate from "essay", "research_paper", "
 
 STEP 4 — PROBLEM-BASED CLASSIFICATION: Set isProblemBased to true ONLY if this is a computational / worked-solution question typical of Math, Physics, Chemistry, Engineering, or Computer Science (verbs like solve, calculate, derive, prove, find, compute, evaluate the integral, show that…). Set it to false for essays, discussions, reports, and other prose-based assignments. This applies at any academic level.
 
-STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. (For problem-based questions, still produce a sensible outline as a fallback in case the student chooses the written path anyway.)
+STEP 5 — OUTLINE: Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known. IMPORTANT: if isProblemBased is true, return an EMPTY outlineSections array — do NOT invent an outline for a computational question; the student is offered a direct worked-answer path instead and will be asked separately if they want an outline.
 ${askInferField ? `\nSTEP 6 — INFERRED FIELD: Based on the terminology and subject matter of the question, infer the most likely field of study (e.g. "Economics", "Molecular Biology", "Mechanical Engineering", "English Literature"). Keep it short. Use null only if genuinely impossible to tell.` : ''}
 
 Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
@@ -323,7 +285,10 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
       sections = applyMarksToWordCounts(sections);
 
       setOutline(sections);
-      setStep('confirm_type');
+      // FORK: computational questions get a real upfront choice between the
+      // structured-outline flow and Answer Mode. No outline exists yet at this
+      // point for those questions — one is only built if they pick "Outline".
+      setStep(parsed.isProblemBased === true ? 'confirm_path' : 'confirm_type');
     } catch {
       toast.error('Could not analyse question — try rephrasing it');
     } finally {
