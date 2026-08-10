@@ -521,31 +521,18 @@ OUTPUT RULES:
     setStep('answer_mode');
   }, [question]);
 
-  const buildAnswerSystemPrompt = useCallback((): string => {
-    const levelLabel =
-      academicLevel === 'high_school' ? 'high school'
-      : academicLevel === 'undergraduate' ? 'undergraduate'
-      : academicLevel === 'postgraduate' ? 'postgraduate'
-      : 'general';
-    const fieldLine = effectiveField
-      ? `\nFIELD OF STUDY: ${effectiveField}. Use notation, units, and conventions standard in that field.`
-      : '';
-    return `You are a rigorous problem-solving tutor helping a ${levelLabel} student with a computational / worked-solution assignment.
+  // Prompt CONTENT is unchanged — it now lives in @/lib/decoderChat so the
+  // standalone Dashboard tool answers with exactly the same rules.
+  const buildAnswerSystemPrompt = useCallback(
+    (): string =>
+      buildSharedAnswerPrompt({
+        question: sessionContext || question,
+        academicLevel,
+        field: effectiveField,
+      }),
+    [academicLevel, effectiveField, sessionContext, question],
+  );
 
-ORIGINAL ASSIGNMENT QUESTION (context for every reply, do not repeat back verbatim):
-${sessionContext || question}
-${fieldLine}
-
-HOW TO ANSWER:
-- Prioritise correctness and clarity. This is a worked answer, NOT an essay.
-- Show the reasoning step by step, in the order a student would work it out. Number the steps when there is more than one.
-- State any assumptions you make and why.
-- Give the final answer clearly at the end (label it "Answer:" on its own line). Include units where relevant.
-- Use plain text math with standard notation (e.g. x^2, sqrt(2), integral from 0 to 1 of ...). Use LaTeX only if the student uses it first.
-- If the student pastes multiple sub-questions (e.g. "1a, 1b, 2"), solve each one under its own clearly labelled heading.
-- If something in the question is ambiguous, ask ONE clarifying question rather than guessing.
-- Do NOT add motivational filler, do NOT vary sentence rhythm for style, do NOT hedge unnecessarily. Be direct.`;
-  }, [academicLevel, effectiveField, sessionContext, question]);
 
   const sendAnswerMessage = useCallback(async (userText: string) => {
     const text = userText.trim();
