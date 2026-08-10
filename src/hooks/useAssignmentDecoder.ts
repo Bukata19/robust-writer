@@ -649,6 +649,7 @@ OUTPUT RULES:
     setStep,
     analysing,
     analyseQuestion,
+    chooseOutlinePath,
     confirmAndBuildOutline,
     generateSection,
     acceptSection,
