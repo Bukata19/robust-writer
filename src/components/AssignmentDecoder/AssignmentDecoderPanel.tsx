@@ -357,7 +357,7 @@ const AnswerModeView: React.FC<{ decoder: DecoderApi }> = ({ decoder }) => {
       </div>
 
       <div className="flex gap-2">
-        <Button variant="ghost" size="sm" className="flex-1" onClick={() => decoder.setStep('confirm_type')}>
+        <Button variant="ghost" size="sm" className="flex-1" onClick={() => decoder.setStep('confirm_path')}>
           ← Back
         </Button>
         <Button variant="ghost" size="sm" className="flex-1" onClick={decoder.clearAnswerMessages}>
