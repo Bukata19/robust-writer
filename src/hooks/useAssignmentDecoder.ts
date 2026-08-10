@@ -296,6 +296,59 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of this exact sha
     }
   }, [question, profileField]);
 
+  // ── FORK: the student explicitly picked the structured-outline path for a
+  // problem-based question. Only NOW do we build an outline (the analysis step
+  // deliberately returns none for these), then hand off to the existing
+  // doc-type confirmation flow completely unchanged.
+  const chooseOutlinePath = useCallback(async () => {
+    if (outline.length > 0) {
+      setStep('confirm_type');
+      return;
+    }
+    setAnalysing(true);
+    try {
+      const verbBlock = questionAnalysis && questionAnalysis.instructionVerbs.length > 0
+        ? `\nINSTRUCTION VERBS: ${questionAnalysis.instructionVerbs.join(', ')}.\nWHAT THEY DEMAND: ${questionAnalysis.verbGuidance}`
+        : '';
+      const system = `You are an academic assignment analyser. The student has chosen to answer this assignment as a written, structured document.
+
+Build 4-8 sections SHAPED BY the instruction verbs. The structure must reflect what the verbs demand — not a generic intro/body/conclusion unless that genuinely fits. Each heading must be specific to THIS assignment. Attach the part's marks to the relevant section when known.${verbBlock}
+
+Respond with ONLY a JSON object (no prose, no markdown fences) of this exact shape:
+{
+  "suggestedTotalWords": number,
+  "outlineSections": [
+    { "heading": "string", "guidanceTip": "short actionable guidance referencing the instruction verb where relevant", "wordCountSuggestion": number, "marks": number | null }
+  ]
+}`;
+      const raw = await callChat([
+        { role: 'system', content: system },
+        { role: 'user', content: question },
+      ]);
+      const parsed = extractJson(raw);
+      if (!parsed || !Array.isArray(parsed.outlineSections) || parsed.outlineSections.length === 0) {
+        toast.error('Could not build an outline — try rephrasing the question');
+        return;
+      }
+      let sections: OutlineSection[] = parsed.outlineSections.map((s: any, i: number) => ({
+        id: `sec-${i}-${Date.now()}`,
+        heading: String(s.heading ?? `Section ${i + 1}`),
+        guidanceTip: String(s.guidanceTip ?? ''),
+        wordCountSuggestion: Number(s.wordCountSuggestion) || 200,
+        marks: typeof s.marks === 'number' ? s.marks : null,
+      }));
+      sections = applyMarksToWordCounts(sections);
+      setOutline(sections);
+      setStep('confirm_type');
+    } catch {
+      toast.error('Could not build an outline — try again');
+    } finally {
+      setAnalysing(false);
+    }
+  }, [outline, question, questionAnalysis]);
+
+
+
 
   const confirmAndBuildOutline = useCallback(
     async (docType: DecoderDocType, level: AcademicLevel) => {
