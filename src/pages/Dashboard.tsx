@@ -30,7 +30,7 @@ import {
   Search, Calendar, SortAsc,
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
-  Home, FolderOpen, Wrench,
+  Home, FolderOpen, Wrench, Wand2, BookOpenCheck,
 } from 'lucide-react';
 import StandaloneHumanizer from '@/components/StandaloneHumanizer';
 import StandaloneAnswerTool from '@/components/StandaloneAnswerTool';
