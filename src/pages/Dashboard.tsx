@@ -33,6 +33,7 @@ import {
   Home, FolderOpen, Wrench,
 } from 'lucide-react';
 import StandaloneHumanizer from '@/components/StandaloneHumanizer';
+import StandaloneAnswerTool from '@/components/StandaloneAnswerTool';
 
 type DocType = 'essay' | 'research_paper' | 'report' | 'general';
 
@@ -41,6 +42,12 @@ const TABS = [
   { id: 'home' as const, label: 'Home', icon: Home },
   { id: 'library' as const, label: 'Library', icon: FolderOpen },
   { id: 'tools' as const, label: 'Tools', icon: Wrench },
+];
+
+// Standalone tools available inside the Tools tab.
+const TOOL_OPTIONS = [
+  { id: 'humanizer' as const, label: 'Humanizer', icon: Wand2 },
+  { id: 'answer' as const, label: 'Answer a Question', icon: BookOpenCheck },
 ];
 type SortMode = 'recent' | 'alpha';
 
@@ -169,6 +176,8 @@ const Dashboard: React.FC = () => {
   // Library = browse/manage. One shared component tree; the inactive tab's
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
+  // Which standalone tool the Tools tab is showing.
+  const [activeTool, setActiveTool] = useState<'humanizer' | 'answer'>('humanizer');
 
 
   const [documents, setDocuments] = useState<Document[]>([]);
