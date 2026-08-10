@@ -106,6 +106,56 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
           </>
         )}
 
+        {/* FORK: problem-based questions choose a path BEFORE any outline is
+            built. Same visual language as the doc-type confirmation below. */}
+        {decoder.step === 'confirm_path' && (
+          <>
+            <p className="text-sm text-foreground">
+              This looks like a{' '}
+              <span className="text-primary font-medium">problem-based</span> question
+              (solve / calculate / derive).
+            </p>
+            {decoder.detectionReason && (
+              <p className="text-xs text-muted-foreground italic">{decoder.detectionReason}</p>
+            )}
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              How would you like to work through it?
+            </p>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={decoder.enterAnswerMode}
+                disabled={decoder.analysing}
+                className="w-full text-left rounded-lg border border-primary/30 bg-primary/5 p-2.5 transition-colors duration-200 motion-reduce:transition-none hover:bg-primary/10 disabled:opacity-50"
+              >
+                <p className="text-sm font-medium text-primary">Direct Answer →</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Worked step-by-step answers in a chat. No outline, no essay.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={decoder.chooseOutlinePath}
+                disabled={decoder.analysing}
+                className="w-full text-left rounded-lg border border-border bg-muted/30 p-2.5 transition-colors duration-200 motion-reduce:transition-none hover:bg-muted/60 disabled:opacity-50"
+              >
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  {decoder.analysing && <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />}
+                  Outline →
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Build a structured document outline and write it section by section.
+                </p>
+              </button>
+            </div>
+
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => decoder.setStep('input')}>
+              ← Back
+            </Button>
+          </>
+        )}
+
         {decoder.step === 'confirm_type' && (
           <>
             <p className="text-sm text-foreground">
@@ -117,22 +167,6 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             </p>
             {decoder.detectionReason && (
               <p className="text-xs text-muted-foreground italic">{decoder.detectionReason}</p>
-            )}
-
-            {decoder.isProblemBased && (
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
-                <p className="text-xs text-foreground">
-                  This looks like a <span className="text-primary font-medium">problem-based</span> question
-                  (solve / calculate / derive). Want to work through it as a chat instead of writing an essay?
-                </p>
-                <Button
-                  size="sm"
-                  onClick={decoder.enterAnswerMode}
-                  className="w-full btn-glow"
-                >
-                  Use Answer Mode →
-                </Button>
-              </div>
             )}
 
             <div className="flex gap-1 flex-wrap">
@@ -165,6 +199,7 @@ const AssignmentDecoderPanel: React.FC<Props> = ({ decoder, onClose }) => {
             </Button>
           </>
         )}
+
 
         {decoder.step === 'answer_mode' && <AnswerModeView decoder={decoder} />}
 
