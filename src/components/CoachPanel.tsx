@@ -1,16 +1,15 @@
-// Writing Coach sidebar: mode + focus controls, live session summary, trends
-// (lazy-loaded charts so recharts stays out of the main bundle), and a dry
-// progress checklist. Reads everything from CoachContext.
+// Writing Coach sidebar: mode + focus controls, plus two live tabs (Stats and
+// Patterns) scoped to the currently-open document only. No extra database
+// reads — everything comes from CoachContext's in-memory session state.
 
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import CoachReportExporter from '@/components/CoachReportExporter';
 import { Switch } from '@/components/ui/switch';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  X, Brain, Activity, TrendingUp, Flag, Check, Loader2, Download,
+  X, Brain, Activity, BarChart3, Download,
   Target, Zap, MessageSquare, Ruler, PenLine,
   type LucideIcon,
 } from 'lucide-react';
@@ -18,8 +17,6 @@ import { useCoach } from '@/contexts/CoachContext';
 import type { CoachMode } from '@/lib/coachTips';
 import { type PatternCategory, toggleFocusArea } from '@/lib/coachPatterns';
 import { PATTERN_LABELS } from '@/lib/coachReporting';
-
-const CoachCharts = lazy(() => import('./CoachCharts'));
 
 const MODE_HINT: Record<CoachMode, string> = {
   encouraging: 'Fewer, gentler tips — only the clearest wins.',
@@ -57,21 +54,20 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
 
   const acceptance = s && s.tipsGiven > 0 ? Math.round((s.tipsAccepted / s.tipsGiven) * 100) : null;
 
-  // Milestone checklist — dry, computed from real stats.
-  const totalTips = coach.recentSessions.reduce((n, r) => n + r.tips_given, 0) + (s?.tipsGiven ?? 0);
-  const totalAccepted = coach.recentSessions.reduce((n, r) => n + r.tips_accepted, 0) + (s?.tipsAccepted ?? 0);
-  const bestStreak = Math.max(s?.streak ?? 0, 0);
-  const finishedSessions = coach.recentSessions.length;
-  const milestones = [
-    { label: 'First 10 tips', done: totalTips >= 10, progress: `${Math.min(totalTips, 10)}/10` },
-    {
-      label: '50% acceptance rate',
-      done: totalTips >= 10 && totalAccepted / Math.max(totalTips, 1) >= 0.5,
-      progress: totalTips > 0 ? `${Math.round((totalAccepted / totalTips) * 100)}%` : '—',
-    },
-    { label: '5-tip accept streak', done: bestStreak >= 5, progress: `${bestStreak}/5` },
-    { label: '5 coached sessions', done: finishedSessions >= 5, progress: `${Math.min(finishedSessions, 5)}/5` },
-  ];
+  // Live pattern counts for THIS document. Patterns are recorded into memory
+  // without a React state change, so poll lightly while the panel is open.
+  const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const read = () => setPatternCounts(coach.getLivePatternCounts());
+    read();
+    const id = window.setInterval(read, 2000);
+    return () => window.clearInterval(id);
+  }, [coach, s?.documentId]);
+
+  const patternRows = Object.entries(patternCounts)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const maxPattern = patternRows.length > 0 ? patternRows[0][1] : 0;
 
   const toggleFocus = (area: PatternCategory) => {
     coach.setFocusAreas(toggleFocusArea(coach.focusAreas, area));
@@ -147,25 +143,24 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue="session" className="flex flex-col flex-1 overflow-hidden mt-3">
-        <TabsList className="grid grid-cols-3 mx-3 shrink-0">
-          <TabsTrigger value="session" className="text-xs">
-            <Activity className="w-3.5 h-3.5 mr-1" /> Session
+      <Tabs defaultValue="stats" className="flex flex-col flex-1 overflow-hidden mt-3">
+        <TabsList className="grid grid-cols-2 mx-3 shrink-0">
+          <TabsTrigger value="stats" className="text-xs">
+            <Activity className="w-3.5 h-3.5 mr-1" /> Stats
           </TabsTrigger>
-          <TabsTrigger value="trends" className="text-xs">
-            <TrendingUp className="w-3.5 h-3.5 mr-1" /> Trends
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="text-xs">
-            <Flag className="w-3.5 h-3.5 mr-1" /> Progress
+          <TabsTrigger value="patterns" className="text-xs">
+            <BarChart3 className="w-3.5 h-3.5 mr-1" /> Patterns
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="session" className="flex-1 overflow-y-auto mt-2 px-3 pb-4 data-[state=inactive]:hidden">
+        <TabsContent value="stats" className="flex-1 overflow-y-auto mt-2 px-3 pb-4 data-[state=inactive]:hidden">
           {!s ? (
-            <p className="text-xs text-muted-foreground pt-2">Open a document to start a coaching session.</p>
+            <p className="text-xs text-muted-foreground pt-2">
+              Start writing to see live stats for this document.
+            </p>
           ) : (
-            <div className="space-y-4 pt-1">
-              <div className="grid grid-cols-3 gap-2">
+            <div className="pt-1 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="surface-card p-2.5 rounded-lg border border-border text-center">
                   <p className="text-lg font-semibold text-foreground leading-none">{s.tipsGiven}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">Tips given</p>
@@ -175,75 +170,21 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
                   <p className="text-[10px] text-muted-foreground mt-1">Accepted</p>
                 </div>
                 <div className="surface-card p-2.5 rounded-lg border border-border text-center">
+                  <p className="text-lg font-semibold text-foreground leading-none">
+                    {acceptance !== null ? `${acceptance}%` : '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Acceptance rate</p>
+                </div>
+                <div className="surface-card p-2.5 rounded-lg border border-border text-center">
                   <p className="text-lg font-semibold text-primary leading-none">{s.streak}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">Streak</p>
                 </div>
               </div>
 
-              {acceptance !== null && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[11px] text-muted-foreground">Acceptance rate</p>
-                    <p className="text-[11px] font-medium text-foreground">{acceptance}%</p>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${acceptance}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                The coach watches for a pause in your typing, checks the current paragraph, and
-                offers at most one tip at a time. Accept the ones that help — your acceptance
-                pattern tunes what it prioritizes next.
-              </p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="trends" className="flex-1 overflow-y-auto mt-2 px-3 pb-4 data-[state=inactive]:hidden">
-          {coach.statsLoading ? (
-            <div className="space-y-3 pt-2">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          ) : coach.recentSessions.length === 0 ? (
-            <p className="text-xs text-muted-foreground pt-2">
-              No finished sessions yet — trends appear after your first coached document.
-            </p>
-          ) : (
-            <div className="pt-2">
-              <Suspense
-                fallback={
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading charts…
-                  </div>
-                }
-              >
-                <CoachCharts sessions={coach.recentSessions} />
-              </Suspense>
-
-              {coach.aggregates.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-xs font-medium text-foreground mb-2">Your most frequent issues</p>
-                  <ul className="space-y-1">
-                    {coach.aggregates.slice(0, 5).map((a) => (
-                      <li key={a.pattern_type} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{PATTERN_LABELS[a.pattern_type] ?? a.pattern_type}</span>
-                        <span className="text-foreground font-medium">{a.total_occurrences}×</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full mt-5"
+                className="w-full"
                 onClick={() => setExportOpen(true)}
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" /> Export report
@@ -252,33 +193,29 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
           )}
         </TabsContent>
 
-        <TabsContent value="progress" className="flex-1 overflow-y-auto mt-2 px-3 pb-4 data-[state=inactive]:hidden">
-          <ul className="space-y-2 pt-2">
-            {milestones.map((m) => (
-              <li
-                key={m.label}
-                className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`flex items-center justify-center w-4 h-4 rounded-full border ${
-                      m.done ? 'bg-primary border-primary text-primary-foreground' : 'border-border'
-                    }`}
-                  >
-                    {m.done && <Check className="w-3 h-3" />}
-                  </span>
-                  <span className={`text-xs ${m.done ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    {m.label}
-                  </span>
-                </div>
-                <span className="text-[11px] text-muted-foreground">{m.progress}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
-            Progress counts your recent sessions on this device and account. Deleted documents
-            keep their coaching history.
-          </p>
+        <TabsContent value="patterns" className="flex-1 overflow-y-auto mt-2 px-3 pb-4 data-[state=inactive]:hidden">
+          {patternRows.length === 0 ? (
+            <p className="text-xs text-muted-foreground pt-2">Nothing flagged yet — keep writing.</p>
+          ) : (
+            <ul className="space-y-2 pt-1">
+              {patternRows.map(([type, count]) => (
+                <li key={type}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      {PATTERN_LABELS[type] ?? type}
+                    </span>
+                    <span className="text-[11px] font-medium text-foreground">{count}×</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-300 motion-reduce:transition-none"
+                      style={{ width: `${maxPattern > 0 ? Math.max((count / maxPattern) * 100, 4) : 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </TabsContent>
       </Tabs>
 
