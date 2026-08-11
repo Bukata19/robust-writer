@@ -161,8 +161,8 @@ Be concise, helpful, and academic in tone. Use markdown formatting in your respo
     // temperature, since outline structure and worked answers need determinism
     // rather than the conversational variety casual chat benefits from.
     const isDecoder = preset === "decoder";
-    const primaryModel = isDecoder ? "anthropic/claude-haiku-3-5" : "google/gemini-3-flash-preview";
-    const fallbackModel = isDecoder ? "google/gemini-2.0-flash" : null;
+    const primaryModel = isDecoder ? "google/gemini-3.6-flash" : "google/gemini-3-flash-preview";
+    const fallbackModel = isDecoder ? "google/gemini-2.5-flash" : null;
     const temperature = isDecoder ? 0.2 : undefined;
 
     const callModel = (model: string) =>
@@ -206,7 +206,7 @@ Be concise, helpful, and academic in tone. Use markdown formatting in your respo
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      console.error("AI gateway error:", response.status);
+      console.error("AI gateway error:", response.status, (await response.text()).slice(0, 500));
       return new Response(
         JSON.stringify({ error: "AI service error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
