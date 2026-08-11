@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logAiFailure } from '@/lib/aiErrors';
 import { BookOpenCheck, Copy, Check, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { callDecoderChat, buildAnswerSystemPrompt, type AnswerLevel } from '@/lib/decoderChat';
@@ -80,6 +81,7 @@ const StandaloneAnswerTool: React.FC = () => {
       if (!reply.trim()) throw new Error('Empty response');
       setResult(reply.trim());
     } catch (err: any) {
+      await logAiFailure('answer:tools', err);
       const msg = err?.message || 'Could not get an answer';
       if (/rate limit|429/i.test(msg)) {
         toast.error('Rate limit reached — please wait a moment and try again');

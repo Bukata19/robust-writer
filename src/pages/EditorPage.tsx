@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logAiFailure } from '@/lib/aiErrors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -688,6 +689,7 @@ usePageTitle(
 
       setHumanizerResult({ original: selectedText, humanized: data.humanizedText, from: humFrom, to: humTo });
     } catch (err: any) {
+      void logAiFailure('humanizer:editor', err);
       toast.error(err.message || 'Humanizer failed');
     } finally {
       setHumanizing(false);

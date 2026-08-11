@@ -265,7 +265,7 @@ async function callHumanizerModel(
   apiKey: string,
   systemPrompt: string,
   userText: string,
-  model = "anthropic/claude-haiku-3-5"
+  model = "google/gemini-3.6-flash"
 ): Promise<string | null> {
   const response = await fetch(
     "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -289,7 +289,10 @@ async function callHumanizerModel(
     }
   );
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    console.error(`humanizer model ${model} failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+    return null;
+  }
   const data = await response.json();
   return data.choices?.[0]?.message?.content ?? null;
 }
@@ -411,7 +414,7 @@ ABSOLUTE OUTPUT CONSTRAINTS:
             LOVABLE_API_KEY,
             systemPrompt,
             chunk,
-            "google/gemini-2.0-flash"
+            "google/gemini-2.5-flash"
           );
         }
 
@@ -431,12 +434,12 @@ ABSOLUTE OUTPUT CONSTRAINTS:
 
       if (!result) {
         // Primary model failed — fallback to Gemini
-        console.warn("Primary model failed, attempting fallback to google/gemini-2.0-flash");
+        console.warn("Primary model failed, attempting fallback to google/gemini-2.5-flash");
         result = await callHumanizerModel(
           LOVABLE_API_KEY,
           systemPrompt,
           preprocessedText,
-          "google/gemini-2.0-flash"
+          "google/gemini-2.5-flash"
         );
       }
 

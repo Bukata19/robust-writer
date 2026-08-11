@@ -59,6 +59,8 @@ interface CoachContextType {
   recordTipShown: (tip: CoachTip) => void;
   recordTipAction: (tip: CoachTip, action: Exclude<TipAction, 'shown'>) => void;
   recordPatterns: (patterns: Record<string, number>) => void;
+  /** Live pattern counts for the current session/document only. */
+  getLivePatternCounts: () => Record<string, number>;
 
 
   aggregates: CoachPatternAggRow[];
@@ -274,6 +276,11 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const getLivePatternCounts = useCallback(
+    () => memoryRef.current?.getSessionPatterns() ?? {},
+    [],
+  );
+
   const refreshStats = useCallback(async () => {
     if (!user) return;
     setStatsLoading(true);
@@ -295,7 +302,7 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         enabled, mode, focusAreas, setEnabled, setMode, setFocusAreas,
         session, startSession, endSession,
         hasSeenTip, canShowPattern, nextVariantIndex, wasSameTextShownRecently,
-        recordTipShown, recordTipAction, recordPatterns,
+        recordTipShown, recordTipAction, recordPatterns, getLivePatternCounts,
 
         aggregates, recentSessions, statsLoading, refreshStats,
       }}
