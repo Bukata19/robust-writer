@@ -26,7 +26,15 @@ export async function callDecoderChat(messages: ChatMessage[]): Promise<string> 
     body: JSON.stringify({ messages, preset: 'decoder' }),
   });
 
-  if (!res.ok || !res.body) throw new Error('Request failed');
+  if (!res.ok || !res.body) {
+    let body = '';
+    try { body = (await res.text()).slice(0, 2000); } catch { /* ignore */ }
+    console.error('[AI:decoder-chat] request failed', { status: res.status, body });
+    const err = new Error(`Request failed (${res.status})`) as Error & { status?: number; body?: string };
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

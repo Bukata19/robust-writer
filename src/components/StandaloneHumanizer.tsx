@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logAiFailure } from '@/lib/aiErrors';
 import { Wand2, Copy, Check, Loader2 } from 'lucide-react';
 
 // Hard cap enforced by the humanizer Edge Function. Keep in lockstep with
@@ -76,6 +77,7 @@ const StandaloneHumanizer: React.FC = () => {
       if (data?.error) throw new Error(data.error);
       setResult(data.humanizedText);
     } catch (err: any) {
+      await logAiFailure('humanizer:tools', err);
       const msg = err?.message || 'Humanizer failed';
       if (/rate limit|429/i.test(msg)) {
         toast.error('Rate limit reached — please wait a moment and try again');
