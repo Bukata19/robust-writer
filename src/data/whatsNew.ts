@@ -16,6 +16,13 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: 'revamped-tools-tab',
+    date: '2026-08-10',
+    title: 'Assignment Mode',
+    description:
+      'An updated Tools tab on your dashboard now includes an assignmnet mode that gives you answers directly, where you are also able to switch to the humanizer — faster and easier assignment help.',
+  },
+  {
     id: 'decoder-smarter',
     date: '2026-07-20',
     title: 'A sharper Assignment Decoder',
