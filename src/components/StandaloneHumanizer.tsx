@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { logAiFailure } from '@/lib/aiErrors';
 import { Wand2, Copy, Check, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 // Hard cap enforced by the humanizer Edge Function. Keep in lockstep with
 // the server so we never round-trip a request that will bounce.
@@ -264,14 +265,18 @@ const StandaloneHumanizer: React.FC = () => {
             </Button>
           </div>
           <div
-            className="min-h-[260px] flex-1 rounded-lg border border-border bg-background p-3 text-sm text-foreground whitespace-pre-wrap overflow-y-auto"
+            className="min-h-[260px] flex-1 rounded-lg border border-border bg-background p-3 text-sm text-foreground overflow-y-auto"
             aria-live="polite"
             aria-busy={loading}
           >
             {loading ? (
               <span className="text-muted-foreground text-xs">Rewriting your text…</span>
             ) : result ? (
-              result
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>
+                  {result}
+                </ReactMarkdown>
+              </div>
             ) : (
               <span className="text-muted-foreground text-xs">
                 The humanized version will appear here.
