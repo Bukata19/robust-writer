@@ -418,6 +418,29 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Safety net: React cleanup never runs on a hard reload, tab close, or app
+  // switch on mobile, so finalize the session from unload events too, using the
+  // keepalive write path the browser is allowed to complete after teardown.
+  useEffect(() => {
+    if (!id) return;
+    const finalize = () => coach.endSession({ keepalive: true });
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') finalize();
+      // Coming back to a still-alive tab: resume coaching (no-op if a session
+      // is somehow still open).
+      else coach.startSession(id);
+    };
+    window.addEventListener('beforeunload', finalize);
+    window.addEventListener('pagehide', finalize);
+    document.addEventListener('visibilitychange', onHidden);
+    return () => {
+      window.removeEventListener('beforeunload', finalize);
+      window.removeEventListener('pagehide', finalize);
+      document.removeEventListener('visibilitychange', onHidden);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // Apply chat default state from settings
   useEffect(() => {
     if (settings.chatDefaultState === 'open') {

@@ -24,6 +24,9 @@ import {
   insertTipHistory,
   getPatternAggregates,
   getRecentSessions,
+  closeCoachSessionKeepalive,
+  insertTipHistoryKeepalive,
+  upsertPatternAggregatesKeepalive,
   type CoachPatternAggRow,
   type CoachSessionRow,
 } from '@/lib/coachDb';
@@ -51,7 +54,7 @@ interface CoachContextType {
 
   session: CoachSessionState | null;
   startSession: (documentId: string | null) => void;
-  endSession: () => void;
+  endSession: (opts?: { keepalive?: boolean }) => void;
   hasSeenTip: (text: string) => boolean;
   canShowPattern: (patternType: string) => boolean;
   nextVariantIndex: (patternType: string, variantCount: number) => number;
@@ -94,7 +97,12 @@ const profileCoach = (profile: unknown) => {
 };
 
 export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile, profileResolved, updateProfile } = useAuth();
+  const { user, session: authSession, profile, profileResolved, updateProfile } = useAuth();
+
+  // Kept in a ref so unload handlers can build an authorized keepalive request
+  // without an async getSession() round-trip.
+  const accessTokenRef = useRef<string | null>(null);
+  accessTokenRef.current = authSession?.access_token ?? null;
 
   const [enabled, setEnabledState] = useState<boolean>(readStoredEnabled);
   const [mode, setModeState] = useState<CoachMode>('balanced');
@@ -187,7 +195,7 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [user, focusAreas]);
 
-  const endSession = useCallback(() => {
+  const endSession = useCallback((opts?: { keepalive?: boolean }) => {
     const memory = memoryRef.current;
     const current = session;
     memoryRef.current = null;
@@ -204,30 +212,40 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       milestones: [] as string[],
     };
 
-    if (user && serverSessionIdRef.current) {
-      // Batch sync using the real server session ID, then clear local state only on success.
-      // A failed sync keeps the localStorage copy (swept on sign-out regardless).
-      void (async () => {
-        const ok = await closeCoachSession(serverSessionIdRef.current!, close);
-        if (Object.keys(patterns).length > 0) {
-          await upsertPatternAggregates(user.id, patterns);
-        }
-        if (tips.length > 0) {
-          await insertTipHistory(
-            tips.map((t) => ({
-              user_id: user.id,
-              session_id: serverSessionIdRef.current!,
-              tip_text: t.text.slice(0, 500),
-              pattern_type: t.patternType,
-              category: t.category,
-              confidence: t.confidence,
-              user_action: t.action,
-            })),
-          );
-        }
-        if (ok) memory.clear();
-      })();
+    if (!user || !serverSessionIdRef.current) return;
+    const serverId = serverSessionIdRef.current;
+    const tipRows = tips.map((t) => ({
+      user_id: user.id,
+      session_id: serverId,
+      tip_text: t.text.slice(0, 500),
+      pattern_type: t.patternType,
+      category: t.category,
+      confidence: t.confidence,
+      user_action: t.action,
+    }));
+
+    // Page is going away (hard reload / tab close): fire keepalive writes that
+    // the browser finishes after unload. Same rows as the async path below.
+    const token = accessTokenRef.current;
+    if (opts?.keepalive && token) {
+      closeCoachSessionKeepalive(serverId, close, token);
+      insertTipHistoryKeepalive(tipRows, token);
+      upsertPatternAggregatesKeepalive(user.id, patterns, token);
+      return;
     }
+
+    // Batch sync using the real server session ID, then clear local state only on success.
+    // A failed sync keeps the localStorage copy (swept on sign-out regardless).
+    void (async () => {
+      const ok = await closeCoachSession(serverId, close);
+      if (Object.keys(patterns).length > 0) {
+        await upsertPatternAggregates(user.id, patterns);
+      }
+      if (tipRows.length > 0) {
+        await insertTipHistory(tipRows);
+      }
+      if (ok) memory.clear();
+    })();
   }, [user]);
 
   const hasSeenTip = useCallback(
