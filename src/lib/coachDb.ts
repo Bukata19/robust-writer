@@ -192,3 +192,86 @@ export async function getTipsInRange(
   if (error) return [];
   return (data ?? []) as CoachTipRow[];
 }
+
+// --- Unload-safe finalization -------------------------------------------------
+// supabase-js issues plain fetches which the browser aborts when the page is
+// being torn down (hard reload / tab close). These helpers hit the same REST
+// endpoints with `keepalive: true`, which the browser is required to let finish
+// after unload. Same rows, same RLS — only the transport differs.
+
+const REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
+const REST_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+const keepaliveHeaders = (accessToken: string) => ({
+  'Content-Type': 'application/json',
+  apikey: REST_KEY,
+  Authorization: `Bearer ${accessToken}`,
+  Prefer: 'return=minimal',
+});
+
+export function closeCoachSessionKeepalive(
+  sessionId: string,
+  close: SessionCloseData,
+  accessToken: string,
+): void {
+  try {
+    void fetch(`${REST_URL}/coach_sessions?id=eq.${encodeURIComponent(sessionId)}`, {
+      method: 'PATCH',
+      keepalive: true,
+      headers: keepaliveHeaders(accessToken),
+      body: JSON.stringify({
+        session_end: new Date().toISOString(),
+        tips_given: close.tipsGiven,
+        tips_accepted: close.tipsAccepted,
+        tips_skipped: close.tipsSkipped,
+        patterns: close.patterns,
+        milestones: close.milestones,
+      }),
+    }).catch(() => undefined);
+  } catch { /* unload race — nothing else to do */ }
+}
+
+export function insertTipHistoryKeepalive(rows: CoachTipRow[], accessToken: string): void {
+  if (rows.length === 0) return;
+  try {
+    void fetch(`${REST_URL}/coach_tips_history`, {
+      method: 'POST',
+      keepalive: true,
+      headers: keepaliveHeaders(accessToken),
+      body: JSON.stringify(rows),
+    }).catch(() => undefined);
+  } catch { /* unload race */ }
+}
+
+export function upsertPatternAggregatesKeepalive(
+  userId: string,
+  patterns: Record<string, number>,
+  accessToken: string,
+): void {
+  const types = Object.keys(patterns);
+  if (types.length === 0) return;
+  // No read-merge here: on unload there's no time for a round-trip, so this
+  // only fills in rows that don't exist yet (ignore-duplicates). Sessions that
+  // end in-app still go through the accurate merging path above.
+  const now = new Date().toISOString();
+  try {
+    void fetch(`${REST_URL}/coach_pattern_log`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        ...keepaliveHeaders(accessToken),
+        Prefer: 'return=minimal,resolution=ignore-duplicates',
+      },
+      body: JSON.stringify(
+        types.map((t) => ({
+          user_id: userId,
+          pattern_type: t,
+          total_occurrences: patterns[t],
+          sessions_with_pattern: 1,
+          first_detected: now,
+          last_detected: now,
+        })),
+      ),
+    }).catch(() => undefined);
+  } catch { /* unload race */ }
+}
