@@ -24,6 +24,9 @@ import {
   insertTipHistory,
   getPatternAggregates,
   getRecentSessions,
+  closeCoachSessionKeepalive,
+  insertTipHistoryKeepalive,
+  upsertPatternAggregatesKeepalive,
   type CoachPatternAggRow,
   type CoachSessionRow,
 } from '@/lib/coachDb';
@@ -51,7 +54,7 @@ interface CoachContextType {
 
   session: CoachSessionState | null;
   startSession: (documentId: string | null) => void;
-  endSession: () => void;
+  endSession: (opts?: { keepalive?: boolean }) => void;
   hasSeenTip: (text: string) => boolean;
   canShowPattern: (patternType: string) => boolean;
   nextVariantIndex: (patternType: string, variantCount: number) => number;
@@ -94,7 +97,12 @@ const profileCoach = (profile: unknown) => {
 };
 
 export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile, profileResolved, updateProfile } = useAuth();
+  const { user, session: authSession, profile, profileResolved, updateProfile } = useAuth();
+
+  // Kept in a ref so unload handlers can build an authorized keepalive request
+  // without an async getSession() round-trip.
+  const accessTokenRef = useRef<string | null>(null);
+  accessTokenRef.current = authSession?.access_token ?? null;
 
   const [enabled, setEnabledState] = useState<boolean>(readStoredEnabled);
   const [mode, setModeState] = useState<CoachMode>('balanced');
