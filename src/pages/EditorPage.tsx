@@ -426,6 +426,9 @@ useEffect(() => {
     const finalize = () => coach.endSession({ keepalive: true });
     const onHidden = () => {
       if (document.visibilityState === 'hidden') finalize();
+      // Coming back to a still-alive tab: resume coaching (no-op if a session
+      // is somehow still open).
+      else coach.startSession(id);
     };
     window.addEventListener('beforeunload', finalize);
     window.addEventListener('pagehide', finalize);
