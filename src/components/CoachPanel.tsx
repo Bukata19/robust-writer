@@ -35,6 +35,9 @@ const FOCUS_OPTIONS: { value: PatternCategory; label: string; icon: LucideIcon }
 
 
 
+// Once-per-browser-session flag for the continuity greeting.
+const WELCOME_KEY = 'rb_coach_welcome_shown';
+
 interface Props {
   onClose: () => void;
   /** One-line note when the Assignment Decoder is steering the coach. */
@@ -51,6 +54,28 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
     // refreshStats identity changes with user; once per open is intended.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Continuity note from history that already exists (coach_pattern_log /
+  // coach_sessions, loaded by refreshStats). Shown once per browser session so
+  // it reads like a greeting, not a permanent banner.
+  const [welcomeBack, setWelcomeBack] = useState<string | null>(null);
+  useEffect(() => {
+    if (coach.statsLoading) return;
+    try {
+      if (sessionStorage.getItem(WELCOME_KEY) === '1') return;
+    } catch { /* storage unavailable */ }
+    const top = coach.aggregates.find((a) => a.total_occurrences > 0);
+    if (!top || coach.recentSessions.length === 0) return;
+    const label = (PATTERN_LABELS[top.pattern_type] ?? top.pattern_type).toLowerCase();
+    setWelcomeBack(
+      `Welcome back — ${label} has come up most in your writing so far (${top.total_occurrences} time${
+        top.total_occurrences === 1 ? '' : 's'
+      } across ${coach.recentSessions.length} session${
+        coach.recentSessions.length === 1 ? '' : 's'
+      }). I'll keep an eye out.`,
+    );
+    try { sessionStorage.setItem(WELCOME_KEY, '1'); } catch { /* storage unavailable */ }
+  }, [coach.statsLoading, coach.aggregates, coach.recentSessions]);
 
   const acceptance = s && s.tipsGiven > 0 ? Math.round((s.tipsAccepted / s.tipsGiven) * 100) : null;
 
@@ -93,6 +118,11 @@ export default function CoachPanel({ onClose, assignmentSummary }: Props) {
       </div>
 
       <div className="px-3 pt-3 space-y-3 shrink-0">
+        {welcomeBack && (
+          <p className="text-[11px] leading-snug text-muted-foreground bg-muted/40 border border-border rounded-md px-2.5 py-1.5">
+            {welcomeBack}
+          </p>
+        )}
         {assignmentSummary && (
           <p className="text-[11px] leading-snug text-primary/90 bg-primary/5 border border-primary/20 rounded-md px-2.5 py-1.5">
             {assignmentSummary}
