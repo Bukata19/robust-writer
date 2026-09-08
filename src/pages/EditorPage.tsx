@@ -1163,7 +1163,7 @@ usePageTitle(
             {chatMessages.map((m, i) => (
               <div key={i} className={`text-sm ${m.role === 'user' ? 'text-right' : 'text-left'} animate-fade-in`}>
                 <div className={`inline-block max-w-[90%] rounded-xl px-3 py-2 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
-                  {m.role === 'assistant' ? <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>{m.content}</ReactMarkdown> : m.content}
+                  {m.role === 'assistant' ? <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{m.content}</ReactMarkdown> : m.content}
                 </div>
               </div>
             ))}

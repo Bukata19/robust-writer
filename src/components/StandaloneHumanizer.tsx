@@ -275,7 +275,12 @@ const StandaloneHumanizer: React.FC = () => {
               <span className="text-muted-foreground text-xs">Rewriting your text…</span>
             ) : result ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>
+                <ReactMarkdown
+                  skipHtml
+                  disallowedElements={['script', 'style', 'iframe']}
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
                   {result}
                 </ReactMarkdown>
               </div>
