@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { logAiFailure } from '@/lib/aiErrors';
 import { BookOpenCheck, Copy, Check, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { callDecoderChat, buildAnswerSystemPrompt, type AnswerLevel } from '@/lib/decoderChat';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -231,7 +233,12 @@ const StandaloneAnswerTool: React.FC = () => {
               <span className="text-muted-foreground text-xs">Working through it…</span>
             ) : result ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>
+                <ReactMarkdown
+                  skipHtml
+                  disallowedElements={['script', 'style', 'iframe']}
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
                   {result}
                 </ReactMarkdown>
               </div>
