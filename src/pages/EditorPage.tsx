@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import OfflineBadge from '@/components/OfflineBadge';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { cacheDocument, getCachedDocument, getLastCachedDocument, type CachedDoc } from '@/lib/offlineDocCache';

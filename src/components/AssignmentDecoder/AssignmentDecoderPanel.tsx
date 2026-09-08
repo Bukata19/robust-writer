@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { useAssignmentDecoder, DecoderDocType, AcademicLevel } from '@/hooks/useAssignmentDecoder';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 type DecoderApi = ReturnType<typeof useAssignmentDecoder>;
 
@@ -309,7 +311,12 @@ const AnswerModeView: React.FC<{ decoder: DecoderApi }> = ({ decoder }) => {
             </p>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               {m.role === 'assistant' ? (
-                <ReactMarkdown skipHtml disallowedElements={['script', 'style', 'iframe']}>
+                <ReactMarkdown
+                  skipHtml
+                  disallowedElements={['script', 'style', 'iframe']}
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
                   {m.content}
                 </ReactMarkdown>
               ) : (

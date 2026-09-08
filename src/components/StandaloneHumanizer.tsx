@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { logAiFailure } from '@/lib/aiErrors';
 import { Wand2, Copy, Check, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 // Hard cap enforced by the humanizer Edge Function. Keep in lockstep with
 // the server so we never round-trip a request that will bounce.

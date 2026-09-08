@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+// KaTeX styling — global so math renders correctly on every AI-output surface.
+import 'katex/dist/katex.min.css';
 
 // Service worker registration
 if (import.meta.env.DEV) {
