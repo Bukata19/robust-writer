@@ -24,6 +24,7 @@ import {
   insertTipHistory,
   getPatternAggregates,
   getRecentSessions,
+  getResumableSession,
   closeCoachSessionKeepalive,
   insertTipHistoryKeepalive,
   upsertPatternAggregatesKeepalive,
@@ -34,6 +35,27 @@ import {
 // Legacy key (pre-profile column) is read once as the initial default.
 const ENABLED_KEY = 'rb_coach_enabled';
 const LEGACY_ENABLED_KEY = 'ra_coach_enabled';
+
+// The accept streak has no column in coach_sessions, so it rides along locally
+// per document. Purely cosmetic continuity — a miss just restarts the streak.
+const STREAK_KEY_PREFIX = 'rb_coach_streak_';
+
+const readStoredStreak = (documentId: string | null): number => {
+  if (!documentId) return 0;
+  try {
+    const v = Number(localStorage.getItem(`${STREAK_KEY_PREFIX}${documentId}`));
+    return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const writeStoredStreak = (documentId: string | null, streak: number): void => {
+  if (!documentId) return;
+  try {
+    localStorage.setItem(`${STREAK_KEY_PREFIX}${documentId}`, String(streak));
+  } catch { /* storage unavailable */ }
+};
 
 export interface CoachSessionState {
   sessionId: string;
@@ -184,16 +206,37 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       tipsSkipped: 0,
       streak: 0,
     });
-    // Server row is best-effort; offline sessions just skip the sync.
-    // Pass the current focusAreas instead of an empty array.
-    if (user) {
-      void createCoachSession(user.id, documentId, focusAreas).then((serverId) => {
-        if (serverId) {
-          serverSessionIdRef.current = serverId;
+    if (!user) return; // offline / signed out: purely local session
+
+    // Resume the most recent session for this same document when the user only
+    // briefly stepped away (in-app navigation or a hard reload), instead of
+    // restarting from zero. Falls back to a brand-new row otherwise.
+    void (async () => {
+      const prior = await getResumableSession(user.id, documentId);
+      if (memoryRef.current !== memory) return; // session changed meanwhile
+      if (prior) {
+        serverSessionIdRef.current = prior.id;
+        memory.seedBaseline(
+          {
+            tipsGiven: prior.tips_given ?? 0,
+            tipsAccepted: prior.tips_accepted ?? 0,
+            tipsSkipped: prior.tips_skipped ?? 0,
+          },
+          readStoredStreak(documentId),
+        );
+        // Carry over the focus areas that were active in the resumed session.
+        if (prior.session_focus_areas?.length) {
+          setFocusAreasState(prior.session_focus_areas as PatternCategory[]);
         }
-      });
-    }
-  }, [user, focusAreas]);
+        syncCounters();
+        return;
+      }
+      const serverId = await createCoachSession(user.id, documentId, focusAreas);
+      if (serverId && memoryRef.current === memory) {
+        serverSessionIdRef.current = serverId;
+      }
+    })();
+  }, [user, focusAreas, syncCounters]);
 
   const endSession = useCallback((opts?: { keepalive?: boolean }) => {
     const memory = memoryRef.current;
@@ -201,6 +244,8 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     memoryRef.current = null;
     setSession(null);
     if (!memory || !current) return;
+
+    writeStoredStreak(current.documentId, memory.getStreak());
 
     const patterns = memory.getSessionPatterns();
     const tips = memory.getTipHistory();

@@ -31,20 +31,31 @@ export interface RecordedTip extends CoachTip {
   at: number;
 }
 
+export interface CoachBaseline {
+  tipsGiven: number;
+  tipsAccepted: number;
+  tipsSkipped: number;
+}
+
 interface PersistedState {
   patterns: Record<string, number>;
   tips: RecordedTip[];
   streak: number;
+  /** Counts carried over from a resumed prior session for the same document. */
+  baseline: CoachBaseline;
   /** Last time (ms epoch) a tip was shown for a given pattern type. */
   lastShownAt: Record<string, number>;
   /** Last variant index used per pattern type (for wording rotation). */
   lastVariantIndex: Record<string, number>;
 }
 
+const emptyBaseline = (): CoachBaseline => ({ tipsGiven: 0, tipsAccepted: 0, tipsSkipped: 0 });
+
 const emptyState = (): PersistedState => ({
   patterns: {},
   tips: [],
   streak: 0,
+  baseline: emptyBaseline(),
   lastShownAt: {},
   lastVariantIndex: {},
 });
@@ -76,6 +87,10 @@ export class CoachMemory {
         patterns: typeof parsed.patterns === 'object' && parsed.patterns ? parsed.patterns : {},
         tips: Array.isArray(parsed.tips) ? parsed.tips : [],
         streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+        baseline:
+          typeof parsed.baseline === 'object' && parsed.baseline
+            ? { ...emptyBaseline(), ...parsed.baseline }
+            : emptyBaseline(),
         lastShownAt:
           typeof parsed.lastShownAt === 'object' && parsed.lastShownAt ? parsed.lastShownAt : {},
         lastVariantIndex:
@@ -188,16 +203,36 @@ export class CoachMemory {
     }
   }
 
+  /**
+   * Carry over totals from a resumed session for the same document, so counts
+   * reported to the server stay absolute for that session row.
+   */
+  seedBaseline(baseline: CoachBaseline, streak: number): void {
+    this.state.baseline = { ...baseline };
+    this.state.streak = streak;
+    this.save();
+  }
+
+  getBaseline(): CoachBaseline {
+    return { ...this.state.baseline };
+  }
+
   getAcceptedCount(): number {
-    return this.state.tips.filter((t) => t.action === 'accepted').length;
+    return (
+      this.state.baseline.tipsAccepted +
+      this.state.tips.filter((t) => t.action === 'accepted').length
+    );
   }
 
   getGivenCount(): number {
-    return this.state.tips.length;
+    return this.state.baseline.tipsGiven + this.state.tips.length;
   }
 
   getSkippedCount(): number {
-    return this.state.tips.filter((t) => t.action === 'skipped').length;
+    return (
+      this.state.baseline.tipsSkipped +
+      this.state.tips.filter((t) => t.action === 'skipped').length
+    );
   }
 
   getStreak(): number {
