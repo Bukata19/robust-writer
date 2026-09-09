@@ -151,6 +151,38 @@ export async function getRecentSessions(
   return (data ?? []) as CoachSessionRow[];
 }
 
+/**
+ * How long after a session's last activity it may still be resumed for the same
+ * document. Short absences (navigating away, a reload, a coffee break) continue
+ * the same session; anything older starts fresh. Tune here.
+ */
+export const RESUMABLE_WINDOW_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+/**
+ * Newest session for this user + document that is still inside the resumable
+ * window, whether or not it was formally closed. Documentless sessions never
+ * resume (no stable identity to match on).
+ */
+export async function getResumableSession(
+  userId: string,
+  documentId: string | null,
+  windowMs: number = RESUMABLE_WINDOW_MS,
+): Promise<CoachSessionRow | null> {
+  if (!documentId) return null;
+  const cutoff = new Date(Date.now() - windowMs).toISOString();
+  const { data, error } = await db
+    .from('coach_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('document_id', documentId)
+    .gte('session_start', cutoff)
+    .order('session_start', { ascending: false })
+    .limit(1);
+  if (error) return null;
+  const rows = (data ?? []) as CoachSessionRow[];
+  return rows[0] ?? null;
+}
+
 export async function getPatternAggregates(userId: string): Promise<CoachPatternAggRow[]> {
   const { data, error } = await db
     .from('coach_pattern_log')
