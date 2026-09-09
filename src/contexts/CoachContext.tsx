@@ -24,6 +24,7 @@ import {
   insertTipHistory,
   getPatternAggregates,
   getRecentSessions,
+  getResumableSession,
   closeCoachSessionKeepalive,
   insertTipHistoryKeepalive,
   upsertPatternAggregatesKeepalive,
