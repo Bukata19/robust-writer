@@ -49,10 +49,13 @@ interface PersistedState {
   lastVariantIndex: Record<string, number>;
 }
 
+const emptyBaseline = (): CoachBaseline => ({ tipsGiven: 0, tipsAccepted: 0, tipsSkipped: 0 });
+
 const emptyState = (): PersistedState => ({
   patterns: {},
   tips: [],
   streak: 0,
+  baseline: emptyBaseline(),
   lastShownAt: {},
   lastVariantIndex: {},
 });
