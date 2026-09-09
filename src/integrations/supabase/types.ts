@@ -14,6 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_pattern_log: {
+        Row: {
+          first_detected: string
+          last_detected: string
+          pattern_type: string
+          sessions_with_pattern: number
+          total_occurrences: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          first_detected?: string
+          last_detected?: string
+          pattern_type: string
+          sessions_with_pattern?: number
+          total_occurrences?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          first_detected?: string
+          last_detected?: string
+          pattern_type?: string
+          sessions_with_pattern?: number
+          total_occurrences?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_sessions: {
+        Row: {
+          acceptance_rate: number | null
+          created_at: string
+          document_id: string | null
+          id: string
+          milestones: Json
+          patterns: Json
+          session_end: string | null
+          session_focus_areas: string[]
+          session_start: string
+          tips_accepted: number
+          tips_given: number
+          tips_skipped: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          milestones?: Json
+          patterns?: Json
+          session_end?: string | null
+          session_focus_areas?: string[]
+          session_start?: string
+          tips_accepted?: number
+          tips_given?: number
+          tips_skipped?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acceptance_rate?: number | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          milestones?: Json
+          patterns?: Json
+          session_end?: string | null
+          session_focus_areas?: string[]
+          session_start?: string
+          tips_accepted?: number
+          tips_given?: number
+          tips_skipped?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_sessions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_tips_history: {
+        Row: {
+          category: string
+          confidence: number
+          created_at: string
+          id: string
+          pattern_type: string
+          session_id: string
+          tip_text: string
+          user_action: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          pattern_type: string
+          session_id: string
+          tip_text: string
+          user_action: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          pattern_type?: string
+          session_id?: string
+          tip_text?: string
+          user_action?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_tips_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coach_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
           content: Json | null
@@ -88,6 +221,9 @@ export type Database = {
       profiles: {
         Row: {
           academic_level: string | null
+          coach_enabled: boolean
+          coach_focus_areas: string[]
+          coach_mode: string
           created_at: string
           custom_instructions: string | null
           display_name: string | null
@@ -99,6 +235,9 @@ export type Database = {
         }
         Insert: {
           academic_level?: string | null
+          coach_enabled?: boolean
+          coach_focus_areas?: string[]
+          coach_mode?: string
           created_at?: string
           custom_instructions?: string | null
           display_name?: string | null
@@ -110,6 +249,9 @@ export type Database = {
         }
         Update: {
           academic_level?: string | null
+          coach_enabled?: boolean
+          coach_focus_areas?: string[]
+          coach_mode?: string
           created_at?: string
           custom_instructions?: string | null
           display_name?: string | null
