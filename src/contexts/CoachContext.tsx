@@ -35,6 +35,27 @@ import {
 const ENABLED_KEY = 'rb_coach_enabled';
 const LEGACY_ENABLED_KEY = 'ra_coach_enabled';
 
+// The accept streak has no column in coach_sessions, so it rides along locally
+// per document. Purely cosmetic continuity — a miss just restarts the streak.
+const STREAK_KEY_PREFIX = 'rb_coach_streak_';
+
+const readStoredStreak = (documentId: string | null): number => {
+  if (!documentId) return 0;
+  try {
+    const v = Number(localStorage.getItem(`${STREAK_KEY_PREFIX}${documentId}`));
+    return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const writeStoredStreak = (documentId: string | null, streak: number): void => {
+  if (!documentId) return;
+  try {
+    localStorage.setItem(`${STREAK_KEY_PREFIX}${documentId}`, String(streak));
+  } catch { /* storage unavailable */ }
+};
+
 export interface CoachSessionState {
   sessionId: string;
   documentId: string | null;
