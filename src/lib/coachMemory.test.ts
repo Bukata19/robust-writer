@@ -128,3 +128,22 @@ describe('clearAllCoachSessions — sign-out sweep', () => {
     expect(localStorage.getItem('rb_other')).toBe('keep');
   });
 });
+
+describe('CoachMemory — resumed session baseline', () => {
+  it('adds carried-over counts to live counts and restores the streak', () => {
+    const m = new CoachMemory('resumed');
+    m.seedBaseline({ tipsGiven: 5, tipsAccepted: 3, tipsSkipped: 2 }, 4);
+    expect(m.getGivenCount()).toBe(5);
+    expect(m.getAcceptedCount()).toBe(3);
+    expect(m.getSkippedCount()).toBe(2);
+    expect(m.getStreak()).toBe(4);
+
+    m.recordTip(tip('New tip.'), 'accepted');
+    expect(m.getGivenCount()).toBe(6);
+    expect(m.getAcceptedCount()).toBe(4);
+
+    const restored = new CoachMemory('resumed');
+    expect(restored.getGivenCount()).toBe(6);
+    expect(restored.getBaseline().tipsGiven).toBe(5);
+  });
+});
