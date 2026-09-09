@@ -245,6 +245,8 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSession(null);
     if (!memory || !current) return;
 
+    writeStoredStreak(current.documentId, memory.getStreak());
+
     const patterns = memory.getSessionPatterns();
     const tips = memory.getTipHistory();
     const close = {
