@@ -87,6 +87,10 @@ export class CoachMemory {
         patterns: typeof parsed.patterns === 'object' && parsed.patterns ? parsed.patterns : {},
         tips: Array.isArray(parsed.tips) ? parsed.tips : [],
         streak: typeof parsed.streak === 'number' ? parsed.streak : 0,
+        baseline:
+          typeof parsed.baseline === 'object' && parsed.baseline
+            ? { ...emptyBaseline(), ...parsed.baseline }
+            : emptyBaseline(),
         lastShownAt:
           typeof parsed.lastShownAt === 'object' && parsed.lastShownAt ? parsed.lastShownAt : {},
         lastVariantIndex:
