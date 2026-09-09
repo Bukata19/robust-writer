@@ -31,10 +31,18 @@ export interface RecordedTip extends CoachTip {
   at: number;
 }
 
+export interface CoachBaseline {
+  tipsGiven: number;
+  tipsAccepted: number;
+  tipsSkipped: number;
+}
+
 interface PersistedState {
   patterns: Record<string, number>;
   tips: RecordedTip[];
   streak: number;
+  /** Counts carried over from a resumed prior session for the same document. */
+  baseline: CoachBaseline;
   /** Last time (ms epoch) a tip was shown for a given pattern type. */
   lastShownAt: Record<string, number>;
   /** Last variant index used per pattern type (for wording rotation). */
