@@ -203,16 +203,36 @@ export class CoachMemory {
     }
   }
 
+  /**
+   * Carry over totals from a resumed session for the same document, so counts
+   * reported to the server stay absolute for that session row.
+   */
+  seedBaseline(baseline: CoachBaseline, streak: number): void {
+    this.state.baseline = { ...baseline };
+    this.state.streak = streak;
+    this.save();
+  }
+
+  getBaseline(): CoachBaseline {
+    return { ...this.state.baseline };
+  }
+
   getAcceptedCount(): number {
-    return this.state.tips.filter((t) => t.action === 'accepted').length;
+    return (
+      this.state.baseline.tipsAccepted +
+      this.state.tips.filter((t) => t.action === 'accepted').length
+    );
   }
 
   getGivenCount(): number {
-    return this.state.tips.length;
+    return this.state.baseline.tipsGiven + this.state.tips.length;
   }
 
   getSkippedCount(): number {
-    return this.state.tips.filter((t) => t.action === 'skipped').length;
+    return (
+      this.state.baseline.tipsSkipped +
+      this.state.tips.filter((t) => t.action === 'skipped').length
+    );
   }
 
   getStreak(): number {
