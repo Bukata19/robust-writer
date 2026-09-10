@@ -182,17 +182,18 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const syncCounters = useCallback(() => {
     const m = memoryRef.current;
     if (!m) return;
-    setSession((prev) =>
-      prev
-        ? {
-            ...prev,
-            tipsGiven: m.getGivenCount(),
-            tipsAccepted: m.getAcceptedCount(),
-            tipsSkipped: m.getSkippedCount(),
-            streak: m.getStreak(),
-          }
-        : prev,
-    );
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        tipsGiven: m.getGivenCount(),
+        tipsAccepted: m.getAcceptedCount(),
+        tipsSkipped: m.getSkippedCount(),
+        streak: m.getStreak(),
+      };
+      sessionRef.current = next;
+      return next;
+    });
   }, []);
 
   const startSession = useCallback((documentId: string | null) => {
