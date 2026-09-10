@@ -134,6 +134,9 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [session, setSession] = useState<CoachSessionState | null>(null);
   // Store the server-returned session ID so endSession can use the real record
   const serverSessionIdRef = useRef<string | null>(null);
+  // Mirror of `session` so endSession (called from unload handlers and cleanup)
+  // never reads a stale captured value.
+  const sessionRef = useRef<CoachSessionState | null>(null);
 
   const [aggregates, setAggregates] = useState<CoachPatternAggRow[]>([]);
   const [recentSessions, setRecentSessions] = useState<CoachSessionRow[]>([]);
@@ -179,17 +182,18 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const syncCounters = useCallback(() => {
     const m = memoryRef.current;
     if (!m) return;
-    setSession((prev) =>
-      prev
-        ? {
-            ...prev,
-            tipsGiven: m.getGivenCount(),
-            tipsAccepted: m.getAcceptedCount(),
-            tipsSkipped: m.getSkippedCount(),
-            streak: m.getStreak(),
-          }
-        : prev,
-    );
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        tipsGiven: m.getGivenCount(),
+        tipsAccepted: m.getAcceptedCount(),
+        tipsSkipped: m.getSkippedCount(),
+        streak: m.getStreak(),
+      };
+      sessionRef.current = next;
+      return next;
+    });
   }, []);
 
   const startSession = useCallback((documentId: string | null) => {
@@ -198,14 +202,16 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const memory = new CoachMemory(sessionId);
     memoryRef.current = memory;
     serverSessionIdRef.current = null; // will be populated by server response
-    setSession({
+    const initial: CoachSessionState = {
       sessionId,
       documentId,
       tipsGiven: 0,
       tipsAccepted: 0,
       tipsSkipped: 0,
       streak: 0,
-    });
+    };
+    sessionRef.current = initial;
+    setSession(initial);
     if (!user) return; // offline / signed out: purely local session
 
     // Resume the most recent session for this same document when the user only
@@ -240,7 +246,8 @@ export const CoachProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const endSession = useCallback((opts?: { keepalive?: boolean }) => {
     const memory = memoryRef.current;
-    const current = session;
+    const current = sessionRef.current;
+    sessionRef.current = null;
     memoryRef.current = null;
     setSession(null);
     if (!memory || !current) return;
