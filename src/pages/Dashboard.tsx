@@ -215,7 +215,7 @@ const Dashboard: React.FC = () => {
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
   // Which standalone tool the Tools tab is showing.
-  const [activeTool, setActiveTool] = useState<'humanizer' | 'answer'>('humanizer');
+  const [activeTool, setActiveTool] = useState<(typeof TOOL_OPTIONS)[number]['id']>('humanizer');
 
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -596,7 +596,7 @@ const Dashboard: React.FC = () => {
             data-intro-id="new-doc-grid"
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
           >
-            {(['essay', 'research_paper', 'report', 'general'] as DocType[]).map((type) => {
+            {(['essay', 'research_paper', 'report', 'general', 'lab_report', 'literature_review', 'presentation_outline', 'reflective_journal'] as DocType[]).map((type) => {
               const config = docTypeConfig[type];
               return (
                 <button
@@ -712,7 +712,7 @@ const Dashboard: React.FC = () => {
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {(['all', 'essay', 'research_paper', 'report', 'general'] as const).map((type) => (
+              {(['all', 'essay', 'research_paper', 'report', 'general', 'lab_report', 'literature_review', 'presentation_outline', 'reflective_journal'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
@@ -917,7 +917,10 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
 
-            {activeTool === 'humanizer' ? <StandaloneHumanizer /> : <StandaloneAnswerTool />}
+            {activeTool === 'humanizer' && <StandaloneHumanizer />}
+            {activeTool === 'answer' && <StandaloneAnswerTool />}
+            {activeTool === 'flashcards' && <StandaloneFlashcards />}
+            {activeTool === 'summarizer' && <StandaloneSummarizer />}
           </div>
         )}
 
