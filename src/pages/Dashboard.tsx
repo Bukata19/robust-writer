@@ -896,7 +896,7 @@ const Dashboard: React.FC = () => {
             <div
               role="tablist"
               aria-label="Standalone tools"
-              className="mb-5 inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
+              className="mb-5 grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
             >
               {TOOL_OPTIONS.map(({ id, label, icon: Icon }) => (
                 <button
@@ -905,7 +905,7 @@ const Dashboard: React.FC = () => {
                   type="button"
                   aria-selected={activeTool === id}
                   onClick={() => setActiveTool(id)}
-                  className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
+                  className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
                     activeTool === id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
