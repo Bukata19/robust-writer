@@ -31,11 +31,23 @@ import {
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
   Home, FolderOpen, Wrench, Wand2, BookOpenCheck,
+  FlaskConical, Library, Presentation, NotebookPen,
+  Layers, ScrollText,
 } from 'lucide-react';
 import StandaloneHumanizer from '@/components/StandaloneHumanizer';
 import StandaloneAnswerTool from '@/components/StandaloneAnswerTool';
+import StandaloneFlashcards from '@/components/StandaloneFlashcards';
+import StandaloneSummarizer from '@/components/StandaloneSummarizer';
 
-type DocType = 'essay' | 'research_paper' | 'report' | 'general';
+type DocType =
+  | 'essay'
+  | 'research_paper'
+  | 'report'
+  | 'general'
+  | 'lab_report'
+  | 'literature_review'
+  | 'presentation_outline'
+  | 'reflective_journal';
 
 // Static tab chrome config — module scope so it isn't reallocated per render.
 const TABS = [
@@ -48,6 +60,8 @@ const TABS = [
 const TOOL_OPTIONS = [
   { id: 'humanizer' as const, label: 'Humanizer', icon: Wand2 },
   { id: 'answer' as const, label: 'Answer a Question', icon: BookOpenCheck },
+  { id: 'flashcards' as const, label: 'Flashcards', icon: Layers },
+  { id: 'summarizer' as const, label: 'Summarizer', icon: ScrollText },
 ];
 type SortMode = 'recent' | 'alpha';
 
@@ -88,6 +102,30 @@ const docTypeConfig: Record<DocType, {
     label: 'General',
     description: 'Blank canvas',
     icon: <PenLine className="w-4 h-4" />,
+    color: 'text-muted-foreground',
+  },
+  lab_report: {
+    label: 'Lab Report',
+    description: 'Experiment write-up',
+    icon: <FlaskConical className="w-4 h-4" />,
+    color: 'text-primary',
+  },
+  literature_review: {
+    label: 'Literature Review',
+    description: 'Sources by theme',
+    icon: <Library className="w-4 h-4" />,
+    color: 'text-primary',
+  },
+  presentation_outline: {
+    label: 'Presentation Outline',
+    description: 'Talk structure',
+    icon: <Presentation className="w-4 h-4" />,
+    color: 'text-muted-foreground',
+  },
+  reflective_journal: {
+    label: 'Reflective Journal',
+    description: 'Personal reflection',
+    icon: <NotebookPen className="w-4 h-4" />,
     color: 'text-muted-foreground',
   },
 };

@@ -70,6 +70,7 @@ import {
   Settings,
   Lightbulb,
   MoreHorizontal,
+  Library,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useAssignmentContext } from '@/hooks/useAssignmentContext';
