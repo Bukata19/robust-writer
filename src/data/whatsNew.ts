@@ -16,6 +16,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: 'source-vault',
+    date: '2026-09-11',
+    title: 'Save sources as you write',
+    description:
+      'A new panel in the editor lets you save quotes, excerpts, and notes for the document you are working on, so you never lose track of a source.',
+  },
+  {
+    id: 'study-tools',
+    date: '2026-09-11',
+    title: 'Flashcards and quick summaries',
+    description:
+      'Two new tools in the Tools tab — turn your notes into flashcards, or get a quick summary of a longer reading.',
+  },
+  {
+    id: 'more-templates',
+    date: '2026-09-11',
+    title: 'More document templates',
+    description:
+      'Lab Report, Literature Review, Presentation Outline, and Reflective Journal are now available alongside Essay, Research Paper, Report, and General.',
+  },
+  {
     id: 'revamped-tools-tab',
     date: '2026-08-10',
     title: 'Assignment Mode',

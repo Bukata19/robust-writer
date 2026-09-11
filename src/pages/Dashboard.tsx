@@ -31,11 +31,23 @@ import {
   ChevronRight, Pencil, Check, X,
   LogOut, Sparkles, FileStack, AlarmClock, Plus,
   Home, FolderOpen, Wrench, Wand2, BookOpenCheck,
+  FlaskConical, Library, Presentation, NotebookPen,
+  Layers, ScrollText,
 } from 'lucide-react';
 import StandaloneHumanizer from '@/components/StandaloneHumanizer';
 import StandaloneAnswerTool from '@/components/StandaloneAnswerTool';
+import StandaloneFlashcards from '@/components/StandaloneFlashcards';
+import StandaloneSummarizer from '@/components/StandaloneSummarizer';
 
-type DocType = 'essay' | 'research_paper' | 'report' | 'general';
+type DocType =
+  | 'essay'
+  | 'research_paper'
+  | 'report'
+  | 'general'
+  | 'lab_report'
+  | 'literature_review'
+  | 'presentation_outline'
+  | 'reflective_journal';
 
 // Static tab chrome config — module scope so it isn't reallocated per render.
 const TABS = [
@@ -48,6 +60,8 @@ const TABS = [
 const TOOL_OPTIONS = [
   { id: 'humanizer' as const, label: 'Humanizer', icon: Wand2 },
   { id: 'answer' as const, label: 'Answer a Question', icon: BookOpenCheck },
+  { id: 'flashcards' as const, label: 'Flashcards', icon: Layers },
+  { id: 'summarizer' as const, label: 'Summarizer', icon: ScrollText },
 ];
 type SortMode = 'recent' | 'alpha';
 
@@ -88,6 +102,30 @@ const docTypeConfig: Record<DocType, {
     label: 'General',
     description: 'Blank canvas',
     icon: <PenLine className="w-4 h-4" />,
+    color: 'text-muted-foreground',
+  },
+  lab_report: {
+    label: 'Lab Report',
+    description: 'Experiment write-up',
+    icon: <FlaskConical className="w-4 h-4" />,
+    color: 'text-primary',
+  },
+  literature_review: {
+    label: 'Literature Review',
+    description: 'Sources by theme',
+    icon: <Library className="w-4 h-4" />,
+    color: 'text-primary',
+  },
+  presentation_outline: {
+    label: 'Presentation Outline',
+    description: 'Talk structure',
+    icon: <Presentation className="w-4 h-4" />,
+    color: 'text-muted-foreground',
+  },
+  reflective_journal: {
+    label: 'Reflective Journal',
+    description: 'Personal reflection',
+    icon: <NotebookPen className="w-4 h-4" />,
     color: 'text-muted-foreground',
   },
 };
@@ -177,7 +215,7 @@ const Dashboard: React.FC = () => {
   // content is conditionally unrendered (state lives here, so it survives).
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
   // Which standalone tool the Tools tab is showing.
-  const [activeTool, setActiveTool] = useState<'humanizer' | 'answer'>('humanizer');
+  const [activeTool, setActiveTool] = useState<(typeof TOOL_OPTIONS)[number]['id']>('humanizer');
 
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -558,7 +596,7 @@ const Dashboard: React.FC = () => {
             data-intro-id="new-doc-grid"
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
           >
-            {(['essay', 'research_paper', 'report', 'general'] as DocType[]).map((type) => {
+            {(['essay', 'research_paper', 'report', 'general', 'lab_report', 'literature_review', 'presentation_outline', 'reflective_journal'] as DocType[]).map((type) => {
               const config = docTypeConfig[type];
               return (
                 <button
@@ -674,7 +712,7 @@ const Dashboard: React.FC = () => {
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {(['all', 'essay', 'research_paper', 'report', 'general'] as const).map((type) => (
+              {(['all', 'essay', 'research_paper', 'report', 'general', 'lab_report', 'literature_review', 'presentation_outline', 'reflective_journal'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
@@ -858,7 +896,7 @@ const Dashboard: React.FC = () => {
             <div
               role="tablist"
               aria-label="Standalone tools"
-              className="mb-5 inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
+              className="mb-5 grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-lg border border-border bg-card p-1 gap-1"
             >
               {TOOL_OPTIONS.map(({ id, label, icon: Icon }) => (
                 <button
@@ -867,7 +905,7 @@ const Dashboard: React.FC = () => {
                   type="button"
                   aria-selected={activeTool === id}
                   onClick={() => setActiveTool(id)}
-                  className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
+                  className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none ${
                     activeTool === id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
@@ -879,7 +917,10 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
 
-            {activeTool === 'humanizer' ? <StandaloneHumanizer /> : <StandaloneAnswerTool />}
+            {activeTool === 'humanizer' && <StandaloneHumanizer />}
+            {activeTool === 'answer' && <StandaloneAnswerTool />}
+            {activeTool === 'flashcards' && <StandaloneFlashcards />}
+            {activeTool === 'summarizer' && <StandaloneSummarizer />}
           </div>
         )}
 

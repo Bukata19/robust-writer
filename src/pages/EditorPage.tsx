@@ -17,6 +17,7 @@ import { cacheDocument, getCachedDocument, getLastCachedDocument, type CachedDoc
 import { saveLocalDraft, getLocalDraft, clearLocalDraft, hasNewerDraft } from '@/lib/localDraft';
 import VersionHistoryPanel from '@/components/VersionHistoryPanel';
 import PolishPanel from '@/components/PolishPanel';
+import SourceVaultPanel from '@/components/SourceVaultPanel';
 import {
   Drawer,
   DrawerContent,
@@ -69,6 +70,7 @@ import {
   Settings,
   Lightbulb,
   MoreHorizontal,
+  Library,
 } from 'lucide-react';
 import { useWritingCoach } from '@/hooks/useWritingCoach';
 import { useAssignmentContext } from '@/hooks/useAssignmentContext';
@@ -118,7 +120,15 @@ const FONT_FAMILY_OPTIONS = [
 ];
 const FONT_SIZE_OPTIONS = ['12px', '14px', '16px', '18px', '20px', '24px'];
 
-type DocType = 'essay' | 'research_paper' | 'report' | 'general';
+type DocType =
+  | 'essay'
+  | 'research_paper'
+  | 'report'
+  | 'general'
+  | 'lab_report'
+  | 'literature_review'
+  | 'presentation_outline'
+  | 'reflective_journal';
 
 interface DocumentData {
   id: string;
@@ -160,6 +170,31 @@ const placeholderMaps: Record<DocType, Record<number, string>> = {
   },
   general: {
     0: 'Start writing here...',
+  },
+  lab_report: {
+    0: 'State what this experiment set out to test or measure...',
+    1: 'State your predicted outcome and the reasoning behind it...',
+    2: 'List the equipment used and describe each step of the procedure...',
+    3: 'Record your observations, measurements, tables, or calculations...',
+    4: 'Interpret the results, explain sources of error, and compare with theory...',
+    5: 'State what the experiment showed in relation to your aim...',
+  },
+  literature_review: {
+    0: 'Introduce the topic, scope, and why this body of research matters...',
+    1: 'Group and discuss the sources by theme rather than one by one...',
+    2: 'Draw the themes together and identify gaps or disagreements...',
+    3: 'Summarize what the literature shows and where research should go next...',
+  },
+  presentation_outline: {
+    0: 'Open with a question, statistic, or story that grabs attention...',
+    1: 'List your main points in order, one per line...',
+    2: 'Note the evidence, examples, or visuals backing each point...',
+    3: 'Close with your takeaway message and what you want the audience to do...',
+  },
+  reflective_journal: {
+    0: 'Describe the experience or event plainly...',
+    1: 'Explain what you took away from it and why it mattered...',
+    2: 'Describe what you would change or approach differently next time...',
   },
 };
 
@@ -227,6 +262,64 @@ const templates: Record<DocType, any> = {
       { type: 'paragraph' },
     ],
   },
+  lab_report: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Lab Report Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Aim' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Hypothesis' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Materials & Method' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Results' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Discussion' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
+      { type: 'paragraph' },
+    ],
+  },
+  literature_review: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Literature Review Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Introduction' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Thematic Review of Sources' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Synthesis & Gaps' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Conclusion' }] },
+      { type: 'paragraph' },
+    ],
+  },
+  presentation_outline: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Presentation Title' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Opening Hook' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Key Points' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Supporting Evidence' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Closing / Call to Action' }] },
+      { type: 'paragraph' },
+    ],
+  },
+  reflective_journal: {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Reflective Journal Entry' }] },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'What Happened' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'What I Learned' }] },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: "What I'd Do Differently" }] },
+      { type: 'paragraph' },
+    ],
+  },
 };
 
 const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.ReactNode; active?: boolean }> = ({ onClick, title, icon, active }) => (
@@ -269,6 +362,7 @@ const EditorPage: React.FC = () => {
   const [showCoach, setShowCoach] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showPolish, setShowPolish] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const [showDecoder, setShowDecoder] = useState(false);
 
   // Focus mode
@@ -1101,9 +1195,20 @@ usePageTitle(
     );
   }
 
-  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showCoach ? 'coach' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : null;
+  const activeSidebar = chatOpen ? 'chat' : humanizerOpen ? 'humanizer' : showCoach ? 'coach' : showHistory ? 'history' : showPolish ? 'polish' : showDecoder ? 'decoder' : showSources ? 'sources' : null;
 
   const closeSidebar = () => {
+    setChatOpen(false);
+    setHumanizerOpen(false);
+    setShowCoach(false);
+    setShowHistory(false);
+    setShowPolish(false);
+    setShowDecoder(false);
+    setShowSources(false);
+  };
+
+  const openSources = () => {
+    setShowSources(true);
     setChatOpen(false);
     setHumanizerOpen(false);
     setShowCoach(false);
@@ -1336,6 +1441,11 @@ usePageTitle(
       {showDecoder && (
         <AssignmentDecoderPanel decoder={decoder} onClose={() => setShowDecoder(false)} />
       )}
+
+      {/* Source Vault Sidebar */}
+      {showSources && id && (
+        <SourceVaultPanel documentId={id} userId={user?.id} onClose={() => setShowSources(false)} />
+      )}
     </div>
   );
 
@@ -1450,6 +1560,21 @@ usePageTitle(
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">Assignment Decoder</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            data-intro-id="sources-btn"
+            variant={showSources ? 'default' : 'ghost'}
+            size="icon"
+            onClick={() => toggleOrOpen(showSources, openSources, () => setShowSources(false))}
+            aria-label="Source Vault"
+            className="scale-click"
+          >
+            <Library className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Source Vault</TooltipContent>
       </Tooltip>
       </div>
     </>
