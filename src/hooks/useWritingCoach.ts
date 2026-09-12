@@ -195,6 +195,42 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
     };
   }, [editor, coach.enabled, evaluate]);
 
+  // Highlight the active tip's exact ranges. Positions are re-verified against
+  // the live document first, so an edited paragraph never gets a wrong
+  // highlight — we simply highlight nothing instead.
+  useEffect(() => {
+    if (!editor) return;
+
+    const sync = () => {
+      const t = tipRef.current;
+      if (!t || !t.ranges?.length || t.paragraphFrom == null) {
+        editor.commands.clearCoachHighlights();
+        return;
+      }
+      const docRanges: { from: number; to: number }[] = [];
+      for (let i = 0; i < t.ranges.length; i++) {
+        const r = t.ranges[i];
+        const expected = t.snippets?.[i] ?? '';
+        const from = t.paragraphFrom + r.start;
+        const to = t.paragraphFrom + r.end;
+        if (!expected || to > editor.state.doc.content.size) return editor.commands.clearCoachHighlights();
+        const actual = editor.state.doc.textBetween(from, to, '\n', '\n');
+        if (actual !== expected) return editor.commands.clearCoachHighlights();
+        docRanges.push({ from, to });
+      }
+      editor.commands.setCoachHighlights(docRanges);
+    };
+
+    sync();
+    editor.on('update', sync);
+    return () => {
+      editor.off('update', sync);
+      editor.commands.clearCoachHighlights();
+    };
+  }, [editor, tip]);
+
+
+
   return {
     tip,
     streak: coach.session?.streak ?? 0,
