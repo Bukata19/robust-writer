@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
-import { detectPatterns, PATTERN_CATEGORY, type PatternType } from '@/lib/coachPatterns';
+import { detectPatterns, PATTERN_CATEGORY, type PatternType, type PatternHit } from '@/lib/coachPatterns';
 import { generateTip, variantCount } from '@/lib/coachTips';
 
 import type { CoachTip } from '@/lib/coachMemory';
@@ -109,7 +109,7 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
       }
 
       const detected = detectPatterns(paragraph);
-      const entries = Object.entries(detected) as [PatternType, { count: number; confidence: number }][];
+      const entries = Object.entries(detected) as [PatternType, PatternHit][];
       if (entries.length === 0) return 'no_issues';
 
       c.recordPatterns(Object.fromEntries(entries.map(([t, h]) => [t, h.count])));
