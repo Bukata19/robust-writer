@@ -13,10 +13,19 @@ export type PatternType =
 
 export type PatternCategory = 'clarity' | 'conciseness' | 'tone' | 'structure' | 'grammar';
 
+/** Character range within the analyzed paragraph text. */
+export interface TextRange {
+  start: number;
+  end: number;
+}
+
 export interface PatternHit {
   count: number;
   confidence: number;
+  /** Locations of the flagged text, relative to the analyzed paragraph. */
+  ranges?: TextRange[];
 }
+
 
 export type PatternMap = Partial<Record<PatternType, PatternHit>>;
 
@@ -109,18 +118,40 @@ export function toggleFocusArea<T>(current: T[], area: T, max = 3): T[] {
 
 const WEAK_OPENER_RE = /^(?:it\s+is|it's|there\s+is|there\s+are|there\s+was|there\s+were)\b/i;
 
-/** Strip double-quoted spans and fenced code blocks — not the writer's prose. */
+/**
+ * Strip double-quoted spans and fenced code blocks — not the writer's prose.
+ * Replacements are LENGTH-PRESERVING (blanked with spaces) so character offsets
+ * in the cleaned text still line up with the original paragraph text.
+ */
+const blank = (m: string) => ' '.repeat(m.length);
 const stripQuoted = (text: string): string =>
   text
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/"[^"\n]{0,400}"/g, ' ')
-    .replace(/“[^”\n]{0,400}”/g, ' '); // curly quotes
+    .replace(/```[\s\S]*?```/g, blank)
+    .replace(/"[^"\n]{0,400}"/g, blank)
+    .replace(/“[^”\n]{0,400}”/g, blank); // curly quotes
 
-const splitSentences = (text: string): string[] =>
-  text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+interface Span {
+  text: string;
+  start: number;
+}
+
+/** Sentence split that also reports each sentence's offset in `text`. */
+const splitSentenceSpans = (text: string): Span[] => {
+  const out: Span[] = [];
+  let cursor = 0;
+  for (const raw of text.split(/(?<=[.!?])\s+/)) {
+    const trimmedStart = raw.length - raw.trimStart().length;
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) out.push({ text: trimmed, start: cursor + trimmedStart });
+    cursor += raw.length;
+    // account for the whitespace consumed by the split
+    const next = text.slice(cursor).match(/^\s+/);
+    if (next) cursor += next[0].length;
+  }
+  return out;
+};
+
+const splitSentences = (text: string): string[] => splitSentenceSpans(text).map((s) => s.text);
 
 const countWords = (text: string): number =>
   (text.match(/[\w'-]+/g) ?? []).length;
@@ -134,76 +165,126 @@ export function detectPatterns(text: string): PatternMap {
   const cleaned = stripQuoted(text ?? '');
   if (!cleaned.trim()) return result;
 
-  const sentences = splitSentences(cleaned);
+  const spans = splitSentenceSpans(cleaned);
+  const sentences = spans.map((s) => s.text);
   const totalWords = countWords(cleaned);
 
   // passive_voice — be-verb + past participle per sentence occurrence.
   let passive = 0;
-  for (const s of sentences) {
-    passive += (s.match(PASSIVE_RE) ?? []).length;
+  const passiveRanges: TextRange[] = [];
+  for (const span of spans) {
+    const re = new RegExp(PASSIVE_RE.source, 'gi');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(span.text)) !== null) {
+      passive++;
+      passiveRanges.push({ start: span.start + m.index, end: span.start + m.index + m[0].length });
+    }
   }
-  if (passive > 0) result.passive_voice = { count: passive, confidence: confidenceFor(0.7, passive) };
+  if (passive > 0) {
+    result.passive_voice = { count: passive, confidence: confidenceFor(0.7, passive), ranges: passiveRanges };
+  }
 
   // wordy_phrase — known bloat phrases, case-insensitive.
   let wordy = 0;
+  const wordyRanges: TextRange[] = [];
   const lower = cleaned.toLowerCase();
   for (const phrase of WORDY_PHRASES) {
     let idx = lower.indexOf(phrase);
     while (idx !== -1) {
       wordy++;
+      wordyRanges.push({ start: idx, end: idx + phrase.length });
       idx = lower.indexOf(phrase, idx + phrase.length);
     }
   }
-  if (wordy > 0) result.wordy_phrase = { count: wordy, confidence: confidenceFor(0.85, wordy) };
+  if (wordy > 0) {
+    result.wordy_phrase = { count: wordy, confidence: confidenceFor(0.85, wordy), ranges: wordyRanges };
+  }
 
   // weak_opener — sentences starting with expletive constructions.
   let weak = 0;
-  for (const s of sentences) {
-    if (WEAK_OPENER_RE.test(s)) weak++;
+  const weakRanges: TextRange[] = [];
+  for (const span of spans) {
+    const m = span.text.match(WEAK_OPENER_RE);
+    if (m) {
+      weak++;
+      weakRanges.push({ start: span.start, end: span.start + m[0].length });
+    }
   }
-  if (weak > 0) result.weak_opener = { count: weak, confidence: confidenceFor(0.8, weak) };
+  if (weak > 0) {
+    result.weak_opener = { count: weak, confidence: confidenceFor(0.8, weak), ranges: weakRanges };
+  }
 
   // complex_sentence — > 30 words, or > 3 comma/semicolon-separated clauses.
   let complex = 0;
-  for (const s of sentences) {
-    const words = countWords(s);
-    const clauses = s.split(/[,;]/).length;
-    if (words > 30 || clauses > 4) complex++;
+  const complexRanges: TextRange[] = [];
+  for (const span of spans) {
+    const words = countWords(span.text);
+    const clauses = span.text.split(/[,;]/).length;
+    if (words > 30 || clauses > 4) {
+      complex++;
+      complexRanges.push({ start: span.start, end: span.start + span.text.length });
+    }
   }
-  if (complex > 0) result.complex_sentence = { count: complex, confidence: confidenceFor(0.75, complex) };
+  if (complex > 0) {
+    result.complex_sentence = { count: complex, confidence: confidenceFor(0.75, complex), ranges: complexRanges };
+  }
 
   // transition_density — transitions per 100 words; healthy is 3–5.
   if (totalWords >= 30) {
     let transitions = 0;
+    const transitionRanges: TextRange[] = [];
     for (const t of TRANSITIONS) {
       const re = new RegExp(`(?<![\\w-])${t.replace(/\s+/g, '\\s+')}(?![\\w-])`, 'gi');
-      transitions += (cleaned.match(re) ?? []).length;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(cleaned)) !== null) {
+        transitions++;
+        transitionRanges.push({ start: m.index, end: m.index + m[0].length });
+      }
     }
     const per100 = (transitions / totalWords) * 100;
     if (per100 > 5) {
       const excess = Math.ceil(per100 - 5);
-      result.transition_density = { count: excess, confidence: confidenceFor(0.65, excess) };
+      result.transition_density = {
+        count: excess,
+        confidence: confidenceFor(0.65, excess),
+        ranges: transitionRanges.sort((a, b) => a.start - b.start),
+      };
     }
   }
 
   // repetition — same content word (4+ chars, non-stopword) 3+ times within a
   // paragraph. Paragraphs are the writer's own blocks; counting across them
   // would punish legitimate keyword use in long documents.
-  const paragraphs = cleaned.split(/\n{2,}/);
   let repeatedWords = 0;
-  for (const para of paragraphs) {
-    const words = (para.toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []).filter(
-      (w) => !STOPWORDS.has(w),
-    );
-    const freq = new Map<string, number>();
-    for (const w of words) freq.set(w, (freq.get(w) ?? 0) + 1);
-    for (const n of freq.values()) {
-      if (n >= 3) repeatedWords++;
+  const repetitionRanges: TextRange[] = [];
+  let paraOffset = 0;
+  for (const para of cleaned.split(/\n{2,}/)) {
+    const occurrences = new Map<string, TextRange[]>();
+    const wordRe = /[a-z][a-z'-]{3,}/gi;
+    let m: RegExpExecArray | null;
+    while ((m = wordRe.exec(para)) !== null) {
+      const w = m[0].toLowerCase();
+      if (STOPWORDS.has(w)) continue;
+      const list = occurrences.get(w) ?? [];
+      list.push({ start: paraOffset + m.index, end: paraOffset + m.index + m[0].length });
+      occurrences.set(w, list);
     }
+    for (const list of occurrences.values()) {
+      if (list.length >= 3) {
+        repeatedWords++;
+        repetitionRanges.push(...list);
+      }
+    }
+    paraOffset += para.length + 2; // paragraph plus its separator
   }
   if (repeatedWords > 0) {
-    result.repetition = { count: repeatedWords, confidence: confidenceFor(0.7, repeatedWords) };
+    result.repetition = {
+      count: repeatedWords,
+      confidence: confidenceFor(0.7, repeatedWords),
+      ranges: repetitionRanges.sort((a, b) => a.start - b.start),
+    };
   }
 
   return result;
 }
+
