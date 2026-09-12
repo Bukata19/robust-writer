@@ -403,6 +403,8 @@ const EditorPage: React.FC = () => {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      CoachHighlight,
+
       UnderlineExt,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({
