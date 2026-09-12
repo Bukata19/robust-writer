@@ -129,19 +129,34 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
         })
         .sort((a, b) => b.score - a.score);
 
+      let paragraphFrom = 0;
+      try {
+        paragraphFrom = ed.state.selection.$anchor.start(1);
+      } catch {
+        paragraphFrom = 0;
+      }
+
       for (const { type, hit } of ranked) {
         if (!c.canShowPattern(type)) continue;
         const idx = c.nextVariantIndex(type, variantCount(type, c.mode));
-        const candidate = generateTip(type, hit, {
+        const base = generateTip(type, hit, {
           mode: c.mode,
           academicLevel: (profileRef.current as { academic_level?: string | null } | null)?.academic_level,
           variantIndex: idx,
         });
+        const ranges = (hit.ranges ?? []).filter((r) => r.start < r.end && r.end <= paragraph.length);
+        const candidate: CoachTip = {
+          ...base,
+          ranges,
+          snippets: ranges.map((r) => paragraph.slice(r.start, r.end)),
+          paragraphFrom,
+        };
         if (c.wasSameTextShownRecently(candidate.text)) continue;
         c.recordTipShown(candidate);
         setTip(candidate);
         return 'ok';
       }
+
 
       return 'no_issues';
     },
