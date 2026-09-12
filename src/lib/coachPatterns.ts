@@ -165,7 +165,6 @@ export function detectPatterns(text: string): PatternMap {
   if (!cleaned.trim()) return result;
 
   const spans = splitSentenceSpans(cleaned);
-  const sentences = spans.map((s) => s.text);
   const totalWords = countWords(cleaned);
 
   // passive_voice — be-verb + past participle per sentence occurrence.
