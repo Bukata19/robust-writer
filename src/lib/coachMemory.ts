@@ -22,7 +22,14 @@ export interface CoachTip {
   confidence: number;
   why?: string;
   suggestion?: string;
+  /** Flagged locations, relative to the analyzed paragraph (not persisted). */
+  ranges?: { start: number; end: number }[];
+  /** The exact flagged strings, used to re-verify positions before highlighting. */
+  snippets?: string[];
+  /** Document position of the analyzed paragraph's first character. */
+  paragraphFrom?: number;
 }
+
 
 export type TipAction = 'accepted' | 'skipped' | 'learned' | 'shown';
 
