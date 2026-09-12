@@ -151,7 +151,6 @@ const splitSentenceSpans = (text: string): Span[] => {
   return out;
 };
 
-const splitSentences = (text: string): string[] => splitSentenceSpans(text).map((s) => s.text);
 
 const countWords = (text: string): number =>
   (text.match(/[\w'-]+/g) ?? []).length;
