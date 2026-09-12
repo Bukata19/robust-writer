@@ -582,3 +582,18 @@
     transform: none !important;
   }
 }
+
+/* Writing Coach: subtle warning tint on the text the active tip refers to.
+   Decoration-only — never written into document content. */
+.ProseMirror .coach-highlight {
+  background-color: hsl(var(--destructive) / 0.14);
+  border-bottom: 2px solid hsl(var(--destructive) / 0.55);
+  border-radius: 2px;
+  transition: background-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ProseMirror .coach-highlight {
+    transition: none;
+  }
+}
