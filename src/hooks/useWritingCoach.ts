@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
-import { detectPatterns, PATTERN_CATEGORY, type PatternType } from '@/lib/coachPatterns';
+import { detectPatterns, PATTERN_CATEGORY, type PatternType, type PatternHit } from '@/lib/coachPatterns';
 import { generateTip, variantCount } from '@/lib/coachTips';
 
 import type { CoachTip } from '@/lib/coachMemory';
@@ -109,7 +109,7 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
       }
 
       const detected = detectPatterns(paragraph);
-      const entries = Object.entries(detected) as [PatternType, { count: number; confidence: number }][];
+      const entries = Object.entries(detected) as [PatternType, PatternHit][];
       if (entries.length === 0) return 'no_issues';
 
       c.recordPatterns(Object.fromEntries(entries.map(([t, h]) => [t, h.count])));
@@ -129,19 +129,34 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
         })
         .sort((a, b) => b.score - a.score);
 
+      let paragraphFrom = 0;
+      try {
+        paragraphFrom = ed.state.selection.$anchor.start(1);
+      } catch {
+        paragraphFrom = 0;
+      }
+
       for (const { type, hit } of ranked) {
         if (!c.canShowPattern(type)) continue;
         const idx = c.nextVariantIndex(type, variantCount(type, c.mode));
-        const candidate = generateTip(type, hit, {
+        const base = generateTip(type, hit, {
           mode: c.mode,
           academicLevel: (profileRef.current as { academic_level?: string | null } | null)?.academic_level,
           variantIndex: idx,
         });
+        const ranges = (hit.ranges ?? []).filter((r) => r.start < r.end && r.end <= paragraph.length);
+        const candidate: CoachTip = {
+          ...base,
+          ranges,
+          snippets: ranges.map((r) => paragraph.slice(r.start, r.end)),
+          paragraphFrom,
+        };
         if (c.wasSameTextShownRecently(candidate.text)) continue;
         c.recordTipShown(candidate);
         setTip(candidate);
         return 'ok';
       }
+
 
       return 'no_issues';
     },
@@ -179,6 +194,42 @@ export function useWritingCoach({ editor, suggestedFocus }: Options) {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
   }, [editor, coach.enabled, evaluate]);
+
+  // Highlight the active tip's exact ranges. Positions are re-verified against
+  // the live document first, so an edited paragraph never gets a wrong
+  // highlight — we simply highlight nothing instead.
+  useEffect(() => {
+    if (!editor) return;
+
+    const sync = () => {
+      const t = tipRef.current;
+      if (!t || !t.ranges?.length || t.paragraphFrom == null) {
+        editor.commands.clearCoachHighlights();
+        return;
+      }
+      const docRanges: { from: number; to: number }[] = [];
+      for (let i = 0; i < t.ranges.length; i++) {
+        const r = t.ranges[i];
+        const expected = t.snippets?.[i] ?? '';
+        const from = t.paragraphFrom + r.start;
+        const to = t.paragraphFrom + r.end;
+        if (!expected || to > editor.state.doc.content.size) return editor.commands.clearCoachHighlights();
+        const actual = editor.state.doc.textBetween(from, to, '\n', '\n');
+        if (actual !== expected) return editor.commands.clearCoachHighlights();
+        docRanges.push({ from, to });
+      }
+      editor.commands.setCoachHighlights(docRanges);
+    };
+
+    sync();
+    editor.on('update', sync);
+    return () => {
+      editor.off('update', sync);
+      editor.commands.clearCoachHighlights();
+    };
+  }, [editor, tip]);
+
+
 
   return {
     tip,
