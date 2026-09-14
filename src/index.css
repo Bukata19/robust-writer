@@ -304,6 +304,24 @@
     transform: scale(0.9);
   }
 
+   /* Flashcard Quiz Mode — flip-card flash feedback on self-mark.
+     Colors are theme tokens; the .reduce-motion toggle already disables
+     all animation globally via the rule at the top of this file. */
+  @keyframes quiz-flash-correct-kf {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    30% { box-shadow: 0 0 0 4px hsl(142 71% 45% / 0.35); }
+  }
+  @keyframes quiz-flash-incorrect-kf {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    30% { box-shadow: 0 0 0 4px hsl(var(--destructive) / 0.35); }
+  }
+  .quiz-flash-correct {
+    animation: quiz-flash-correct-kf 0.45s ease-out;
+  }
+  .quiz-flash-incorrect {
+    animation: quiz-flash-incorrect-kf 0.45s ease-out;
+  }
+   
   /* Onboarding celebration — checkmark pop + confetti burst.
      Colors come only from theme tokens; motion honors both the in-app
      .reduce-motion toggle (global rule above) and the OS preference. */
