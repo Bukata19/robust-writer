@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { logAiFailure } from '@/lib/aiErrors';
-import { Layers, Copy, Check, Loader2 } from 'lucide-react';
+import { Layers, Copy, Check, Loader2, List as ListIcon, Brain, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -64,10 +64,17 @@ const md = (text: string) => (
   </div>
 );
 
+type ViewMode = 'list' | 'quiz';
+type Mark = 'correct' | 'incorrect' | undefined;
+
 /**
  * Flashcard Generator — standalone, document-free, same shape as
  * StandaloneAnswerTool: textarea in, read-only output with copy buttons out,
  * routed through the existing chat Edge Function (no new function).
+ *
+ * Quiz Mode is a purely frontend addition on top of the same parsed `cards`
+ * array the List view already uses — no new Edge Function, no new AI call,
+ * no persisted state (a fresh quiz session each time Quiz Mode is entered).
  */
 const StandaloneFlashcards: React.FC = () => {
   const [input, setInput] = useState('');
@@ -75,6 +82,13 @@ const StandaloneFlashcards: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  // ── Quiz Mode state ──────────────────────────────────────────────────────
+  const [view, setView] = useState<ViewMode>('list');
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [marks, setMarks] = useState<Mark[]>([]);
+  const [quizDone, setQuizDone] = useState(false);
 
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
@@ -87,6 +101,18 @@ const StandaloneFlashcards: React.FC = () => {
   }, [overLimit, approaching]);
 
   const cards = useMemo(() => (result ? parseCards(result) : []), [result]);
+
+  const resetQuiz = () => {
+    setQuizIndex(0);
+    setRevealed(false);
+    setMarks(new Array(cards.length).fill(undefined));
+    setQuizDone(false);
+  };
+
+  const enterQuizMode = () => {
+    resetQuiz();
+    setView('quiz');
+  };
 
   const submit = async () => {
     const notes = input.trim();
@@ -101,6 +127,7 @@ const StandaloneFlashcards: React.FC = () => {
 
     setLoading(true);
     setResult(null);
+    setView('list');
     try {
       const reply = await callDecoderChat([
         { role: 'system', content: SYSTEM_PROMPT },
@@ -143,6 +170,31 @@ const StandaloneFlashcards: React.FC = () => {
       window.setTimeout(() => setCopiedAll(false), 1500);
     });
   };
+
+  // ── Quiz Mode handlers ───────────────────────────────────────────────────
+  const goToCard = (index: number) => {
+    setQuizIndex(index);
+    setRevealed(false);
+  };
+
+  const handleMark = (result: 'correct' | 'incorrect') => {
+    setMarks((prev) => {
+      const next = [...prev];
+      next[quizIndex] = result;
+      return next;
+    });
+    // Brief pause so the color feedback is visible before advancing.
+    window.setTimeout(() => {
+      if (quizIndex + 1 < cards.length) {
+        goToCard(quizIndex + 1);
+      } else {
+        setQuizDone(true);
+      }
+    }, 450);
+  };
+
+  const score = marks.filter((m) => m === 'correct').length;
+  const answered = marks.filter((m) => m !== undefined).length;
 
   return (
     <div className="animate-fade-in">
@@ -212,32 +264,70 @@ const StandaloneFlashcards: React.FC = () => {
 
         {/* ── RESULT ── */}
         <div className="surface-card p-4 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-2">
             <span className="text-xs font-medium text-foreground">
               Flashcards{cards.length ? ` (${cards.length})` : ''}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={copyAll}
-              disabled={!result}
-              aria-label="Copy all flashcards to clipboard"
-              className="h-7 px-2 text-[11px]"
-            >
-              {copiedAll ? (
-                <>
-                  <Check className="w-3.5 h-3.5 mr-1" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 mr-1" />
-                  Copy all
-                </>
+
+            <div className="flex items-center gap-1">
+              {/* List / Quiz toggle — only shown once there are real cards */}
+              {cards.length > 0 && (
+                <div className="flex items-center rounded-md border border-border p-0.5 mr-1">
+                  <button
+                    type="button"
+                    onClick={() => setView('list')}
+                    aria-pressed={view === 'list'}
+                    className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                      view === 'list'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <ListIcon className="w-3 h-3" />
+                    List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enterQuizMode}
+                    aria-pressed={view === 'quiz'}
+                    className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                      view === 'quiz'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Brain className="w-3 h-3" />
+                    Quiz
+                  </button>
+                </div>
               )}
-            </Button>
+
+              {view === 'list' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyAll}
+                  disabled={!result}
+                  aria-label="Copy all flashcards to clipboard"
+                  className="h-7 px-2 text-[11px]"
+                >
+                  {copiedAll ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 mr-1" />
+                      Copy all
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
+
           <div
             className="min-h-[260px] flex-1 rounded-lg border border-border bg-background p-3 text-sm text-foreground overflow-y-auto"
             aria-live="polite"
@@ -245,7 +335,7 @@ const StandaloneFlashcards: React.FC = () => {
           >
             {loading ? (
               <span className="text-muted-foreground text-xs">Reading your notes…</span>
-            ) : cards.length ? (
+            ) : cards.length && view === 'list' ? (
               <ul className="space-y-3">
                 {cards.map((card, i) => (
                   <li key={i} className="rounded-lg border border-border bg-card p-3">
@@ -279,6 +369,135 @@ const StandaloneFlashcards: React.FC = () => {
                   </li>
                 ))}
               </ul>
+            ) : cards.length && view === 'quiz' ? (
+              quizDone ? (
+                // ── End-of-session score ──────────────────────────────────
+                <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
+                  <div className="rounded-full bg-primary/10 p-4">
+                    <Brain className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {score} / {cards.length}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">correct this round</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={resetQuiz}>
+                      <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                      Try again
+                    </Button>
+                    <Button type="button" size="sm" onClick={() => setView('list')}>
+                      <ListIcon className="mr-1.5 h-3.5 w-3.5" />
+                      Back to list
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // ── One card at a time, flip to reveal ────────────────────
+                <div className="flex h-full flex-col">
+                  <div className="mb-3 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>
+                      Card {quizIndex + 1} of {cards.length}
+                    </span>
+                    <span>{answered} answered</span>
+                  </div>
+
+                  <div className="quiz-flip-outer flex-1" style={{ perspective: '1200px' }}>
+                    <div
+                      className={`quiz-flip-inner relative h-full w-full transition-transform duration-500 motion-reduce:transition-none ${
+                        revealed ? 'quiz-flipped' : ''
+                      } ${
+                        marks[quizIndex] === 'correct'
+                          ? 'quiz-flash-correct'
+                          : marks[quizIndex] === 'incorrect'
+                          ? 'quiz-flash-incorrect'
+                          : ''
+                      }`}
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      }}
+                    >
+                      {/* Front — question */}
+                      <div
+                        className="quiz-face absolute inset-0 flex flex-col items-center justify-center rounded-lg border border-border bg-card p-4 text-center"
+                        style={{ backfaceVisibility: 'hidden' }}
+                      >
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-primary">
+                          Question
+                        </p>
+                        {md(cards[quizIndex].q)}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-4 btn-glow"
+                          onClick={() => setRevealed(true)}
+                        >
+                          Reveal Answer
+                        </Button>
+                      </div>
+
+                      {/* Back — answer */}
+                      <div
+                        className="quiz-face absolute inset-0 flex flex-col items-center justify-center rounded-lg border border-border bg-card p-4 text-center"
+                        style={{
+                          backfaceVisibility: 'hidden',
+                          transform: 'rotateY(180deg)',
+                        }}
+                      >
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          Answer
+                        </p>
+                        {md(cards[quizIndex].a)}
+                        <div className="mt-4 flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleMark('incorrect')}
+                          >
+                            Got it wrong
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+                            onClick={() => handleMark('correct')}
+                          >
+                            Got it right
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={quizIndex === 0}
+                      onClick={() => goToCard(quizIndex - 1)}
+                    >
+                      <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                      Prev
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        quizIndex + 1 < cards.length ? goToCard(quizIndex + 1) : setQuizDone(true)
+                      }
+                    >
+                      Next
+                      <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )
             ) : result ? (
               md(result)
             ) : (
