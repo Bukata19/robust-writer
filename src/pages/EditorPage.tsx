@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -337,6 +337,8 @@ const ToolbarButton: React.FC<{ onClick: () => void; title: string; icon: React.
 
 const EditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const cameFrom = searchParams.get('from') === 'library' ? 'library' : 'home';
   const navigate = useNavigate();
   const { user } = useAuth();
   const { settings } = useSettings();
@@ -1664,7 +1666,7 @@ const formatButtons = editor ? (
     <div className={`h-screen bg-background flex flex-col overflow-hidden page-enter ${focusMode ? 'focus-mode' : ''}`}>
       {/* Top Bar */}
       <header className={`h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-3 gap-2 shrink-0 transition-opacity duration-500 ${focusMode ? 'opacity-0 hover:opacity-100 fixed top-0 left-0 right-0 z-50' : 'relative z-10'}`}>
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="scale-click shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => navigate(`/dashboard?tab=${cameFrom}`)} aria-label="Back to dashboard" className="scale-click shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
