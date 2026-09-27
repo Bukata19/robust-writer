@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -210,10 +210,23 @@ const Dashboard: React.FC = () => {
   const showOnboardingBanner =
     !!profile && !profile.onboarding_completed && !onboardingOpen && !bannerDismissed;
 
-  // Tab view-state only — no routes, no URLs. Home = create/continue,
-  // Library = browse/manage. One shared component tree; the inactive tab's
-  // content is conditionally unrendered (state lives here, so it survives).
-  const [activeTab, setActiveTab] = useState<'home' | 'library' | 'tools'>('home');
+  // Tab state lives in the URL (?tab=home|library|tools) so it survives
+  // reload and the browser back button, and so the Editor can hand back
+  // the exact tab a document was opened from. Home = create/continue,
+  // Library = browse/search, Tools = standalone AI helpers.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (['home', 'library', 'tools'] as const).includes(
+    searchParams.get('tab') as any
+  )
+    ? (searchParams.get('tab') as 'home' | 'library' | 'tools')
+    : 'home';
+  const setActiveTab = (tab: 'home' | 'library' | 'tools') => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+  };
   // Which standalone tool the Tools tab is showing.
   const [activeTool, setActiveTool] = useState<(typeof TOOL_OPTIONS)[number]['id']>('humanizer');
 
@@ -318,7 +331,7 @@ const Dashboard: React.FC = () => {
     if (error) {
       toast.error('Failed to create document');
     } else if (data) {
-      navigate(`/editor/${data.id}`);
+      navigate(`/editor/${data.id}?from=home`);
     }
   };
 
@@ -553,7 +566,7 @@ const Dashboard: React.FC = () => {
         {/* ── CONTINUE WRITING ── */}
         {mostRecent && !loading && (
           <button
-            onClick={() => navigate(`/editor/${mostRecent.id}`)}
+            onClick={() => navigate(`/editor/${mostRecent.id}?from=home`)}
             className="focus-ring relative overflow-hidden w-full text-left mb-7 flex items-center justify-between gap-4 rounded-xl p-4 sm:p-5 cursor-pointer transition-all group border border-primary/30 hover:border-primary/60 bg-gradient-to-r from-primary/10 via-primary/[0.04] to-transparent hover:shadow-glow"
           >
             <div className="min-w-0 flex-1 relative z-10">
@@ -763,7 +776,7 @@ const Dashboard: React.FC = () => {
                 return (
                   <div
                     key={doc.id}
-                    onClick={() => !isRenaming && navigate(`/editor/${doc.id}`)}
+                    onClick={() => !isRenaming && navigate(`/editor/${doc.id}?from=library`)}
                     className={`surface-card ${isCompact ? 'p-3' : 'p-4'} card-hover-glow cursor-pointer group animate-fade-in transition-all hover:border-primary/40`}
                   >
                     {/* Top row: type + actions */}
